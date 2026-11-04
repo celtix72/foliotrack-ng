@@ -676,6 +676,10 @@ router.put('/providers/:id', requireAuth, (req, res) => {
 
   try {
     const updated = saveProviderConfig(providerId, updates);
+    if (updates.frequencyMinutes !== undefined) {
+      setSetting(req.user.id, 'quote_sync_frequency_minutes', updates.frequencyMinutes);
+      setQuoteSyncFrequencyMinutes(updates.frequencyMinutes);
+    }
     const marketStatus = isProviderMarketOpen(updated);
     return res.json({
       success: true,

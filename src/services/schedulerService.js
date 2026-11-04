@@ -21,6 +21,8 @@ let cachedFrequencyMinutes = null;
 function getQuoteSyncFrequencyMinutes() {
   try {
     const db = getDb();
+    let effectiveFrequency = cachedFrequencyMinutes || 30;
+
     const row = db.prepare(`
       SELECT value FROM settings
       WHERE key = 'quote_sync_frequency_minutes'
@@ -29,10 +31,29 @@ function getQuoteSyncFrequencyMinutes() {
     if (row && row.value) {
       const parsed = parseInt(row.value, 10);
       if (parsed > 0 && !isNaN(parsed)) {
-        cachedFrequencyMinutes = parsed;
-        return parsed;
+        effectiveFrequency = parsed;
       }
     }
+
+    // Check if any enabled provider has a tighter frequency configured (e.g. YAHOO set to 1 min)
+    const providerRows = db.prepare(`
+      SELECT value FROM settings
+      WHERE key LIKE 'provider_config_%'
+    `).all();
+    for (const pr of providerRows) {
+      try {
+        const pcfg = JSON.parse(pr.value);
+        if (pcfg && pcfg.enabled !== false && pcfg.frequencyMinutes) {
+          const f = parseInt(pcfg.frequencyMinutes, 10);
+          if (f > 0 && f < effectiveFrequency) {
+            effectiveFrequency = f;
+          }
+        }
+      } catch {}
+    }
+
+    cachedFrequencyMinutes = effectiveFrequency;
+    return effectiveFrequency;
   } catch (err) {
     // fallback to cached or default
   }
