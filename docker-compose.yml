@@ -1,5 +1,6 @@
 services:
   foliotrack:
+    image: ghcr.io/celtix72/foliotrack-ng:latest
     build:
       context: .
       dockerfile: Dockerfile
