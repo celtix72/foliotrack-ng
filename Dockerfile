@@ -1,10 +1,10 @@
 # ==========================================
 # FolioTrack - Dockerfile per UGREEN NAS (UGOS) & Linux
-# Node.js 20 Alpine con dumb-init e compilazione nativa C++
+# Node.js 22 LTS Alpine con dumb-init e compilazione nativa C++
 # ==========================================
 
 # 1. Builder Stage: compilazione moduli nativi (better-sqlite3)
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Installa strumenti di compilazione C++ per Alpine
 RUN apk add --no-cache python3 make g++ sqlite-dev
@@ -16,7 +16,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 # 2. Production Runner Stage: immagine snella e sicura
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 # Installa dumb-init (gestione segnali PID 1 per chiusura atomica SQLite), tzdata e wget per healthcheck
 RUN apk add --no-cache dumb-init tzdata wget libstdc++

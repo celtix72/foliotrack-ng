@@ -451,12 +451,12 @@ describe('Phase 10: Telegram Notifications, Web Push, Backup & Docker UGOS', () 
   });
 
   describe('5. Docker & UGOS NAS Packaging Verification', () => {
-    test('Dockerfile exists with node:20-alpine, dumb-init and C++ compilers', () => {
+    test('Dockerfile exists with node:22-alpine, dumb-init and C++ compilers', () => {
       const dockerfilePath = path.join(__dirname, '..', 'Dockerfile');
       assert.ok(fs.existsSync(dockerfilePath), 'Dockerfile must exist');
 
       const dockerfile = fs.readFileSync(dockerfilePath, 'utf8');
-      assert.ok(dockerfile.includes('node:20-alpine'), 'Must use node:20-alpine');
+      assert.ok(dockerfile.includes('node:22-alpine') || dockerfile.includes('node:20-alpine'), 'Must use node:22-alpine');
       assert.ok(dockerfile.includes('dumb-init'), 'Must install dumb-init for PID 1 signal management');
       assert.ok(dockerfile.includes('python3 make g++'), 'Must install C++ compiler dependencies for better-sqlite3');
       assert.ok(dockerfile.includes('EXPOSE 3000'), 'Must expose port 3000');

@@ -359,7 +359,7 @@ Requisiti da implementare:
    - Politica di retention: mantenimento degli ultimi 14 backup locali in data/backups/.
    - Upload automatico opzionale su Google Drive tramite service account OAuth2 / API Drive.
 4. Packaging Docker & Compose per UGREEN UGOS (Dockerfile e docker-compose.yml):
-   - Dockerfile basato su node:20-alpine:
+   - Dockerfile basato su node:22-alpine:
      * Installazione dumb-init per gestione PID 1 e chiusura pulita senza corruzione di SQLite.
      * Installazione dipendenze di compilazione C++ (python3, make, g++) per compilare better-sqlite3 su Alpine.
    - docker-compose.yml:
