@@ -144,14 +144,14 @@ router.get('/income-summary', (req, res) => {
     if (row.type === 'INTEREST') byType.interest = Number(row.amount) || 0.0;
   }
 
-  // 3. Breakdown by Month (last 36 months)
+  // 3. Breakdown by Month (last 48 months to cover 3 full calendar years)
   const monthlyRows = db.prepare(`
     SELECT strftime('%Y-%m', t.date) as month,
            t.type,
            SUM(t.amount) as amount
     FROM transactions t
     ${whereClause}
-      AND t.date >= date('now', '-36 months')
+      AND t.date >= date('now', '-48 months')
     GROUP BY month, t.type
     ORDER BY month ASC
   `).all(...params);

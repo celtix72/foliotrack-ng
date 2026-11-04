@@ -52,15 +52,14 @@
     <!-- Monthly Dividends Bar Chart Card -->
     <div class="signature-card p-4 space-y-2">
       <div class="flex items-center justify-between text-xs">
-        <span class="font-bold text-gray-900 dark:text-white">Incassi Mensili</span>
-        <div class="flex items-center space-x-2 text-[10px] font-mono">
-          <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-sm bg-emerald-500"></span><span>Div</span></span>
-          <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-sm bg-blue-500"></span><span>Cedole</span></span>
-        </div>
+        <span class="font-bold text-gray-900 dark:text-white">Flussi Dividendi</span>
+        <span class="text-[10px] font-mono text-gray-400">Mesi 1-12 (3 Anni)</span>
       </div>
       <div class="h-44 relative w-full">
         <canvas id="mMonthlyIncomeChart"></canvas>
       </div>
+      <!-- Legenda dei colori con i totali dei dividendi per anno -->
+      <div id="mDividendChartLegend" class="flex flex-wrap items-center justify-around gap-1.5 pt-2 border-t border-gray-100 dark:border-white/5 font-mono text-[10px]"></div>
     </div>
 
     <!-- Performance & Drawdown Curve Card -->
@@ -192,9 +191,59 @@
       const canvas = document.getElementById('mMonthlyIncomeChart');
       if (!canvas) return;
 
-      const labels = (monthlyData || []).slice(-12).map(m => m.month.slice(5));
-      const divs = (monthlyData || []).slice(-12).map(m => m.dividends);
-      const ints = (monthlyData || []).slice(-12).map(m => m.interest);
+      const currentYear = new Date().getFullYear();
+      const years = [currentYear - 2, currentYear - 1, currentYear];
+      const monthLabels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+      const monthNames = [
+        'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+      ];
+
+      const palette = [
+        { bg: '#3b82f6', border: '#2563eb' },
+        { bg: '#f59e0b', border: '#d97706' },
+        { bg: '#10b981', border: '#059669' }
+      ];
+
+      const yearTotals = {};
+      const datasets = years.map((yr, idx) => {
+        const monthValues = new Array(12).fill(0);
+
+        (monthlyData || []).forEach(m => {
+          if (!m || !m.month) return;
+          const parts = m.month.split('-');
+          const mYr = parseInt(parts[0], 10);
+          const mMth = parseInt(parts[1], 10);
+          if (mYr === yr && mMth >= 1 && mMth <= 12) {
+            const val = Number(m.total !== undefined ? m.total : m.dividends) || 0;
+            monthValues[mMth - 1] += val;
+          }
+        });
+
+        const totalYear = monthValues.reduce((acc, curr) => acc + curr, 0);
+        yearTotals[yr] = totalYear;
+
+        return {
+          label: `${yr}`,
+          data: monthValues,
+          backgroundColor: palette[idx].bg,
+          borderColor: palette[idx].border,
+          borderWidth: 1,
+          borderRadius: 3
+        };
+      });
+
+      // Render custom color legend with annual totals below the mobile chart
+      const legendContainer = document.getElementById('mDividendChartLegend');
+      if (legendContainer) {
+        legendContainer.innerHTML = years.map((yr, idx) => `
+          <div class="flex items-center space-x-1 bg-gray-50/70 dark:bg-white/[0.03] px-2 py-0.5 rounded-md border border-gray-100 dark:border-white/5">
+            <span class="w-2.5 h-2.5 rounded-sm" style="background-color: ${palette[idx].bg};"></span>
+            <span class="text-gray-400 font-medium">${yr}:</span>
+            <span class="font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(yearTotals[yr])}</span>
+          </div>
+        `).join('');
+      }
 
       if (mIncomeChart) mIncomeChart.destroy();
       const isDark = document.documentElement.classList.contains('dark');
@@ -202,19 +251,42 @@
       mIncomeChart = new Chart(canvas, {
         type: 'bar',
         data: {
-          labels,
-          datasets: [
-            { label: 'Div', data: divs, backgroundColor: '#10b981', borderRadius: 4 },
-            { label: 'Cedole', data: ints, backgroundColor: '#3b82f6', borderRadius: 4 }
-          ]
+          labels: monthLabels,
+          datasets
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          categoryPercentage: 0.8,
+          barPercentage: 0.9,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (tooltipItems) => {
+                  const idx = tooltipItems[0].dataIndex;
+                  return `Mese ${idx + 1} - ${monthNames[idx]}`;
+                },
+                label: (ctx) => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw)}`
+              }
+            }
+          },
           scales: {
-            x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'JetBrains Mono', size: 9 }, color: isDark ? '#9ca3af' : '#6b7280' } },
-            y: { stacked: true, grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'JetBrains Mono', size: 9 }, color: isDark ? '#9ca3af' : '#6b7280' } }
+            x: {
+              stacked: false,
+              grid: { display: false },
+              ticks: { font: { family: 'JetBrains Mono', size: 9 }, color: isDark ? '#9ca3af' : '#6b7280' }
+            },
+            y: {
+              stacked: false,
+              beginAtZero: true,
+              grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+              ticks: {
+                font: { family: 'JetBrains Mono', size: 9 },
+                color: isDark ? '#9ca3af' : '#6b7280',
+                callback: (v) => '€ ' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
+              }
+            }
           }
         }
       });

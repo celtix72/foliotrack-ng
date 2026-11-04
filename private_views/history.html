@@ -69,27 +69,19 @@
         </div>
       </div>
 
-      <!-- Main Section: Monthly Dividends Bar Chart -->
+      <!-- Main Section: Monthly Dividends Bar Chart (Grouped by Year: 1-12) -->
       <div class="signature-card p-6 space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h3 class="text-base font-bold text-gray-900 dark:text-white">Flussi Cedolari Mensili</h3>
-            <p class="text-xs text-gray-500 font-mono">Suddivisione tra dividendi azionari ed interessi/cedole obbligazionarie (ultimi 3 anni)</p>
-          </div>
-          <div class="flex items-center space-x-4 text-xs font-mono">
-            <span class="flex items-center space-x-1.5">
-              <span class="w-3 h-3 rounded-sm bg-emerald-500"></span>
-              <span class="text-gray-600 dark:text-gray-300">Dividendi Azionari</span>
-            </span>
-            <span class="flex items-center space-x-1.5">
-              <span class="w-3 h-3 rounded-sm bg-blue-500"></span>
-              <span class="text-gray-600 dark:text-gray-300">Cedole BTP/Bond</span>
-            </span>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white">Flussi Dividendi Mensili</h3>
+            <p class="text-xs text-gray-500 font-mono">Confronto dividendi per mese (1-12) degli ultimi 3 anni</p>
           </div>
         </div>
         <div class="h-64 relative w-full">
           <canvas id="monthlyIncomeChart"></canvas>
         </div>
+        <!-- Legenda dei colori con i totali dei dividendi per anno -->
+        <div id="dividendChartLegend" class="flex flex-wrap items-center justify-center gap-4 sm:gap-6 pt-3 border-t border-gray-100 dark:border-white/5 font-mono text-xs"></div>
       </div>
 
       <!-- Historical Performance & Drawdown Curve -->
@@ -285,9 +277,62 @@
       const canvas = document.getElementById('monthlyIncomeChart');
       if (!canvas) return;
 
-      const labels = (monthlyData || []).map(m => m.month);
-      const dividends = (monthlyData || []).map(m => m.dividends);
-      const interest = (monthlyData || []).map(m => m.interest);
+      const currentYear = new Date().getFullYear();
+      const years = [currentYear - 2, currentYear - 1, currentYear];
+      const monthLabels = [
+        '1 - Gen', '2 - Feb', '3 - Mar', '4 - Apr', '5 - Mag', '6 - Giu',
+        '7 - Lug', '8 - Ago', '9 - Set', '10 - Ott', '11 - Nov', '12 - Dic'
+      ];
+      const monthNames = [
+        'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+      ];
+
+      const palette = [
+        { bg: '#3b82f6', border: '#2563eb' }, // Year - 2 (es. 2024: Blu)
+        { bg: '#f59e0b', border: '#d97706' }, // Year - 1 (es. 2025: Ambra)
+        { bg: '#10b981', border: '#059669' }  // Anno Corrente (es. 2026: Smeraldo)
+      ];
+
+      const yearTotals = {};
+      const datasets = years.map((yr, idx) => {
+        const monthValues = new Array(12).fill(0);
+
+        (monthlyData || []).forEach(m => {
+          if (!m || !m.month) return;
+          const parts = m.month.split('-');
+          const mYr = parseInt(parts[0], 10);
+          const mMth = parseInt(parts[1], 10);
+          if (mYr === yr && mMth >= 1 && mMth <= 12) {
+            const val = Number(m.total !== undefined ? m.total : m.dividends) || 0;
+            monthValues[mMth - 1] += val;
+          }
+        });
+
+        const totalYear = monthValues.reduce((acc, curr) => acc + curr, 0);
+        yearTotals[yr] = totalYear;
+
+        return {
+          label: `${yr}`,
+          data: monthValues,
+          backgroundColor: palette[idx].bg,
+          borderColor: palette[idx].border,
+          borderWidth: 1,
+          borderRadius: 4
+        };
+      });
+
+      // Render custom color legend with annual totals below the chart
+      const legendContainer = document.getElementById('dividendChartLegend');
+      if (legendContainer) {
+        legendContainer.innerHTML = years.map((yr, idx) => `
+          <div class="flex items-center space-x-2 bg-gray-50/70 dark:bg-white/[0.03] px-3.5 py-1.5 rounded-xl border border-gray-100 dark:border-white/5 transition hover:scale-105">
+            <span class="w-3.5 h-3.5 rounded-md shadow-sm" style="background-color: ${palette[idx].bg};"></span>
+            <span class="text-gray-500 dark:text-gray-400 font-medium">${yr}:</span>
+            <span class="font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(yearTotals[yr])}</span>
+          </div>
+        `).join('');
+      }
 
       if (incomeChart) incomeChart.destroy();
 
@@ -296,46 +341,40 @@
       incomeChart = new Chart(canvas, {
         type: 'bar',
         data: {
-          labels,
-          datasets: [
-            {
-              label: 'Dividendi Azionari',
-              data: dividends,
-              backgroundColor: '#10b981',
-              borderRadius: 6
-            },
-            {
-              label: 'Cedole BTP/Bond',
-              data: interest,
-              backgroundColor: '#3b82f6',
-              borderRadius: 6
-            }
-          ]
+          labels: monthLabels,
+          datasets
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          categoryPercentage: 0.8,
+          barPercentage: 0.9,
           plugins: {
             legend: { display: false },
             tooltip: {
               callbacks: {
+                title: (tooltipItems) => {
+                  const idx = tooltipItems[0].dataIndex;
+                  return `Mese ${idx + 1} - ${monthNames[idx]}`;
+                },
                 label: (ctx) => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw)}`
               }
             }
           },
           scales: {
             x: {
-              stacked: true,
+              stacked: false,
               grid: { display: false },
               ticks: { font: { family: 'JetBrains Mono', size: 10 }, color: isDark ? '#9ca3af' : '#6b7280' }
             },
             y: {
-              stacked: true,
+              stacked: false,
+              beginAtZero: true,
               grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
               ticks: {
                 font: { family: 'JetBrains Mono', size: 10 },
                 color: isDark ? '#9ca3af' : '#6b7280',
-                callback: (v) => '€ ' + v
+                callback: (v) => '€ ' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
               }
             }
           }

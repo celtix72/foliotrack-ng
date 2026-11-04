@@ -363,6 +363,8 @@ describe('Phase 8: Dividends, Income Projections, Portfolio Snapshots & Italian 
       const html = await res.text();
       assert.ok(html.includes('Flussi, Dividendi & Fisco'));
       assert.ok(html.includes('monthlyIncomeChart'));
+      assert.ok(html.includes('dividendChartLegend'), 'Must contain dividendChartLegend for annual totals');
+      assert.ok(html.includes('1 - Gen') && html.includes('12 - Dic'), 'Must define month 1-12 labels');
       assert.ok(html.includes('performanceChart'));
       assert.ok(html.includes('taxLossesTbody'));
       assert.ok(html.includes('Zainetto Fiscale'));
@@ -375,6 +377,7 @@ describe('Phase 8: Dividends, Income Projections, Portfolio Snapshots & Italian 
       assert.strictEqual(res.status, 200);
       const html = await res.text();
       assert.ok(html.includes('mMonthlyIncomeChart'));
+      assert.ok(html.includes('mDividendChartLegend'), 'Must contain mobile dividendChartLegend for annual totals');
       assert.ok(html.includes('mPerformanceChart'));
       assert.ok(html.includes('mTaxLossesContainer'));
     });
