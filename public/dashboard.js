@@ -2336,9 +2336,9 @@
     if (isMobile) {
       grid = GridStack.init({
         column: 2,
-        cellHeight: 70,
+        cellHeight: 68,
         animate: true,
-        margin: 8,
+        margin: 4,
         staticGrid: !isCustomizing,
         draggable: { handle: '.widget-drag-handle' },
         resizable: { handles: 'se,sw' }
