@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Flussi & Fisco | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-bold text-gray-900 dark:text-white">Flussi & Fisco</h1>
+      <span class="text-[10px] font-mono text-gray-400">Dividendi, performance & zainetto</span>
+    </div>
+    <select id="mPortfolioSelect" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono text-gray-800 dark:text-gray-200">
+      <option value="all">Tutti i portafogli</option>
+    </select>
+  </header>
+
+  <div id="live-ticker-container"></div>
+
+  <!-- Mobile Main Content -->
+  <main class="flex-1 px-4 py-3 space-y-4">
+    <!-- Quick KPI Summary -->
+    <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+      <div class="signature-card p-3 space-y-0.5">
+        <span class="text-[10px] text-gray-400">Incassato Storico</span>
+        <div id="mStatTotalReceived" class="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">€ 0.00</div>
+        <div id="mStatIncomeBreakdown" class="text-[10px] text-gray-400 truncate">0 div • 0 cedole</div>
+      </div>
+
+      <div class="signature-card p-3 space-y-0.5">
+        <span class="text-[10px] text-gray-400">Stima 12 Mesi</span>
+        <div id="mStatProjectedAnnual" class="text-base font-bold text-blue-600 dark:text-blue-400 tabular-nums">€ 0.00</div>
+        <div id="mStatProjectedMonthly" class="text-[10px] text-gray-400">Media/mese</div>
+      </div>
+    </div>
+
+    <!-- Monthly Dividends Bar Chart Card -->
+    <div class="signature-card p-4 space-y-2">
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-bold text-gray-900 dark:text-white">Incassi Mensili</span>
+        <div class="flex items-center space-x-2 text-[10px] font-mono">
+          <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-sm bg-emerald-500"></span><span>Div</span></span>
+          <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-sm bg-blue-500"></span><span>Cedole</span></span>
+        </div>
+      </div>
+      <div class="h-44 relative w-full">
+        <canvas id="mMonthlyIncomeChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Performance & Drawdown Curve Card -->
+    <div class="signature-card p-4 space-y-2">
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-bold text-gray-900 dark:text-white">Rendimento & Drawdown</span>
+        <span id="mMaxDdBadge" class="text-[10px] font-mono font-bold text-rose-500">-0.0%</span>
+      </div>
+      <div class="h-44 relative w-full">
+        <canvas id="mPerformanceChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Zainetto Fiscale Card List -->
+    <div class="signature-card p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="font-bold text-xs text-gray-900 dark:text-white">Zainetto Fiscale Attivo</span>
+          <p class="text-[10px] text-gray-400 font-mono">Minusvalenze compensabili (4 anni)</p>
+        </div>
+        <span id="mStatTaxLosses" class="text-sm font-bold font-mono text-amber-600 dark:text-amber-400">€ 0.00</span>
+      </div>
+
+      <div id="mTaxLossesContainer" class="space-y-2 pt-1 border-t border-gray-100 dark:border-white/5 text-xs font-mono">
+        <div class="text-center text-gray-400 py-3">Nessuna minusvalenza attiva</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#141416]/95 backdrop-blur-md border-t border-gray-200/60 dark:border-white/5 px-6 py-2 flex items-center justify-around z-30 text-[10px] font-mono">
+    <a href="/dashboard" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+      Dashboard
+    </a>
+    <a href="/portfolios" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+      Portafogli
+    </a>
+    <a href="/dividends" class="flex flex-col items-center text-emerald-600 dark:text-emerald-400 font-bold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      Flussi
+    </a>
+    <a href="/transactions" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Movimenti
+    </a>
+    <a href="/settings" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Impostazioni
+    </a>
+  </nav>
+
+  <!-- Vendors & Scripts -->
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/header_indices.js"></script>
+
+  <script>
+    let mIncomeChart = null;
+    let mPerfChart = null;
+
+    const fmtEur = (v) => '€ ' + (Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 });
+
+    async function loadPortfolios() {
+      try {
+        const res = await fetch('/api/portfolios');
+        const data = await res.json();
+        if (data.success && data.portfolios) {
+          const sel = document.getElementById('mPortfolioSelect');
+          sel.innerHTML = '<option value="all">Tutti i portafogli</option>' + data.portfolios.map(p => `
+            <option value="${p.id}">${p.name}</option>
+          `).join('');
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const initialP = urlParams.get('portfolioId') || localStorage.getItem('foliotrack_selected_portfolio');
+          if (initialP && (initialP === 'all' || sel.querySelector(`option[value="${initialP}"]`))) {
+            sel.value = initialP;
+          }
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+
+    async function loadData() {
+      const pId = document.getElementById('mPortfolioSelect').value;
+      let incomeUrl = '/api/dividends/income-summary';
+      let perfUrl = '/api/history/performance?range=1Y';
+      let taxUrl = '/api/taxes/zainetto';
+
+      if (pId && pId !== 'all') {
+        incomeUrl += `?portfolioId=${pId}`;
+        perfUrl += `&portfolioId=${pId}`;
+        taxUrl += `?portfolioId=${pId}`;
+      }
+
+      try {
+        const [incRes, perfRes, taxRes] = await Promise.all([
+          fetch(incomeUrl).then(r => r.json()),
+          fetch(perfUrl).then(r => r.json()),
+          fetch(taxUrl).then(r => r.json())
+        ]);
+
+        if (incRes.success && incRes.summary) {
+          const s = incRes.summary;
+          document.getElementById('mStatTotalReceived').textContent = fmtEur(s.totalReceived);
+          document.getElementById('mStatIncomeBreakdown').textContent = `${fmtEur(s.byType.dividends)} div • ${fmtEur(s.byType.interest)} cedole`;
+          document.getElementById('mStatProjectedAnnual').textContent = fmtEur(s.projectedNext12Months);
+          document.getElementById('mStatProjectedMonthly').textContent = `Media: ${fmtEur(s.projectedMonthlyAverage)}/m`;
+
+          renderMobileIncomeChart(s.byMonth);
+        }
+
+        if (perfRes.success && perfRes.series) {
+          document.getElementById('mMaxDdBadge').textContent = `-${(perfRes.maxDrawdown || 0).toFixed(1)}%`;
+          renderMobilePerformanceChart(perfRes.series);
+        }
+
+        if (taxRes.success && taxRes.summary) {
+          document.getElementById('mStatTaxLosses').textContent = fmtEur(taxRes.summary.totalResidualLosses);
+          renderMobileTaxLosses(taxRes.losses);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderMobileIncomeChart(monthlyData) {
+      const canvas = document.getElementById('mMonthlyIncomeChart');
+      if (!canvas) return;
+
+      const labels = (monthlyData || []).slice(-12).map(m => m.month.slice(5));
+      const divs = (monthlyData || []).slice(-12).map(m => m.dividends);
+      const ints = (monthlyData || []).slice(-12).map(m => m.interest);
+
+      if (mIncomeChart) mIncomeChart.destroy();
+      const isDark = document.documentElement.classList.contains('dark');
+
+      mIncomeChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Div', data: divs, backgroundColor: '#10b981', borderRadius: 4 },
+            { label: 'Cedole', data: ints, backgroundColor: '#3b82f6', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'JetBrains Mono', size: 9 }, color: isDark ? '#9ca3af' : '#6b7280' } },
+            y: { stacked: true, grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'JetBrains Mono', size: 9 }, color: isDark ? '#9ca3af' : '#6b7280' } }
+          }
+        }
+      });
+    }
+
+    function renderMobilePerformanceChart(series) {
+      const canvas = document.getElementById('mPerformanceChart');
+      if (!canvas) return;
+
+      const labels = series.map(s => s.date ? s.date.slice(5) : '');
+      const values = series.map(s => s.totalValue);
+
+      if (mPerfChart) mPerfChart.destroy();
+      const isDark = document.documentElement.classList.contains('dark');
+
+      mPerfChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            borderColor: '#10b981',
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: true,
+            backgroundColor: 'rgba(16, 185, 129, 0.08)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 5, font: { family: 'JetBrains Mono', size: 9 }, color: isDark ? '#9ca3af' : '#6b7280' } },
+            y: { grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'JetBrains Mono', size: 9 }, color: isDark ? '#9ca3af' : '#6b7280' } }
+          }
+        }
+      });
+    }
+
+    function renderMobileTaxLosses(losses) {
+      const container = document.getElementById('mTaxLossesContainer');
+      if (!losses || losses.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 py-2">Nessuna minusvalenza registrata</div>';
+        return;
+      }
+
+      container.innerHTML = losses.map(l => `
+        <div class="p-2.5 rounded-xl bg-gray-50/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 space-y-1">
+          <div class="flex items-center justify-between font-bold">
+            <span>Anno ${l.year} (${l.portfolioName})</span>
+            <span class="text-amber-600 dark:text-amber-400">${fmtEur(l.residualAmount)}</span>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-gray-400">
+            <span>Scadenza: ${l.expiryDate}</span>
+            <span>${l.daysRemaining} gg rimanenti</span>
+          </div>
+          <div class="w-full bg-gray-200 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+            <div class="h-full bg-amber-500 rounded-full" style="width: ${Math.min(l.percentResidual, 100)}%"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('mPortfolioSelect').addEventListener('change', (e) => {
+      localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
+      loadData();
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadPortfolios();
+      await loadData();
+    });
+  </script>
+</body>
+</html>
+

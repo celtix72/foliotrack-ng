@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dettaglio Portafoglio | FolioTrack</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+  <!-- SIDEBAR_PARTIAL -->
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div id="live-ticker-container"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 px-8 pt-6 pb-16 space-y-6 max-w-7xl mx-auto w-full">
+      <!-- Breadcrumb & Top Actions -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <a href="/portfolios" class="text-xs font-mono text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center space-x-1 mb-1 transition">
+            <span>&larr; Tutti i Portafogli</span>
+          </a>
+          <div class="flex flex-wrap items-center gap-3">
+            <h1 id="portfolioTitle" class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Caricamento...</h1>
+            <span id="portfolioTypeBadge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+              -
+            </span>
+            <span id="portfolioCostBasisBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono text-gray-500 bg-gray-100 dark:bg-white/5">
+              -
+            </span>
+
+            <!-- Quick Portfolio Switcher -->
+            <div class="flex items-center space-x-1.5 ml-1">
+              <label for="detailPortfolioSwitcher" class="text-xs font-mono text-gray-400">Passa a:</label>
+              <select id="detailPortfolioSwitcher" class="px-2.5 py-1 rounded-xl text-xs font-mono border border-gray-300 dark:border-white/10 bg-white/80 dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer">
+                <!-- Dynamically loaded -->
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Cross-Page Portfolio Links -->
+          <a id="linkViewTx" href="#" class="btn-pill px-3 py-1.5 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-medium transition flex items-center space-x-1">
+            <span>📋 Movimenti</span>
+          </a>
+          <a id="linkViewHistory" href="#" class="btn-pill px-3 py-1.5 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-medium transition flex items-center space-x-1">
+            <span>📈 Flussi & Fisco</span>
+          </a>
+          <a id="linkViewReports" href="#" class="btn-pill px-3 py-1.5 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-medium transition flex items-center space-x-1">
+            <span>🤖 AI Advisor</span>
+          </a>
+
+          <a id="exportWealthfolioBtn" href="#" class="btn-pill px-3.5 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Esporta Wealthfolio</span>
+          </a>
+          <button id="importCsvBtn" class="btn-pill px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition shadow-md shadow-blue-600/20 flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span>Importa CSV</span>
+          </button>
+          <button id="newTxBtn" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-1">
+            <span>+ Nuovo Movimento</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick KPI Metric Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <!-- 1. Total Value (NAV) -->
+        <div class="signature-card p-4 space-y-1">
+          <span class="text-xs text-gray-500 font-medium">Valore Totale (NAV)</span>
+          <div id="statNav" class="text-xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">€ 0.00</div>
+          <div id="stat1D" class="text-xs font-mono font-medium text-gray-400">0.00% 1D</div>
+        </div>
+
+        <!-- 2. Cash -->
+        <div class="signature-card p-4 space-y-1">
+          <span class="text-xs text-gray-500 font-medium">Liquidità Disponibile</span>
+          <div id="statCash" class="text-xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">€ 0.00</div>
+          <div id="statCashWeight" class="text-xs font-mono text-gray-400">0.0% del totale</div>
+        </div>
+
+        <!-- 3. Invested Capital -->
+        <div class="signature-card p-4 space-y-1">
+          <span class="text-xs text-gray-500 font-medium">Capitale Versato Netto</span>
+          <div id="statInvested" class="text-xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">€ 0.00</div>
+          <div class="text-xs font-mono text-gray-400">Net Deposits</div>
+        </div>
+
+        <!-- 4. Unrealized P&L -->
+        <div class="signature-card p-4 space-y-1">
+          <span class="text-xs text-gray-500 font-medium">P&L Non Realizzato</span>
+          <div id="statPnl" class="text-xl font-bold font-mono tabular-nums">€ 0.00</div>
+          <div id="statPnlPct" class="text-xs font-mono font-semibold">0.00%</div>
+        </div>
+
+        <!-- 5. Total Dividends -->
+        <div class="signature-card p-4 space-y-1 col-span-2 md:col-span-1">
+          <span class="text-xs text-gray-500 font-medium">Dividendi Totali Incassati</span>
+          <div id="statDividends" class="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">€ 0.00</div>
+          <div id="statAssetCount" class="text-xs font-mono text-gray-400">0 titoli in portafoglio</div>
+        </div>
+      </div>
+
+      <!-- Holdings Table Card -->
+      <div class="signature-card overflow-hidden">
+        <!-- Table Top Controls -->
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div class="flex items-center space-x-2.5">
+              <h3 class="text-base font-bold text-gray-900 dark:text-white">Posizioni Aperte (Holdings)</h3>
+              <span id="holdingsCountBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                0 titoli
+              </span>
+            </div>
+            <p class="text-xs text-gray-500">Clicca su una riga per aprire il dettaglio analitico. Clicca sulle intestazioni di colonna per ordinare.</p>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="holdingSearch" placeholder="Cerca ticker o nome..."
+              class="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs font-mono border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white">
+            <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Holdings Table -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
+            <thead class="bg-gray-50/70 dark:bg-white/5 text-gray-500 uppercase tracking-wider text-[11px]">
+              <tr>
+                <th class="px-5 py-3.5 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="ticker">
+                  <div class="inline-flex items-center space-x-1">
+                    <span>Asset / Titolo</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="type">
+                  <div class="inline-flex items-center space-x-1">
+                    <span>Classe</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="sector">
+                  <div class="inline-flex items-center space-x-1">
+                    <span>Settore GICS</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="region">
+                  <div class="inline-flex items-center space-x-1">
+                    <span>Regione</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="quantity">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>Quantità</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="costBasis">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>PMC</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="currentPrice">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>Prezzo Live</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="marketValue">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>Controvalore</span>
+                    <span class="sort-icon text-gray-400 text-[10px]">▼</span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="unrealizedPnl">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>P&L Non Realizzato</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-5 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-holding-sort="weight">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>Peso %</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="holdingsTbody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums">
+              <tr>
+                <td colspan="10" class="px-6 py-8 text-center text-gray-400">Caricamento posizioni in corso...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Closed Positions (Posizioni Chiuse) Table Card -->
+      <div class="signature-card overflow-hidden">
+        <!-- Table Top Controls & Summary -->
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div class="flex items-center space-x-2.5">
+              <h3 class="text-base font-bold text-gray-900 dark:text-white">Posizioni Chiuse</h3>
+              <span id="closedCountBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                0 operazioni
+              </span>
+            </div>
+            <p class="text-xs text-gray-500">Realizzi su operazioni totali o parziali di vendita (SELL). Clicca sulle intestazioni di colonna per ordinare.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="closedFilterType" class="px-2.5 py-1.5 rounded-xl text-xs font-mono border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="ALL">Tutti i realizzi</option>
+              <option value="TOTALE">Solo Chiusure Totali</option>
+              <option value="PARZIALE">Solo Chiusure Parziali</option>
+              <option value="PROFIT">Solo Plusvalenze</option>
+              <option value="LOSS">Solo Minusvalenze</option>
+            </select>
+            <div class="relative w-full sm:w-56">
+              <input type="text" id="closedSearch" placeholder="Cerca ticker o titolo..."
+                class="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs font-mono border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white">
+              <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary KPI strip for Closed Positions -->
+        <div class="px-6 py-2.5 bg-gray-50/40 dark:bg-white/[0.01] border-b border-gray-100 dark:border-white/5 flex flex-wrap items-center gap-6 text-xs font-mono">
+          <div>
+            <span class="text-gray-400 text-[10px] uppercase">P&L Realizzato:</span>
+            <strong id="closedTotalPnl" class="font-bold ml-1">€ 0</strong>
+          </div>
+          <div>
+            <span class="text-gray-400 text-[10px] uppercase">Controvalore Vendite:</span>
+            <strong id="closedTotalProceeds" class="text-gray-900 dark:text-white font-bold ml-1">€ 0</strong>
+          </div>
+          <div>
+            <span class="text-gray-400 text-[10px] uppercase">Plusvalenze:</span>
+            <strong id="closedTotalProfits" class="text-emerald-600 dark:text-emerald-400 font-bold ml-1">€ 0</strong>
+          </div>
+          <div>
+            <span class="text-gray-400 text-[10px] uppercase">Minusvalenze:</span>
+            <strong id="closedTotalLosses" class="text-rose-600 dark:text-rose-400 font-bold ml-1">€ 0</strong>
+          </div>
+        </div>
+
+        <!-- Closed Positions Table -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
+            <thead class="bg-gray-50/70 dark:bg-white/5 text-gray-500 uppercase tracking-wider text-[11px]">
+              <tr>
+                <th class="px-4 py-3.5 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="date">
+                  <div class="inline-flex items-center space-x-1">
+                    <span>Data</span>
+                    <span class="sort-icon text-gray-400 text-[10px]">▼</span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="ticker">
+                  <div class="inline-flex items-center space-x-1">
+                    <span>Asset / Titolo</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-3 py-3.5 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="closeType">
+                  <div class="inline-flex items-center space-x-1">
+                    <span>Tipo</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-3 py-3.5 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="sector">
+                  <div class="inline-flex items-center space-x-1">
+                    <span>Settore</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="quantity">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>Quantità</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="pmc">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>PMC Carico</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="sellPrice">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>Prezzo Vendita</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-4 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="proceeds">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>Controvalore</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+                <th class="px-5 py-3.5 text-right cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition" data-closed-sort="realizedPnl">
+                  <div class="inline-flex items-center justify-end space-x-1 w-full">
+                    <span>P&L Realizzato</span>
+                    <span class="sort-icon text-gray-400 text-[10px]"></span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="closedTbody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums">
+              <tr>
+                <td colspan="9" class="px-6 py-8 text-center text-gray-400">Caricamento posizioni chiuse...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Vendors & Component Scripts -->
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/header_indices.js"></script>
+  <script src="/transaction_modal.js"></script>
+  <script src="/bulk_import.js"></script>
+  <script src="/asset_drawer.js"></script>
+
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const portfolioId = parseInt(pathParts[pathParts.length - 1], 10) || 1;
+    let portfolioData = null;
+    let allHoldings = [];
+    let allClosedPositions = [];
+
+    // Sorting state
+    let holdingsSort = { key: 'marketValue', dir: 'desc' };
+    let closedSort = { key: 'date', dir: 'desc' };
+
+    // Formatters: 0 decimals for currency value amounts, proper decimals for % and quotation prices
+    const fmtEur = (v) => '€ ' + Math.round(Number(v) || 0).toLocaleString('it-IT', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+
+    const fmtEurSigned = (v) => {
+      const n = Math.round(Number(v) || 0);
+      return (n >= 0 ? '+€ ' : '-€ ') + Math.abs(n).toLocaleString('it-IT', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      });
+    };
+
+    const fmtPrice = (v, curr = '€') => {
+      const n = Number(v) || 0;
+      const hasSubCents = (n !== 0) && (Math.abs(n * 100 - Math.round(n * 100)) > 0.001);
+      return curr + ' ' + n.toLocaleString('it-IT', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: hasSubCents ? 4 : 2
+      });
+    };
+
+    const fmtPct = (v) => {
+      const n = Number(v) || 0;
+      return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+    };
+
+    const fmtQty = (v) => {
+      const n = Number(v) || 0;
+      return n.toLocaleString('it-IT', {
+        maximumFractionDigits: (n % 1 === 0) ? 0 : 4
+      });
+    };
+
+    function sortList(list, key, dir) {
+      return [...list].sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+
+        if (valA === undefined || valA === null) valA = '';
+        if (valB === undefined || valB === null) valB = '';
+
+        if (typeof valA === 'string' && isNaN(Number(valA))) {
+          const cmp = valA.localeCompare(valB, 'it', { sensitivity: 'base' });
+          return dir === 'asc' ? cmp : -cmp;
+        }
+
+        const numA = Number(valA) || 0;
+        const numB = Number(valB) || 0;
+        return dir === 'asc' ? (numA - numB) : (numB - numA);
+      });
+    }
+
+    async function loadPortfolioDetail() {
+      try {
+        const res = await fetch(`/api/portfolios/${portfolioId}`);
+        const data = await res.json();
+        if (!data.success || !data.portfolio) {
+          document.getElementById('portfolioTitle').textContent = 'Portafoglio non trovato';
+          return;
+        }
+
+        portfolioData = data.portfolio;
+        allHoldings = (portfolioData.metrics && portfolioData.metrics.holdings) || [];
+        allClosedPositions = (portfolioData.metrics && portfolioData.metrics.closedPositions) || portfolioData.closedPositions || [];
+
+        // Title and badges
+        document.getElementById('portfolioTitle').textContent = portfolioData.name;
+        document.getElementById('portfolioTypeBadge').textContent = portfolioData.type;
+        document.getElementById('portfolioCostBasisBadge').textContent = portfolioData.costBasisMethod || 'WAC';
+
+        // Export button link & cross-page links
+        document.getElementById('exportWealthfolioBtn').href = `/api/portfolios/${portfolioId}/export/wealthfolio`;
+        document.getElementById('linkViewTx').href = `/transactions?portfolioId=${portfolioId}`;
+        document.getElementById('linkViewHistory').href = `/history?portfolioId=${portfolioId}`;
+        document.getElementById('linkViewReports').href = `/reports?portfolioId=${portfolioId}`;
+        localStorage.setItem('foliotrack_selected_portfolio', String(portfolioId));
+
+        // Load portfolio switcher options
+        loadPortfolioSwitcher();
+
+        // KPI cards (rounded to 0 decimals for values)
+        const nav = portfolioData.totalValue || 0;
+        const cash = portfolioData.currentCash || 0;
+        const invested = portfolioData.investedCapital || 0;
+        const pnl = (portfolioData.metrics && portfolioData.metrics.unrealizedPnL) || 0;
+        const pnlPct = (portfolioData.metrics && portfolioData.metrics.unrealizedPnLPercent) || 0;
+        const p1d = portfolioData.performance1D || 0;
+        const dividends = portfolioData.totalDividends || 0;
+
+        document.getElementById('statNav').textContent = fmtEur(nav);
+        const p1dEl = document.getElementById('stat1D');
+        p1dEl.textContent = `${p1d >= 0 ? '+' : ''}${p1d.toFixed(2)}% 1D`;
+        p1dEl.className = `text-xs font-mono font-medium ${p1d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+
+        document.getElementById('statCash').textContent = fmtEur(cash);
+        document.getElementById('statCashWeight').textContent = nav > 0 ? `${((cash / nav) * 100).toFixed(1)}% del totale` : '0.0%';
+
+        document.getElementById('statInvested').textContent = fmtEur(invested);
+
+        const pnlEl = document.getElementById('statPnl');
+        pnlEl.textContent = fmtEurSigned(pnl);
+        pnlEl.className = `text-xl font-bold font-mono tabular-nums ${pnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+
+        const pnlPctEl = document.getElementById('statPnlPct');
+        pnlPctEl.textContent = fmtPct(pnlPct);
+        pnlPctEl.className = `text-xs font-mono font-semibold ${pnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+
+        document.getElementById('statDividends').textContent = fmtEur(dividends);
+        document.getElementById('statAssetCount').textContent = `${allHoldings.length} titoli in portafoglio`;
+
+        // Render both tables
+        applyHoldingsFilterAndSort();
+        applyClosedFilterAndSort();
+      } catch (err) {
+        console.error('Error loading portfolio:', err);
+      }
+    }
+
+    function applyHoldingsFilterAndSort() {
+      const q = (document.getElementById('holdingSearch')?.value || '').toLowerCase().trim();
+      let filtered = allHoldings;
+      if (q) {
+        filtered = filtered.filter(h =>
+          (h.ticker && h.ticker.toLowerCase().includes(q)) ||
+          (h.name && h.name.toLowerCase().includes(q)) ||
+          (h.sector && h.sector.toLowerCase().includes(q))
+        );
+      }
+      const sorted = sortList(filtered, holdingsSort.key, holdingsSort.dir);
+      renderHoldingsTable(sorted);
+      const badge = document.getElementById('holdingsCountBadge');
+      if (badge) badge.textContent = `${sorted.length} titoli`;
+    }
+
+    function renderHoldingsTable(holdings) {
+      const tbody = document.getElementById('holdingsTbody');
+      if (!holdings || holdings.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="10" class="px-6 py-10 text-center text-gray-400 font-mono">
+              Nessuna posizione aperta. Clicca su "+ Nuovo Movimento" o "Importa CSV" per iniziare.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = holdings.map((h, idx) => {
+        const pnl = h.unrealizedPnL || 0;
+        const pnlPct = h.unrealizedPnLPercent || 0;
+        const chg1D = h.changePercent || 0;
+        const weight = h.weight || 0;
+
+        const pnlClass = pnl >= 0 ? 'badge-profit' : 'badge-loss';
+        const chgClass = chg1D >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+
+        return `
+          <tr class="hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer group" data-holding-idx="${idx}">
+            <td class="px-5 py-3.5 whitespace-nowrap">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 transition">${h.ticker}</span>
+                <span class="text-gray-400 dark:text-gray-500 font-sans text-xs truncate max-w-[140px]" title="${h.name || ''}">${h.name || '-'}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300">
+                ${h.type || 'EQUITY'}
+              </span>
+            </td>
+            <td class="px-4 py-3.5 whitespace-nowrap text-gray-500 font-sans text-xs">
+              ${h.sector || 'Unclassified'}
+            </td>
+            <td class="px-4 py-3.5 whitespace-nowrap text-gray-500 font-sans text-xs">
+              ${h.region || 'Global'}
+            </td>
+            <td class="px-4 py-3.5 text-right font-medium text-gray-800 dark:text-gray-200">
+              ${fmtQty(h.quantity)}
+            </td>
+            <td class="px-4 py-3.5 text-right text-gray-600 dark:text-gray-400">
+              ${fmtPrice(h.costBasis || h.pmc)}
+            </td>
+            <td class="px-4 py-3.5 text-right font-semibold text-gray-900 dark:text-white">
+              <div>${fmtPrice(h.currentPrice)}</div>
+              <div class="text-[10px] ${chgClass}">${chg1D >= 0 ? '+' : ''}${chg1D.toFixed(2)}%</div>
+            </td>
+            <td class="px-4 py-3.5 text-right font-bold text-gray-900 dark:text-white">
+              ${fmtEur(h.marketValue)}
+            </td>
+            <td class="px-4 py-3.5 text-right whitespace-nowrap">
+              <span class="${pnlClass} inline-block font-bold text-[11px]">
+                ${fmtEurSigned(pnl)} (${fmtPct(pnlPct)})
+              </span>
+            </td>
+            <td class="px-5 py-3.5 text-right">
+              <div class="flex items-center justify-end space-x-2">
+                <span class="font-bold text-gray-900 dark:text-white">${fmtPct(weight)}</span>
+                <div class="w-12 h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+                  <div class="h-full bg-emerald-500 rounded-full" style="width: ${Math.min(weight, 100)}%"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Add click listeners to rows to open drawer
+      document.querySelectorAll('#holdingsTbody tr[data-holding-idx]').forEach(tr => {
+        tr.addEventListener('click', () => {
+          const idx = parseInt(tr.getAttribute('data-holding-idx'), 10);
+          const holding = holdings[idx];
+          if (holding && window.AssetDrawer) {
+            window.AssetDrawer.open(holding, portfolioId);
+          }
+        });
+      });
+    }
+
+    function applyClosedFilterAndSort() {
+      const q = (document.getElementById('closedSearch')?.value || '').toLowerCase().trim();
+      const filterType = document.getElementById('closedFilterType')?.value || 'ALL';
+      let filtered = allClosedPositions;
+
+      if (filterType === 'TOTALE') {
+        filtered = filtered.filter(c => c.isTotal || c.closeType === 'TOTALE');
+      } else if (filterType === 'PARZIALE') {
+        filtered = filtered.filter(c => !c.isTotal || c.closeType === 'PARZIALE');
+      } else if (filterType === 'PROFIT') {
+        filtered = filtered.filter(c => (Number(c.realizedPnl) || 0) >= 0);
+      } else if (filterType === 'LOSS') {
+        filtered = filtered.filter(c => (Number(c.realizedPnl) || 0) < 0);
+      }
+
+      if (q) {
+        filtered = filtered.filter(c =>
+          (c.ticker && c.ticker.toLowerCase().includes(q)) ||
+          (c.name && c.name.toLowerCase().includes(q)) ||
+          (c.sector && c.sector.toLowerCase().includes(q))
+        );
+      }
+
+      const sorted = sortList(filtered, closedSort.key, closedSort.dir);
+      renderClosedTable(sorted);
+      updateClosedSummary(filtered);
+    }
+
+    function updateClosedSummary(closedList) {
+      const badge = document.getElementById('closedCountBadge');
+      if (badge) badge.textContent = `${closedList.length} operazioni`;
+
+      const totPnl = closedList.reduce((acc, c) => acc + (Number(c.realizedPnl) || 0), 0);
+      const totProceeds = closedList.reduce((acc, c) => acc + (Number(c.proceeds) || 0), 0);
+      const totProfits = closedList.filter(c => (c.realizedPnl || 0) > 0).reduce((acc, c) => acc + c.realizedPnl, 0);
+      const totLosses = closedList.filter(c => (c.realizedPnl || 0) < 0).reduce((acc, c) => acc + c.realizedPnl, 0);
+
+      const pnlEl = document.getElementById('closedTotalPnl');
+      if (pnlEl) {
+        pnlEl.textContent = fmtEurSigned(totPnl);
+        pnlEl.className = 'font-bold ml-1 ' + (totPnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400');
+      }
+      const procEl = document.getElementById('closedTotalProceeds');
+      if (procEl) procEl.textContent = fmtEur(totProceeds);
+      const profEl = document.getElementById('closedTotalProfits');
+      if (profEl) profEl.textContent = fmtEurSigned(totProfits);
+      const lossEl = document.getElementById('closedTotalLosses');
+      if (lossEl) lossEl.textContent = fmtEurSigned(totLosses);
+    }
+
+    function renderClosedTable(closedList) {
+      const tbody = document.getElementById('closedTbody');
+      if (!closedList || closedList.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="px-6 py-10 text-center text-gray-400 font-mono">
+              Nessuna posizione chiusa registrata. Le vendite totali o parziali appariranno qui con il relativo realizzo.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = closedList.map((c, idx) => {
+        const pnl = Number(c.realizedPnl) || 0;
+        const pnlPct = Number(c.realizedPnlPercent) || 0;
+        const isProfit = pnl >= 0;
+        const pnlClass = isProfit ? 'badge-profit' : 'badge-loss';
+        const isTot = c.isTotal || c.closeType === 'TOTALE';
+        const typeBadge = isTot
+          ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">Totale</span>'
+          : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">Parziale</span>';
+
+        return `
+          <tr class="hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer group" data-closed-idx="${idx}">
+            <td class="px-4 py-3.5 whitespace-nowrap text-gray-600 dark:text-gray-400">
+              ${c.date || '-'}
+            </td>
+            <td class="px-4 py-3.5 whitespace-nowrap">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 transition">${c.ticker}</span>
+                <span class="text-gray-400 dark:text-gray-500 font-sans text-xs truncate max-w-[140px]" title="${c.name || ''}">${c.name || '-'}</span>
+              </div>
+            </td>
+            <td class="px-3 py-3.5 whitespace-nowrap">
+              ${typeBadge}
+            </td>
+            <td class="px-3 py-3.5 whitespace-nowrap text-gray-500 font-sans text-xs">
+              ${c.sector || 'Unclassified'}
+            </td>
+            <td class="px-4 py-3.5 text-right font-medium text-gray-800 dark:text-gray-200">
+              ${fmtQty(c.quantity)}
+            </td>
+            <td class="px-4 py-3.5 text-right text-gray-600 dark:text-gray-400">
+              ${fmtPrice(c.pmc)}
+            </td>
+            <td class="px-4 py-3.5 text-right font-semibold text-gray-900 dark:text-white">
+              ${fmtPrice(c.sellPrice)}
+            </td>
+            <td class="px-4 py-3.5 text-right font-bold text-gray-900 dark:text-white">
+              ${fmtEur(c.proceeds)}
+            </td>
+            <td class="px-5 py-3.5 text-right whitespace-nowrap">
+              <span class="${pnlClass} inline-block font-bold text-[11px]">
+                ${fmtEurSigned(pnl)} (${fmtPct(pnlPct)})
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Add click listeners to closed position rows to open drawer
+      document.querySelectorAll('#closedTbody tr[data-closed-idx]').forEach(tr => {
+        tr.addEventListener('click', () => {
+          const idx = parseInt(tr.getAttribute('data-closed-idx'), 10);
+          const c = closedList[idx];
+          if (c && window.AssetDrawer) {
+            window.AssetDrawer.open({
+              ticker: c.ticker,
+              name: c.name,
+              currency: c.currency,
+              type: c.type,
+              sector: c.sector,
+              quantity: c.remainingQuantity || 0,
+              pmc: c.pmc,
+              realizedPnl: c.realizedPnl
+            }, portfolioId);
+          }
+        });
+      });
+    }
+
+    function setupSortHeaders() {
+      // Holdings table sort headers
+      document.querySelectorAll('th[data-holding-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+          const key = th.getAttribute('data-holding-sort');
+          if (holdingsSort.key === key) {
+            holdingsSort.dir = holdingsSort.dir === 'asc' ? 'desc' : 'asc';
+          } else {
+            holdingsSort.key = key;
+            const strKeys = ['ticker', 'type', 'sector', 'region'];
+            holdingsSort.dir = strKeys.includes(key) ? 'asc' : 'desc';
+          }
+          updateSortIndicators('holding', holdingsSort);
+          applyHoldingsFilterAndSort();
+        });
+      });
+
+      // Closed positions table sort headers
+      document.querySelectorAll('th[data-closed-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+          const key = th.getAttribute('data-closed-sort');
+          if (closedSort.key === key) {
+            closedSort.dir = closedSort.dir === 'asc' ? 'desc' : 'asc';
+          } else {
+            closedSort.key = key;
+            const strKeys = ['ticker', 'closeType', 'sector'];
+            closedSort.dir = strKeys.includes(key) ? 'asc' : 'desc';
+          }
+          updateSortIndicators('closed', closedSort);
+          applyClosedFilterAndSort();
+        });
+      });
+    }
+
+    function updateSortIndicators(type, sortState) {
+      const attr = type === 'holding' ? 'data-holding-sort' : 'data-closed-sort';
+      document.querySelectorAll(`th[${attr}]`).forEach(th => {
+        const key = th.getAttribute(attr);
+        const icon = th.querySelector('.sort-icon');
+        if (!icon) return;
+        if (key === sortState.key) {
+          icon.textContent = sortState.dir === 'asc' ? '▲' : '▼';
+          icon.className = 'sort-icon text-emerald-600 dark:text-emerald-400 text-[10px] font-bold';
+        } else {
+          icon.textContent = '';
+          icon.className = 'sort-icon text-gray-400 text-[10px]';
+        }
+      });
+    }
+
+    // Search and filter listeners
+    document.getElementById('holdingSearch').addEventListener('input', applyHoldingsFilterAndSort);
+    document.getElementById('closedSearch').addEventListener('input', applyClosedFilterAndSort);
+    document.getElementById('closedFilterType').addEventListener('change', applyClosedFilterAndSort);
+
+    async function loadPortfolioSwitcher() {
+      try {
+        const res = await fetch('/api/portfolios');
+        const data = await res.json();
+        if (data.success && data.portfolios) {
+          const sel = document.getElementById('detailPortfolioSwitcher');
+          if (!sel) return;
+          sel.innerHTML = data.portfolios.map(p => `
+            <option value="${p.id}" ${p.id === portfolioId ? 'selected' : ''}>${p.name} (${p.currency})</option>
+          `).join('');
+
+          sel.onchange = (e) => {
+            const nextId = e.target.value;
+            if (nextId) {
+              localStorage.setItem('foliotrack_selected_portfolio', nextId);
+              window.location.href = `/portfolios/${nextId}`;
+            }
+          };
+        }
+      } catch (err) {
+        console.warn('Error loading switcher:', err);
+      }
+    }
+
+    // Buttons bindings
+    document.getElementById('newTxBtn').addEventListener('click', () => {
+      if (window.TransactionModal) {
+        window.TransactionModal.open({ portfolioId });
+      }
+    });
+
+    document.getElementById('importCsvBtn').addEventListener('click', () => {
+      if (window.BulkImportModal) {
+        window.BulkImportModal.open({ portfolioId });
+      }
+    });
+
+    document.addEventListener('transactionSaved', loadPortfolioDetail);
+    document.addEventListener('transactionsImported', loadPortfolioDetail);
+    document.addEventListener('DOMContentLoaded', () => {
+      setupSortHeaders();
+      loadPortfolioDetail();
+    });
+  </script>
+</body>
+</html>
+

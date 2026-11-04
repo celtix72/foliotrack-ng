@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pensione & AI Advisor | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-bold text-gray-900 dark:text-white">Pensione & AI</h1>
+      <span class="text-[10px] font-mono text-gray-400">Monte Carlo & Advisor</span>
+    </div>
+    <select id="reportPortfolioSelect" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono">
+      <option value="all">Tutti i portafogli</option>
+    </select>
+  </header>
+
+  <div id="live-ticker-container"></div>
+
+  <!-- Mobile Main Content -->
+  <main class="flex-1 px-4 py-3 space-y-4">
+    <!-- Quick Parameters Collapse -->
+    <div class="signature-card p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-xs uppercase tracking-wider text-gray-500">Parametri Pensione</span>
+        <button id="runSimulationBtn" class="btn-pill px-3 py-1 bg-blue-600 text-white text-[11px] font-semibold">
+          Simula
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+        <div>
+          <label class="block text-[10px] text-gray-400">Età Attuale / Pensione</label>
+          <div class="flex items-center space-x-1">
+            <input type="number" id="goalCurrentAge" value="35" class="w-1/2 px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+            <span class="text-gray-400">/</span>
+            <input type="number" id="goalRetirementAge" value="60" class="w-1/2 px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] text-gray-400">Risparmio Mese (€)</label>
+          <input type="number" id="goalMonthlySavings" value="500" class="w-full px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+        </div>
+        <div>
+          <label class="block text-[10px] text-gray-400">Spesa Mese (€)</label>
+          <input type="number" id="goalMonthlyExpenses" value="2000" class="w-full px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+        </div>
+        <div>
+          <label class="block text-[10px] text-gray-400">Rendimento %</label>
+          <input type="number" id="goalExpectedReturn" value="7.0" class="w-full px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+          <input type="hidden" id="goalVolatility" value="14.0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Monte Carlo Output Scorecards -->
+    <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+      <div class="signature-card p-3 space-y-0.5">
+        <span class="text-[10px] text-gray-400">Tasso Successo</span>
+        <div id="statSuccessRate" class="text-lg font-bold text-emerald-600 dark:text-emerald-400">0.0%</div>
+      </div>
+      <div class="signature-card p-3 space-y-0.5">
+        <span class="text-[10px] text-gray-400">FIRE Number (4%)</span>
+        <div id="statFireNumber" class="text-lg font-bold text-gray-900 dark:text-white">€ 0</div>
+      </div>
+      <div class="signature-card p-3 space-y-0.5 col-span-2">
+        <span class="text-[10px] text-gray-400">Patrimonio Mediano a Pensione</span>
+        <div id="statRetirementMedian" class="text-base font-bold text-blue-600 dark:text-blue-400">€ 0</div>
+      </div>
+    </div>
+
+    <!-- Fan Chart Card -->
+    <div class="signature-card p-4 space-y-2">
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-bold text-gray-900 dark:text-white">Ventaglio Monte Carlo</span>
+        <span class="text-[10px] font-mono text-gray-400">P90 • P50 • P10</span>
+      </div>
+      <div class="h-48 relative w-full">
+        <canvas id="monteCarloChart"></canvas>
+      </div>
+      <div id="statSorrDepleted" class="text-[10px] font-mono text-rose-500 pt-1 border-t border-gray-100 dark:border-white/5">
+        Stress-test SORR: -
+      </div>
+    </div>
+
+    <!-- AI Advisor Trigger Card -->
+    <div class="signature-card p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-xs uppercase tracking-wider text-gray-500">AI Advisor</span>
+        <button id="runAiBtn" class="btn-pill px-3 py-1 bg-emerald-600 text-white text-[11px] font-semibold">
+          Analizza con AI
+        </button>
+      </div>
+      <select id="aiProviderSelect" class="w-full px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono">
+        <option value="auto">Auto (Gemini / OpenAI / Euristico)</option>
+        <option value="gemini">Google Gemini</option>
+        <option value="openai">OpenAI</option>
+        <option value="heuristic">Motore Euristico Offline</option>
+      </select>
+
+      <div id="aiLoadingSpinner" class="hidden py-4 text-center text-xs font-mono text-gray-500">
+        Analisi AI in corso...
+      </div>
+
+      <div id="aiResultsContainer" class="hidden space-y-3 pt-2 border-t border-gray-100 dark:border-white/5 text-xs font-mono">
+        <div class="flex items-center justify-between">
+          <span>Provider: <strong id="aiProviderBadge" class="text-emerald-500">-</strong></span>
+          <span id="aiQualityBadge" class="px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-800 text-[10px]">Buona</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="p-2 rounded-lg bg-gray-50 dark:bg-white/5">
+            <span class="text-[10px] text-gray-400 block">Rischio</span>
+            <strong id="aiRiskScore" class="text-amber-500 text-sm">0/100</strong>
+          </div>
+          <div class="p-2 rounded-lg bg-gray-50 dark:bg-white/5">
+            <span class="text-[10px] text-gray-400 block">Diversificazione</span>
+            <strong id="aiDiversificationScore" class="text-emerald-500 text-sm">0/100</strong>
+          </div>
+        </div>
+
+        <div id="aiAnalysisContent" class="space-y-3">
+          <div class="p-2.5 rounded-lg bg-emerald-50/40 dark:bg-emerald-950/20 text-xs">
+            <strong class="text-emerald-600 dark:text-emerald-400 block mb-1">Punti di Forza:</strong>
+            <ul id="aiStrengthsList" class="space-y-1"></ul>
+          </div>
+          <div class="p-2.5 rounded-lg bg-amber-50/40 dark:bg-amber-950/20 text-xs">
+            <strong class="text-amber-600 dark:text-amber-400 block mb-1">Criticità / Concentrazione:</strong>
+            <ul id="aiWeaknessesList" class="space-y-1"></ul>
+          </div>
+          <div class="p-2.5 rounded-lg bg-blue-50/40 dark:bg-blue-950/20 text-xs">
+            <strong class="text-blue-600 dark:text-blue-400 block mb-1">Consigli Tattici:</strong>
+            <ul id="aiTacticalList" class="space-y-1"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#141416]/95 backdrop-blur-md border-t border-gray-200/60 dark:border-white/5 px-6 py-2 flex items-center justify-around z-30 text-[10px] font-mono">
+    <a href="/dashboard" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+      Dashboard
+    </a>
+    <a href="/portfolios" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+      Portafogli
+    </a>
+    <a href="/goals" class="flex flex-col items-center text-emerald-600 dark:text-emerald-400 font-bold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      FIRE & AI
+    </a>
+    <a href="/transactions" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Movimenti
+    </a>
+    <a href="/settings" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Impostazioni
+    </a>
+  </nav>
+
+  <!-- Vendors & Scripts -->
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/header_indices.js"></script>
+  <script src="/ai_reports.js"></script>
+
+  <script>
+    async function initMobilePortfolios() {
+      try {
+        const res = await fetch('/api/portfolios');
+        const data = await res.json();
+        if (data.success && data.portfolios) {
+          const sel = document.getElementById('reportPortfolioSelect');
+          data.portfolios.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            sel.appendChild(opt);
+          });
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const initialP = urlParams.get('portfolioId') || localStorage.getItem('foliotrack_selected_portfolio');
+          if (initialP && (initialP === 'all' || sel.querySelector(`option[value="${initialP}"]`))) {
+            sel.value = initialP;
+          }
+
+          sel.addEventListener('change', (e) => {
+            localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
+            if (window.AiReportsController) window.AiReportsController.runSimulation();
+          });
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', initMobilePortfolios);
+  </script>
+</body>
+</html>
+

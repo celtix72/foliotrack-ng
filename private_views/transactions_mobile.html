@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Movimenti | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-bold text-gray-900 dark:text-white">Movimenti</h1>
+      <span id="mTotalCount" class="text-[10px] font-mono text-gray-400">0 registrati</span>
+    </div>
+
+    <div class="flex items-center space-x-1.5">
+      <button id="mRecalculatePerfBtn" title="Ricalcola Performance Storica" class="p-2 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg id="mIconRecalculatePerf" class="w-5 h-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+
+      <button id="mToggleFiltersBtn" class="p-2 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        </svg>
+      </button>
+
+      <button id="mBulkImportBtn" class="p-2 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      </button>
+
+      <a id="mExportBtn" href="/api/transactions/export/wealthfolio" class="p-2 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <div id="live-ticker-container"></div>
+
+  <!-- Collapsible Mobile Filters Drawer -->
+  <div id="mFiltersPanel" class="hidden px-4 py-3 bg-gray-50 dark:bg-white/[0.03] border-b border-gray-200/50 dark:border-white/5 space-y-2.5 text-xs font-mono">
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <label class="block text-[10px] text-gray-400 uppercase font-bold">Portafoglio</label>
+        <select id="mFilterPortfolio" class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          <option value="">Tutti</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] text-gray-400 uppercase font-bold">Tipo Operazione</label>
+        <select id="mFilterType" class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          <option value="">Tutti</option>
+          <option value="BUY">BUY - Acquisto</option>
+          <option value="SELL">SELL - Vendita</option>
+          <option value="DIVIDEND">DIVIDEND</option>
+          <option value="INTEREST">INTEREST</option>
+          <option value="DEPOSIT">DEPOSIT</option>
+          <option value="WITHDRAWAL">WITHDRAWAL</option>
+          <option value="TRANSFER">TRANSFER</option>
+          <option value="FEE">FEE</option>
+          <option value="TAX">TAX</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <label class="block text-[10px] text-gray-400 uppercase font-bold">Strumento</label>
+        <select id="mFilterInstrumentType" class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          <option value="">Tutti</option>
+          <option value="EQUITY">Azioni (Equity)</option>
+          <option value="ETF">ETF</option>
+          <option value="BOND">Obbligazioni (Bond)</option>
+          <option value="CRYPTO">Crypto</option>
+          <option value="CASH">Liquidità (Cassa)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] text-gray-400 uppercase font-bold">Cerca</label>
+        <input type="text" id="mFilterTicker" placeholder="Ticker, nome..."
+          class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+      </div>
+    </div>
+    <!-- Date Presets & Inputs -->
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <label class="text-[10px] text-gray-400 uppercase font-bold">Periodo Rapido</label>
+        <button id="mResetFiltersBtn" class="text-[11px] text-rose-500 hover:text-rose-600 font-bold">↺ Reset</button>
+      </div>
+      <div class="flex items-center space-x-1 overflow-x-auto pb-1">
+        <button data-m-range="all" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white">Tutto</button>
+        <button data-m-range="ytd" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">YTD</button>
+        <button data-m-range="30d" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">30G</button>
+        <button data-m-range="90d" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">90G</button>
+        <button data-m-range="1y" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">1A</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-1.5">
+        <div>
+          <label class="text-[9px] text-gray-400">Da:</label>
+          <input type="date" id="mFilterStartDate" class="w-full px-1.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px]">
+        </div>
+        <div>
+          <label class="text-[9px] text-gray-400">A:</label>
+          <input type="date" id="mFilterEndDate" class="w-full px-1.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px]">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Transactions List -->
+  <main class="flex-1 px-4 py-3 space-y-2.5">
+    <div id="mTxListContainer" class="space-y-2">
+      <div class="signature-card p-6 text-center text-xs text-gray-400 font-mono">
+        Caricamento movimenti...
+      </div>
+    </div>
+
+    <!-- Mobile Pagination -->
+    <div class="pt-2 flex items-center justify-between text-xs font-mono">
+      <button id="mPrevBtn" disabled class="btn-pill px-3 py-1.5 bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300 disabled:opacity-40">
+        &larr; Prec.
+      </button>
+      <span id="mPageIndicator" class="text-gray-500">1</span>
+      <button id="mNextBtn" disabled class="btn-pill px-3 py-1.5 bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300 disabled:opacity-40">
+        Succ. &rarr;
+      </button>
+    </div>
+  </main>
+
+  <!-- Floating Action Button for New Transaction -->
+  <button id="mNewTxFab" class="fixed right-5 bottom-20 z-40 w-12 h-12 rounded-full bg-emerald-600 text-white shadow-xl flex items-center justify-center hover:bg-emerald-700 transition">
+    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+    </svg>
+  </button>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#141416]/95 backdrop-blur-md border-t border-gray-200/60 dark:border-white/5 px-6 py-2 flex items-center justify-around z-30 text-[10px] font-mono">
+    <a href="/dashboard" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+      Dashboard
+    </a>
+    <a href="/portfolios" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+      Portafogli
+    </a>
+    <a href="/transactions" class="flex flex-col items-center text-emerald-600 dark:text-emerald-400 font-bold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Movimenti
+    </a>
+    <a href="/settings" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Impostazioni
+    </a>
+  </nav>
+
+  <!-- Vendors & Component Scripts -->
+  <script src="/header_indices.js"></script>
+  <script src="/transaction_modal.js"></script>
+  <script src="/bulk_import.js"></script>
+
+  <script>
+    let currentLimit = 20;
+    let currentOffset = 0;
+    let totalTxs = 0;
+    let allTransactions = [];
+
+    const fmtEur = (v) => '€ ' + Math.round(Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const fmtPrice = (v) => {
+      const n = Number(v) || 0;
+      const hasSubCents = (n !== 0) && (Math.abs(n * 100 - Math.round(n * 100)) > 0.001);
+      return '€ ' + n.toLocaleString('it-IT', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: hasSubCents ? 4 : 2
+      });
+    };
+    const fmtQty = (v) => (Number(v) || 0).toLocaleString('it-IT', { maximumFractionDigits: 4 });
+
+    async function loadMobilePortfolios() {
+      try {
+        const res = await fetch('/api/portfolios');
+        const data = await res.json();
+        if (data.success && data.portfolios) {
+          const select = document.getElementById('mFilterPortfolio');
+          select.innerHTML = '<option value="">Tutti</option>' + data.portfolios.map(p => `
+            <option value="${p.id}">${p.name}</option>
+          `).join('');
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const initialP = urlParams.get('portfolioId') || localStorage.getItem('foliotrack_selected_portfolio');
+          if (initialP && initialP !== 'all' && select.querySelector(`option[value="${initialP}"]`)) {
+            select.value = initialP;
+          }
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+
+    async function loadMobileTransactions() {
+      const container = document.getElementById('mTxListContainer');
+      const pId = document.getElementById('mFilterPortfolio').value;
+      const type = document.getElementById('mFilterType').value;
+      const assetType = document.getElementById('mFilterInstrumentType')?.value || '';
+      const ticker = document.getElementById('mFilterTicker').value.trim();
+      const startDate = document.getElementById('mFilterStartDate')?.value || '';
+      const endDate = document.getElementById('mFilterEndDate')?.value || '';
+
+      const params = new URLSearchParams();
+      params.append('limit', currentLimit);
+      params.append('offset', currentOffset);
+      if (pId) params.append('portfolioId', pId);
+      if (type) params.append('type', type);
+      if (assetType) params.append('assetType', assetType);
+      if (ticker) params.append('search', ticker);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      try {
+        const res = await fetch(`/api/transactions?${params.toString()}`);
+        const data = await res.json();
+
+        if (!data.success || !data.transactions) {
+          container.innerHTML = '<div class="signature-card p-6 text-center text-xs text-rose-500 font-mono">Errore caricamento</div>';
+          return;
+        }
+
+        totalTxs = data.total;
+        allTransactions = data.transactions;
+        document.getElementById('mTotalCount').textContent = `${totalTxs} registrati`;
+
+        const currentPage = Math.floor(currentOffset / currentLimit) + 1;
+        const totalPages = Math.ceil(totalTxs / currentLimit) || 1;
+        document.getElementById('mPageIndicator').textContent = `${currentPage} / ${totalPages}`;
+        document.getElementById('mPrevBtn').disabled = currentOffset <= 0;
+        document.getElementById('mNextBtn').disabled = currentOffset + currentLimit >= totalTxs;
+
+        if (allTransactions.length === 0) {
+          container.innerHTML = '<div class="signature-card p-6 text-center text-xs text-gray-400 font-mono">Nessun movimento trovato</div>';
+          return;
+        }
+
+        container.innerHTML = allTransactions.map((t, idx) => {
+          let badgeClass = 'px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ';
+          if (t.type === 'BUY') badgeClass += 'badge-profit';
+          else if (t.type === 'SELL') badgeClass += 'badge-loss';
+          else if (t.type === 'DIVIDEND' || t.type === 'INTEREST') badgeClass += 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
+          else if (t.type === 'DEPOSIT') badgeClass += 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300';
+          else if (t.type === 'WITHDRAWAL') badgeClass += 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+          else badgeClass += 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300';
+
+          const aType = (t.assetType || (t.assetTicker ? 'EQUITY' : 'CASH')).toUpperCase();
+          let instBadge = '';
+          if (aType === 'EQUITY' || aType === 'STOCK') {
+            instBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">EQUITY</span>';
+          } else if (aType === 'ETF') {
+            instBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300">ETF</span>';
+          } else if (aType === 'BOND') {
+            instBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">BOND</span>';
+          } else {
+            instBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300">${aType}</span>`;
+          }
+
+          const isInflow = ['DEPOSIT', 'SELL', 'DIVIDEND', 'INTEREST'].includes(t.type);
+          const flowSign = isInflow ? '+' : (['BUY', 'WITHDRAWAL', 'FEE', 'TAX'].includes(t.type) ? '-' : '');
+          const flowColor = isInflow ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white';
+
+          const runningCashVal = Number(t.runningCash) || 0.0;
+          const runningCashColor = runningCashVal < 0
+            ? 'text-amber-500 font-bold'
+            : 'text-emerald-600 dark:text-emerald-400 font-bold';
+
+          return `
+            <div class="signature-card p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="${badgeClass}">${t.type}</span>
+                  ${instBadge}
+                  <span class="font-bold text-xs font-mono text-gray-900 dark:text-white">${t.assetTicker || t.portfolioName || '-'}</span>
+                </div>
+                <div class="font-bold font-mono text-xs tabular-nums ${flowColor}">${flowSign}${fmtEur(t.amount)}</div>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
+                <span>${t.date} ${t.quantity ? `• ${fmtQty(t.quantity)} @ ${fmtPrice(t.price)}` : ''}</span>
+                <span class="text-[10px] text-gray-500">${t.portfolioName || ''}</span>
+              </div>
+
+              <!-- Running Cash Balance -->
+              <div class="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-white/5 text-[11px] font-mono">
+                <span class="text-gray-400">Saldo Cassa post-mov:</span>
+                <span class="${runningCashColor}">${fmtEur(t.runningCash)}</span>
+              </div>
+
+              <div class="flex items-center justify-end space-x-3 pt-1 text-[11px] font-mono">
+                <button data-m-edit="${t.id}" class="text-gray-400 hover:text-emerald-500">Modifica</button>
+                <button data-m-del="${t.id}" class="text-rose-500 hover:text-rose-600">Elimina</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Bind Edit buttons
+        document.querySelectorAll('button[data-m-edit]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-m-edit'), 10);
+            const tx = allTransactions.find(x => x.id === id);
+            if (tx && window.TransactionModal) window.TransactionModal.open(tx);
+          });
+        });
+
+        // Bind Delete buttons
+        document.querySelectorAll('button[data-m-del]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = parseInt(btn.getAttribute('data-m-del'), 10);
+            if (!confirm('Eliminare questo movimento?')) return;
+            try {
+              const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+              const data = await res.json();
+              if (res.ok && data.success) {
+                loadMobileTransactions();
+              } else {
+                alert('Errore: ' + (data.error || 'Operazione fallita'));
+              }
+            } catch (err) {
+              alert('Errore: ' + err.message);
+            }
+          });
+        });
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    document.getElementById('mToggleFiltersBtn').addEventListener('click', () => {
+      document.getElementById('mFiltersPanel').classList.toggle('hidden');
+    });
+
+    document.getElementById('mFilterPortfolio').addEventListener('change', (e) => {
+      localStorage.setItem('foliotrack_selected_portfolio', e.target.value || 'all');
+      const exportBtn = document.getElementById('mExportBtn');
+      if (exportBtn) {
+        exportBtn.href = e.target.value ? `/api/transactions/export/wealthfolio?portfolioId=${e.target.value}` : '/api/transactions/export/wealthfolio';
+      }
+      currentOffset = 0;
+      loadMobileTransactions();
+    });
+
+    ['mFilterType', 'mFilterInstrumentType', 'mFilterStartDate', 'mFilterEndDate'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => {
+        currentOffset = 0;
+        loadMobileTransactions();
+      });
+    });
+
+    document.getElementById('mFilterTicker').addEventListener('input', () => {
+      currentOffset = 0;
+      loadMobileTransactions();
+    });
+
+    // Mobile date presets
+    document.querySelectorAll('.m-range-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const range = btn.getAttribute('data-m-range');
+        const today = new Date();
+        const endStr = today.toISOString().split('T')[0];
+        let startStr = '';
+
+        if (range === 'ytd') startStr = `${today.getFullYear()}-01-01`;
+        else if (range === '30d') startStr = new Date(today.getTime() - 30 * 86400000).toISOString().split('T')[0];
+        else if (range === '90d') startStr = new Date(today.getTime() - 90 * 86400000).toISOString().split('T')[0];
+        else if (range === '1y') startStr = new Date(today.getTime() - 365 * 86400000).toISOString().split('T')[0];
+
+        document.getElementById('mFilterStartDate').value = startStr;
+        document.getElementById('mFilterEndDate').value = range === 'all' ? '' : endStr;
+
+        document.querySelectorAll('.m-range-btn').forEach(b => {
+          if (b === btn) {
+            b.className = 'm-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white';
+          } else {
+            b.className = 'm-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300';
+          }
+        });
+
+        currentOffset = 0;
+        loadMobileTransactions();
+      });
+    });
+
+    document.getElementById('mResetFiltersBtn')?.addEventListener('click', () => {
+      document.getElementById('mFilterPortfolio').value = '';
+      localStorage.setItem('foliotrack_selected_portfolio', 'all');
+      document.getElementById('mFilterType').value = '';
+      if (document.getElementById('mFilterInstrumentType')) document.getElementById('mFilterInstrumentType').value = '';
+      document.getElementById('mFilterTicker').value = '';
+      if (document.getElementById('mFilterStartDate')) document.getElementById('mFilterStartDate').value = '';
+      if (document.getElementById('mFilterEndDate')) document.getElementById('mFilterEndDate').value = '';
+      currentOffset = 0;
+      loadMobileTransactions();
+    });
+
+    document.getElementById('mPrevBtn').addEventListener('click', () => {
+      if (currentOffset > 0) {
+        currentOffset = Math.max(0, currentOffset - currentLimit);
+        loadMobileTransactions();
+      }
+    });
+
+    document.getElementById('mNextBtn').addEventListener('click', () => {
+      if (currentOffset + currentLimit < totalTxs) {
+        currentOffset += currentLimit;
+        loadMobileTransactions();
+      }
+    });
+
+    document.getElementById('mNewTxFab').addEventListener('click', () => {
+      if (window.TransactionModal) {
+        const currentP = document.getElementById('mFilterPortfolio').value;
+        window.TransactionModal.open({ portfolioId: currentP ? parseInt(currentP, 10) : undefined });
+      }
+    });
+
+    document.getElementById('mRecalculatePerfBtn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('mRecalculatePerfBtn');
+      const icon = document.getElementById('mIconRecalculatePerf');
+      const pId = document.getElementById('mFilterPortfolio').value;
+      if (btn) btn.disabled = true;
+      if (icon) icon.classList.add('animate-spin');
+
+      try {
+        const res = await fetch('/api/history/recalculate-performance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolioId: pId || 'all', daysBack: 1825 })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Errore');
+        const m = data.metrics || {};
+        const twr1y = m.twr && m.twr['1Y'] !== undefined ? `${m.twr['1Y'] >= 0 ? '+' : ''}${m.twr['1Y']}%` : 'N/D';
+        alert(`✓ Storico ricalcolato con successo (${data.pointsReconstructed || 0} punti).\nTWR 1A: ${twr1y} • Max DD: -${m.maxDrawdown || 0}%`);
+        await loadMobileTransactions();
+      } catch (err) {
+        alert('Errore ricalcolo: ' + err.message);
+      } finally {
+        if (icon) icon.classList.remove('animate-spin');
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    document.getElementById('mBulkImportBtn').addEventListener('click', () => {
+      if (window.BulkImportModal) window.BulkImportModal.open();
+    });
+
+    document.addEventListener('transactionSaved', loadMobileTransactions);
+    document.addEventListener('transactionsImported', loadMobileTransactions);
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadMobilePortfolios();
+      await loadMobileTransactions();
+    });
+  </script>
+</body>
+</html>
+

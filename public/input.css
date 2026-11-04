@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Monospace quantitative financial elements */
+  .font-mono-numbers,
+  .tabular-nums,
+  code,
+  pre,
+  .price-tag,
+  .pnl-badge,
+  .currency-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Signature Theme Cards */
+  .signature-card {
+    border-radius: 1rem; /* 16px */
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .light .signature-card,
+  :not(.dark) .signature-card {
+    background-color: #fdfdfd;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 6px 18px rgba(0, 0, 0, 0.03);
+    color: #121212;
+  }
+
+  .dark .signature-card {
+    background-color: #1a1a1c;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.25);
+    color: #f4f4f5;
+  }
+
+  /* Signature Profit & Loss Badges */
+  .badge-profit {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.15rem 0.65rem;
+    font-size: 0.775rem;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    background-color: #e8f2eb;
+    color: #357941;
+  }
+
+  .dark .badge-profit {
+    background-color: #163321;
+    color: #86c09c;
+  }
+
+  .badge-loss {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.15rem 0.65rem;
+    font-size: 0.775rem;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    background-color: #fbe7e5;
+    color: #b3261e;
+  }
+
+  .dark .badge-loss {
+    background-color: #3b1816;
+    color: #f08a7e;
+  }
+
+  /* Pill Buttons */
+  .btn-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+  }
+
+  /* Background Gradient Container */
+  .signature-bg {
+    background: linear-gradient(180deg, #fafafa 0%, #f6f6f6 100%);
+    min-height: 100vh;
+  }
+
+  .dark .signature-bg {
+    background: linear-gradient(180deg, #121213 0%, #0d0d0e 100%);
+    min-height: 100vh;
+  }
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.45);
+}
+

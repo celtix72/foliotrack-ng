@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impostazioni, Valute & Titoli | FolioTrack</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+  <!-- SIDEBAR_PARTIAL -->
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div id="live-ticker-container"></div>
+
+    <!-- Header Section -->
+    <header class="px-8 pt-8 pb-4 max-w-7xl mx-auto w-full">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Impostazioni & Configurazione</h1>
+          <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">
+            Gestione Cambio Valuta FX, Titoli & Fonti Dati, Tassonomie GICS, Dati di Mercato 5Y, Notifiche e Backup
+          </p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            ● FolioTrack Core
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content with Tabs -->
+    <main class="flex-1 px-8 pb-16 max-w-7xl mx-auto w-full space-y-6">
+
+      <!-- Navigation Tabs Bar -->
+      <nav id="settings-tabs" class="flex flex-wrap gap-2 border-b border-gray-200/80 dark:border-white/5 pb-3">
+        <button type="button" data-settings-tab="fx" class="btn-pill px-4 py-2 text-xs font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center space-x-1.5 transition">
+          <span>💱</span>
+          <span>Cambio Valuta FX</span>
+        </button>
+        <button type="button" data-settings-tab="assets" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
+          <span>📈</span>
+          <span>Titoli & Asset</span>
+        </button>
+        <button type="button" data-settings-tab="classifications" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
+          <span>🏷️</span>
+          <span>Classificazioni</span>
+        </button>
+        <button type="button" data-settings-tab="market" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
+          <span>🌐</span>
+          <span>Dati di Mercato & 5Y</span>
+        </button>
+        <button type="button" data-settings-tab="notifications" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
+          <span>🔔</span>
+          <span>Notifiche</span>
+        </button>
+        <button type="button" data-settings-tab="backups" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
+          <span>☁️</span>
+          <span>Backup & DR</span>
+        </button>
+        <button type="button" data-settings-tab="ai" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
+          <span>🤖</span>
+          <span>AI & API Keys</span>
+        </button>
+        <button type="button" data-settings-tab="theme" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
+          <span>🎨</span>
+          <span>Aspetto</span>
+        </button>
+      </nav>
+
+      <!-- ========================================== -->
+      <!-- TAB 1: CAMBIO VALUTA FX                   -->
+      <!-- ========================================== -->
+      <div id="panel-fx" class="tab-panel space-y-6">
+        <!-- FX KPI Summary Cards -->
+        <div id="fx-cards-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- Populated by JS -->
+          <div class="signature-card p-4 space-y-1 animate-pulse">
+            <span class="text-xs font-mono text-gray-400">EUR / USD</span>
+            <div class="text-xl font-bold font-mono">Caricamento...</div>
+          </div>
+        </div>
+
+        <!-- FX Table Card -->
+        <div class="signature-card p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-gray-100 dark:border-white/5">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>💱</span>
+                <span>Tassi di Cambio Valuta (Forex Rates)</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                Gestione dei cambi per portafogli e movimenti multi-valuta (EUR, USD, CHF, GBP, JPY)
+              </p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button type="button" id="btn-sync-fx" class="btn-pill px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm flex items-center space-x-1.5">
+                <span>🔄</span>
+                <span>Sincronizza Tassi FX Ora</span>
+              </button>
+              <button type="button" id="btn-add-fx" class="btn-pill px-3.5 py-1.5 border border-gray-300 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-medium flex items-center space-x-1.5">
+                <span>➕</span>
+                <span>Nuova Coppia FX</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto border border-gray-200 dark:border-white/10 rounded-2xl">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 text-gray-500 uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th class="px-5 py-3">Coppia Valutaria</th>
+                  <th class="px-4 py-3">Direzione</th>
+                  <th class="px-4 py-3 text-right">Tasso di Cambio</th>
+                  <th class="px-4 py-3 text-right">Tasso Inverso</th>
+                  <th class="px-4 py-3">Fonte Dati</th>
+                  <th class="px-4 py-3">Ultimo Aggiornamento</th>
+                  <th class="px-4 py-3 text-right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody id="fx-table-body" class="divide-y divide-gray-100 dark:divide-white/5 tabular-nums">
+                <tr>
+                  <td colspan="7" class="px-4 py-8 text-center text-gray-400">Caricamento tassi di cambio...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 2: TITOLI & ASSET (FONTI DATI & 5Y)   -->
+      <!-- ========================================== -->
+      <div id="panel-assets" class="tab-panel hidden space-y-6">
+        <!-- Asset Filter & Actions Bar -->
+        <div class="signature-card p-5 space-y-4">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>📈</span>
+                <span>Catalogo Titoli & Fonti Dati di Mercato</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                Imposta la fonte specifica per ciascun titolo (Yahoo, Borsa Italiana, Google o Manuale) e scarica le quotazioni realtime e 5Y.
+              </p>
+            </div>
+
+            <!-- Bulk Buttons -->
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" id="btn-sync-all-quotes" class="btn-pill px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm flex items-center space-x-1.5" title="Aggiorna i prezzi correnti di tutti i titoli">
+                <span>⚡</span>
+                <span>Aggiorna Tutti i Prezzi Realtime</span>
+              </button>
+              <button type="button" id="btn-sync-all-history" class="btn-pill px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm flex items-center space-x-1.5" title="Scarica lo storico a 5 anni per tutti i titoli per costruire l'andamento del portafoglio">
+                <span>📥</span>
+                <span>Scarica Storico 5Y per Tutti</span>
+              </button>
+              <button type="button" id="btn-add-asset" class="btn-pill px-3.5 py-1.5 border border-gray-300 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-semibold flex items-center space-x-1">
+                <span>➕</span>
+                <span>Nuovo Titolo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Realtime Sync Frequency & Historical Rules Bar -->
+          <div class="p-3.5 rounded-xl bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs font-mono">
+            <div class="flex items-center space-x-3">
+              <span class="text-base">⏱️</span>
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-bold text-gray-900 dark:text-white">Frequenza Aggiornamento Realtime:</span>
+                  <div class="inline-flex items-center space-x-1.5">
+                    <input type="number" id="syncFrequencyInput" min="1" max="1440" value="30" class="w-16 px-2 py-1 text-center font-bold rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-black/30 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <span class="text-gray-500">minuti</span>
+                    <button type="button" id="btn-save-sync-freq" class="btn-pill px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs text-[11px] ml-1">
+                      Salva Frequenza
+                    </button>
+                  </div>
+                </div>
+                <span id="syncScheduleStatusText" class="text-[11px] text-gray-400 block mt-1">Schedulazione: default ogni 30 min</span>
+              </div>
+            </div>
+            <div class="text-[11px] text-gray-500 dark:text-gray-400 bg-white dark:bg-black/20 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/5 flex items-center space-x-2">
+              <span class="text-emerald-500">ℹ️</span>
+              <span><strong>Quotazioni storiche:</strong> scaricate una tantum se non già presenti oppure su richiesta forzata.</span>
+            </div>
+          </div>
+
+          <!-- Filters Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-100 dark:border-white/5 text-xs font-mono">
+            <div>
+              <label class="block text-[10px] text-gray-400 uppercase mb-1">Cerca Ticker o Nome</label>
+              <input type="text" id="assetSearchInput" placeholder="es. CSPX, BTP, AAPL..."
+                class="w-full px-3 py-1.5 rounded-xl border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <div>
+              <label class="block text-[10px] text-gray-400 uppercase mb-1">Filtra per Tipo</label>
+              <select id="assetTypeFilter" class="w-full px-3 py-1.5 rounded-xl border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="">Tutti i Tipi</option>
+                <option value="EQUITY">Azioni (EQUITY)</option>
+                <option value="ETF">ETF</option>
+                <option value="BOND">Obbligazioni (BOND)</option>
+                <option value="COMMODITY">Materie Prime</option>
+                <option value="CRYPTO">Crypto</option>
+                <option value="CASH">Liquidità</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-gray-400 uppercase mb-1">Filtra per Fonte Dati</label>
+              <select id="assetSourceFilter" class="w-full px-3 py-1.5 rounded-xl border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="">Tutte le Fonti</option>
+                <option value="YAHOO">Yahoo Finance (Default)</option>
+                <option value="BORSA_ITALIANA">Borsa Italiana</option>
+                <option value="GOOGLE">Google Finance</option>
+                <option value="MANUAL">Manuale</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assets Table -->
+        <div class="signature-card p-6 overflow-hidden">
+          <div class="overflow-x-auto border border-gray-200 dark:border-white/10 rounded-2xl">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 text-gray-500 uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th class="px-4 py-3">Ticker / ISIN</th>
+                  <th class="px-4 py-3">Nome Strumento</th>
+                  <th class="px-3 py-3">Tipo</th>
+                  <th class="px-3 py-3">Valuta & Borsa</th>
+                  <th class="px-4 py-3">Fonte Dati Mercato</th>
+                  <th class="px-4 py-3 text-right">Ultimo Prezzo</th>
+                  <th class="px-4 py-3 text-center">Storico 5Y</th>
+                  <th class="px-4 py-3 text-right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody id="assets-table-body" class="divide-y divide-gray-100 dark:divide-white/5 tabular-nums">
+                <tr>
+                  <td colspan="8" class="px-4 py-10 text-center text-gray-400">Caricamento catalogo titoli...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 3: CLASSIFICAZIONI (GICS, CLASSI, REG) -->
+      <!-- ========================================== -->
+      <div id="panel-classifications" class="tab-panel hidden space-y-6">
+        <!-- Classifications Summary Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- 1. Asset Classes -->
+          <div class="signature-card p-5 space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Asset Classes</h4>
+              <span id="class-count-badge" class="badge-profit text-[10px] font-mono">0 classi</span>
+            </div>
+            <div id="class-distribution-list" class="space-y-1.5 text-xs font-mono max-h-48 overflow-y-auto pr-1">
+              <div class="text-gray-400 py-4 text-center">Caricamento classi...</div>
+            </div>
+          </div>
+
+          <!-- 2. GICS Sectors -->
+          <div class="signature-card p-5 space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">11 Settori GICS</h4>
+              <span id="sector-count-badge" class="badge-profit text-[10px] font-mono">11 settori</span>
+            </div>
+            <div id="sector-distribution-list" class="space-y-1.5 text-xs font-mono max-h-48 overflow-y-auto pr-1">
+              <div class="text-gray-400 py-4 text-center">Caricamento settori...</div>
+            </div>
+          </div>
+
+          <!-- 3. Regions -->
+          <div class="signature-card p-5 space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Aree Geografiche</h4>
+              <span id="region-count-badge" class="badge-profit text-[10px] font-mono">0 regioni</span>
+            </div>
+            <div id="region-distribution-list" class="space-y-1.5 text-xs font-mono max-h-48 overflow-y-auto pr-1">
+              <div class="text-gray-400 py-4 text-center">Caricamento regioni...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rapid Taxonomy Assignment Table -->
+        <div class="signature-card p-6 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>🏷️</span>
+                <span>Assegnazione Rapida Tassonomie per Titolo</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                Modifica classe di investimento, settore GICS e regione geografica: il salvataggio è immediato.
+              </p>
+            </div>
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400">● Salvataggio live</span>
+          </div>
+
+          <div class="overflow-x-auto border border-gray-200 dark:border-white/10 rounded-2xl">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 text-gray-500 uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th class="px-4 py-3">Titolo (Ticker / Nome)</th>
+                  <th class="px-4 py-3">Asset Class</th>
+                  <th class="px-4 py-3">Settore GICS</th>
+                  <th class="px-4 py-3">Area Geografica</th>
+                  <th class="px-4 py-3 text-right">Stato</th>
+                </tr>
+              </thead>
+              <tbody id="taxonomy-table-body" class="divide-y divide-gray-100 dark:divide-white/5">
+                <tr>
+                  <td colspan="5" class="px-4 py-10 text-center text-gray-400">Caricamento tassonomie titoli...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 4: DATI DI MERCATO & CACHE 5Y         -->
+      <!-- ========================================== -->
+      <div id="panel-market" class="tab-panel hidden space-y-6">
+        <!-- Market Providers Status Cards Grid (populated dynamically) -->
+        <div id="market-providers-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="signature-card p-5 space-y-2 border-emerald-500/20 bg-emerald-500/5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm">Yahoo Finance</span>
+              <span class="badge-profit text-[10px]">Caricamento...</span>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              Provider principale per azioni globali, ETF, quote forex e criptovalute.
+            </p>
+          </div>
+          <div class="signature-card p-5 space-y-2 border-blue-500/20 bg-blue-500/5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm">Borsa Italiana</span>
+              <span class="badge-profit text-[10px]">Caricamento...</span>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              Primario per titoli di stato (BTP, BOT), obbligazioni MOT/EuroTLX con ISIN.
+            </p>
+          </div>
+          <div class="signature-card p-5 space-y-2 border-amber-500/20 bg-amber-500/5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm">Google Finance</span>
+              <span class="badge-profit text-[10px]">Caricamento...</span>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              Scraping realtime di fallback per titoli quotati su borse internazionali.
+            </p>
+          </div>
+        </div>
+
+        <!-- Live Market Ticker Banner Configuration Card -->
+        <div id="card-market-ticker-settings" class="signature-card p-6 space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-100 dark:border-white/5">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>📈</span>
+                <span>Barra Indici & Ticker Banner Scorrevole</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
+                Personalizza gli indici mondiali e gli asset visualizzati nel banner automatico in cima allo schermo, la velocità di scorrimento e la frequenza di aggiornamento in streaming.
+              </p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button type="button" id="btn-reset-ticker-config" class="btn-pill px-3 py-1.5 border border-gray-300 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 text-xs font-mono">
+                🔄 Ripristina Default
+              </button>
+              <button type="button" id="btn-save-ticker-config" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm flex items-center space-x-1.5">
+                <span>💾</span>
+                <span>Salva Configurazione</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Controls: Refresh frequency & Scroll speed -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Refresh Frequency -->
+            <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 space-y-2">
+              <label class="block text-xs font-mono font-bold text-gray-800 dark:text-gray-200">
+                ⏱️ Frequenza Aggiornamento Quotazioni
+              </label>
+              <p class="text-[11px] text-gray-500 font-mono">
+                Intervallo con cui il banner richiede i prezzi aggiornati in streaming.
+              </p>
+              <div class="flex items-center space-x-2 pt-1">
+                <input type="number" id="tickerRefreshSecondsInput" min="5" max="3600" value="60"
+                       class="w-20 px-3 py-1.5 text-center font-bold font-mono rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-black/30 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                <span class="text-xs font-mono text-gray-500">secondi</span>
+                <div class="flex items-center space-x-1 pl-2">
+                  <button type="button" class="btn-freq-quick px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-xs font-mono hover:bg-emerald-500 hover:text-white transition" data-freq="15">15s</button>
+                  <button type="button" class="btn-freq-quick px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-xs font-mono hover:bg-emerald-500 hover:text-white transition" data-freq="30">30s</button>
+                  <button type="button" class="btn-freq-quick px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-xs font-mono hover:bg-emerald-500 hover:text-white transition" data-freq="60">60s</button>
+                  <button type="button" class="btn-freq-quick px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-xs font-mono hover:bg-emerald-500 hover:text-white transition" data-freq="300">5m</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Scroll Speed -->
+            <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 space-y-2">
+              <label class="block text-xs font-mono font-bold text-gray-800 dark:text-gray-200">
+                🏃 Velocità Scorrimento Banner
+              </label>
+              <p class="text-[11px] text-gray-500 font-mono">
+                Regola la velocità con cui scorre il nastro orizzontale automatico.
+              </p>
+              <div class="flex items-center space-x-3 pt-1">
+                <select id="tickerScrollSpeedSelect" class="px-3 py-1.5 font-mono text-xs rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-black/30 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                  <option value="very_slow">Ultralenta (lettura lentissima)</option>
+                  <option value="slow">Lenta (molto rilassata)</option>
+                  <option value="normal" selected>Normale (calma)</option>
+                  <option value="fast">Moderata</option>
+                </select>
+                <button type="button" id="btn-force-refresh-ticker" class="btn-pill px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono flex items-center space-x-1">
+                  <span>⚡</span>
+                  <span>Test / Ricarica Banner</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Indici Attivi List -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-mono font-bold uppercase tracking-wider text-gray-500">
+                Indici Configurati (<span id="ticker-indices-count">0</span>)
+              </h4>
+              <span class="text-[11px] font-mono text-gray-400">Attiva/disattiva o modifica gli indici che scorrono</span>
+            </div>
+
+            <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-white/10">
+              <table class="w-full text-left text-xs font-mono divide-y divide-gray-200 dark:divide-white/5">
+                <thead class="bg-gray-50 dark:bg-white/5 text-gray-500 font-semibold">
+                  <tr>
+                    <th class="px-4 py-2.5 w-16 text-center">Attivo</th>
+                    <th class="px-4 py-2.5">Simbolo / Ticker</th>
+                    <th class="px-4 py-2.5">Nome Visualizzato</th>
+                    <th class="px-4 py-2.5 w-28">Valuta / Tipo</th>
+                    <th class="px-4 py-2.5 w-20 text-center">Azione</th>
+                  </tr>
+                </thead>
+                <tbody id="ticker-indices-tbody" class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-[#18181a]">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Add New Index & Presets -->
+          <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 space-y-4">
+            <div class="space-y-2">
+              <span class="text-xs font-mono font-bold text-gray-800 dark:text-gray-200 block">
+                💡 Aggiungi con 1 Click dai Benchmark Suggeriti:
+              </span>
+              <div id="ticker-presets-pills" class="flex flex-wrap gap-1.5">
+                <!-- Preset pills populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Custom Ticker Input -->
+            <div class="pt-3 border-t border-gray-200 dark:border-white/5">
+              <span class="text-xs font-mono font-bold text-gray-800 dark:text-gray-200 block mb-2">
+                ➕ Oppure aggiungi un Ticker personalizzato (es. da Yahoo Finance o Borsa Italiana):
+              </span>
+              <div class="flex flex-wrap items-center gap-2">
+                <input type="text" id="newTickerSymbolInput" placeholder="Simbolo (es. ^IXIC, AAPL, CL=F)" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-mono text-xs uppercase focus:ring-2 focus:ring-emerald-500 w-48">
+                <input type="text" id="newTickerNameInput" placeholder="Nome (es. NASDAQ, Apple)" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-emerald-500 w-48">
+                <select id="newTickerCurrencySelect" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-emerald-500">
+                  <option value="EUR">EUR (€)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="%">% (Rendimento)</option>
+                  <option value="">Forex / Senza valuta</option>
+                </select>
+                <button type="button" id="btn-add-custom-ticker" class="btn-pill px-4 py-1.5 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-200 text-white dark:text-gray-900 text-xs font-semibold shadow-xs flex items-center space-x-1">
+                  <span>➕</span>
+                  <span>Aggiungi Indice</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cache Metrics & History Builder Card -->
+        <div class="signature-card p-6 space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-100 dark:border-white/5">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>📊</span>
+                <span>Archivio Quotazioni Storiche & Ricostruzione Portafoglio</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
+                La tabella locale <code class="text-emerald-500 font-bold">asset_quotes</code> conserva i prezzi giornalieri per costruire l'andamento del portafoglio nel tempo (5 anni default).
+              </p>
+            </div>
+            <button type="button" id="btn-clear-market-cache" class="btn-pill px-3 py-1.5 border border-rose-500/30 text-rose-600 hover:bg-rose-500/10 text-xs font-mono">
+              🧹 Pulisci Dati &gt; 5Y
+            </button>
+          </div>
+
+          <!-- Cache Stats Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+            <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+              <span class="text-gray-400 text-[10px] uppercase block">Punti Prezzo in Cache</span>
+              <span id="market-total-quotes" class="text-xl font-bold tabular-nums text-gray-900 dark:text-white">0</span>
+            </div>
+            <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+              <span class="text-gray-400 text-[10px] uppercase block">Titoli Storicizzati</span>
+              <span id="market-distinct-tickers" class="text-xl font-bold tabular-nums text-gray-900 dark:text-white">0</span>
+            </div>
+            <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+              <span class="text-gray-400 text-[10px] uppercase block">Data Più Antica</span>
+              <span id="market-oldest-date" class="text-base font-bold tabular-nums text-gray-800 dark:text-gray-200">-</span>
+            </div>
+            <div class="p-4 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+              <span class="text-gray-400 text-[10px] uppercase block">Data Più Recente</span>
+              <span id="market-newest-date" class="text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">-</span>
+            </div>
+          </div>
+
+          <!-- 5Y Reconstruction Big Callout Box -->
+          <div class="p-6 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-transparent to-teal-500/10 border border-emerald-500/30 space-y-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <h4 class="text-sm font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                  <span>🚀</span>
+                  <span>Ricostruisci Andamento Storico Portafoglio (5Y)</span>
+                </h4>
+                <p class="text-xs text-gray-600 dark:text-gray-300 font-mono mt-1 leading-relaxed">
+                  Calcola retroattivamente il valore totale del patrimonio, la liquidità e i controvalori giorno per giorno per gli ultimi 5 anni combinando le transazioni storiche con le quotazioni di chiusura salvate in cache.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-3 pt-2">
+              <button type="button" id="btn-reconstruct-history" class="btn-pill px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 flex items-center space-x-2">
+                <span>⚙️</span>
+                <span>Ricostruisci Storico Portafoglio 5Y Ora</span>
+              </button>
+              <span id="reconstruct-status" class="text-xs font-mono text-gray-400"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 5: NOTIFICHE (TELEGRAM & WEB PUSH)    -->
+      <!-- ========================================== -->
+      <div id="panel-notifications" class="tab-panel hidden space-y-6">
+        <!-- 1. Notifiche Telegram -->
+        <div class="signature-card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>✈️</span>
+                <span>Notifiche Telegram Bot</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                Ricevi il digest di chiusura mercati (18:30) e gli alert di prezzo target o stop loss violati.
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-mono font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Bot Token (Telegram BotFather)
+              </label>
+              <input type="password" id="telegram_bot_token" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                class="w-full text-xs font-mono px-3 py-2 bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+            </div>
+            <div>
+              <label class="block text-xs font-mono font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Chat ID Personale o Canale
+              </label>
+              <input type="text" id="telegram_chat_id" placeholder="es. 987654321 o @canale"
+                class="w-full text-xs font-mono px-3 py-2 bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+            </div>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center gap-3">
+            <button type="button" id="btn-telegram-test" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5 inline-flex items-center space-x-1.5">
+              <span>✉️</span>
+              <span>Invia Messaggio di Prova</span>
+            </button>
+            <button type="button" id="btn-telegram-digest" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5 inline-flex items-center space-x-1.5">
+              <span>📊</span>
+              <span>Invia Daily Market Digest Ora</span>
+            </button>
+            <button type="button" id="btn-check-alerts" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5 inline-flex items-center space-x-1.5">
+              <span>🎯</span>
+              <span>Scansiona Target & Stop Loss</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Notifiche Web Push -->
+        <div class="signature-card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>🔔</span>
+                <span>Web Push Notifications (Desktop & Mobile)</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                Notifiche native del sistema operativo tramite Service Worker e crittografia VAPID.
+              </p>
+            </div>
+            <div id="push-status-text" class="text-xs font-mono">
+              Verifica in corso...
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" id="btn-toggle-push" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">
+              Attiva Notifiche Push nel Browser
+            </button>
+            <button type="button" id="btn-test-push" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5 hidden">
+              Invia Push di Prova
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 6: BACKUP & DISASTER RECOVERY         -->
+      <!-- ========================================== -->
+      <div id="panel-backups" class="tab-panel hidden space-y-6">
+        <!-- Google Drive Backup Sync -->
+        <div class="signature-card p-6">
+          <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2 mb-1">
+            <span>☁️</span>
+            <span>Sincronizzazione Cloud Google Drive (Opzionale)</span>
+          </h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mb-4">
+            Service Account per upload automatico dei file ZIP di backup sul cloud.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-mono font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Service Account Client Email
+              </label>
+              <input type="text" id="gdrive_client_email" placeholder="backup@project.iam.gserviceaccount.com"
+                class="w-full text-xs font-mono px-3 py-2 bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+            </div>
+            <div>
+              <label class="block text-xs font-mono font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Google Drive Folder ID
+              </label>
+              <input type="text" id="gdrive_folder_id" placeholder="1A2B3C4D5E6F..."
+                class="w-full text-xs font-mono px-3 py-2 bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+            </div>
+          </div>
+        </div>
+
+        <!-- Disaster Recovery & Backup Manager -->
+        <div class="signature-card p-6">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>💾</span>
+                <span>Disaster Recovery & Backup Automatico</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                Istantanee atomiche compresse in formato .ZIP in <code class="text-emerald-500">data/backups/</code>. Politica di retention: ultimi 14 backup.
+              </p>
+            </div>
+            <button type="button" id="btn-create-backup" class="btn-pill px-4 py-2 bg-gray-900 hover:bg-black text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-xs font-semibold inline-flex items-center space-x-2">
+              <span>➕</span>
+              <span>Crea Backup Immediato .ZIP</span>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto border border-gray-200 dark:border-white/10 rounded-2xl">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 font-mono text-gray-500 dark:text-gray-400">
+                <tr>
+                  <th class="px-4 py-3">File Archivio</th>
+                  <th class="px-4 py-3">Dimensione</th>
+                  <th class="px-4 py-3">Data Creazione</th>
+                  <th class="px-4 py-3 text-right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody id="backups-table-body">
+                <tr>
+                  <td colspan="4" class="px-4 py-6 text-center text-xs font-mono text-gray-400">
+                    Caricamento lista backup...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Zona Pericolo: Reset Database Finanziario -->
+        <div class="signature-card p-6 border border-rose-500/30 bg-rose-500/[0.02]">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-base font-bold text-rose-600 dark:text-rose-400 flex items-center space-x-2">
+                <span>⚠️</span>
+                <span>Zona Pericolo: Reset Completo Database Finanziario</span>
+              </h3>
+              <p class="text-xs text-gray-700 dark:text-gray-300 mt-1 font-mono">
+                Azzera completamente tutti i <strong>portafogli</strong>, i <strong>movimenti</strong>, i <strong>titoli</strong>, le <strong>quotazioni storiche</strong> e i <strong>conteggi fiscali/dividendi</strong>, ripartendo da un database completamente vuoto.
+              </p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 font-mono">
+                Gli account utente e le impostazioni di sistema vengono preservati. Prima dell'azzeramento viene creato automaticamente un backup di sicurezza ZIP.
+              </p>
+            </div>
+            <button type="button" id="btn-reset-financial-db" class="btn-pill px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold inline-flex items-center space-x-2 shadow-md shadow-rose-600/20 whitespace-nowrap transition">
+              <span>🗑️</span>
+              <span>Reimposta Tutto (Azzera DB)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 7: AI & API KEYS                      -->
+      <!-- ========================================== -->
+      <div id="panel-ai" class="tab-panel hidden space-y-6">
+        <div class="signature-card p-6">
+          <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2 mb-1">
+            <span>🧠</span>
+            <span>Chiavi API Intelligenza Artificiale & Tavily</span>
+          </h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mb-4">
+            I token vengono cifrati con crittografia forte AES-256-GCM sul database SQLite locale.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-mono font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Google Gemini API Key
+              </label>
+              <input type="password" id="gemini_api_key" placeholder="AIzaSy..."
+                class="w-full text-xs font-mono px-3 py-2 bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+            </div>
+            <div>
+              <label class="block text-xs font-mono font-medium text-gray-700 dark:text-gray-300 mb-1">
+                OpenAI API Key
+              </label>
+              <input type="password" id="openai_api_key" placeholder="sk-proj-..."
+                class="w-full text-xs font-mono px-3 py-2 bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+            </div>
+            <div>
+              <label class="block text-xs font-mono font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Tavily Search API Key
+              </label>
+              <input type="password" id="tavily_api_key" placeholder="tvly-..."
+                class="w-full text-xs font-mono px-3 py-2 bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end">
+            <button type="button" id="btn-save-ai-settings" class="btn-pill px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm inline-flex items-center space-x-1.5">
+              <span>💾</span>
+              <span>Salva Token AI</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 8: ASPETTO & TEMA                     -->
+      <!-- ========================================== -->
+      <div id="panel-theme" class="tab-panel hidden space-y-6">
+        <div class="signature-card p-6">
+          <h3 class="text-base font-bold text-gray-900 dark:text-white">Tema & Aspetto Visivo</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">Personalizza l'interfaccia Signature di FolioTrack</p>
+          <div class="mt-4 flex items-center space-x-3">
+            <button type="button" onclick="setTheme('light')" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5">Tema Chiaro</button>
+            <button type="button" onclick="setTheme('dark')" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5">Tema Scuro</button>
+            <button type="button" onclick="setTheme('system')" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5">Predefinito di Sistema</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modal Aggiungi / Modifica Coppia FX -->
+  <div id="fxModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-md p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <h3 id="fxModalTitle" class="text-base font-bold text-gray-900 dark:text-white">Nuova Coppia FX</h3>
+        <button type="button" id="closeFxModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1">✕</button>
+      </div>
+
+      <form id="fxForm" class="mt-4 space-y-4 text-xs font-mono">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Da Valuta (From) *</label>
+            <input type="text" id="modalFxFrom" required maxlength="3" placeholder="EUR"
+              class="w-full px-3 py-2 rounded-xl uppercase bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">A Valuta (To) *</label>
+            <input type="text" id="modalFxTo" required maxlength="3" placeholder="USD"
+              class="w-full px-3 py-2 rounded-xl uppercase bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Tasso di Cambio *</label>
+          <input type="number" id="modalFxRate" required step="any" min="0.000001" placeholder="1.0850"
+            class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-3 border-t border-gray-100 dark:border-white/5">
+          <button type="button" id="cancelFxModalBtn" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10">Annulla</button>
+          <button type="submit" class="btn-pill px-4 py-2 bg-emerald-600 text-white font-semibold">Salva Tasso</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Aggiungi / Modifica Titolo -->
+  <div id="assetModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-lg p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <h3 id="assetModalTitle" class="text-base font-bold text-gray-900 dark:text-white">Modifica Titolo</h3>
+        <button type="button" id="closeAssetModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1">✕</button>
+      </div>
+
+      <form id="assetForm" class="mt-4 space-y-3.5 text-xs font-mono">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Ticker / ISIN *</label>
+            <input type="text" id="modalAssetTicker" required placeholder="es. CSPX.MI o IT0005240830"
+              class="w-full px-3 py-2 rounded-xl uppercase bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Nome Strumento *</label>
+            <input type="text" id="modalAssetName" required placeholder="es. iShares Core S&P 500"
+              class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Tipo Strumento</label>
+            <select id="modalAssetType" class="w-full px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+              <option value="EQUITY">Azioni (EQUITY)</option>
+              <option value="ETF">ETF</option>
+              <option value="BOND">Obbligazioni (BOND)</option>
+              <option value="COMMODITY">Materie Prime</option>
+              <option value="CRYPTO">Crypto</option>
+              <option value="CASH">Liquidità</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Valuta</label>
+            <select id="modalAssetCurrency" class="w-full px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+              <option value="EUR">EUR (€)</option>
+              <option value="USD">USD ($)</option>
+              <option value="CHF">CHF (Fr)</option>
+              <option value="GBP">GBP (£)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Fonte Dati Mercato *</label>
+            <select id="modalAssetDataSource" class="w-full px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 font-bold text-emerald-600 dark:text-emerald-400">
+              <option value="YAHOO">Yahoo Finance (Default)</option>
+              <option value="BORSA_ITALIANA">Borsa Italiana</option>
+              <option value="GOOGLE">Google Finance</option>
+              <option value="MANUAL">Manuale</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Settore GICS</label>
+            <select id="modalAssetSector" class="w-full px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+              <option value="Unclassified">Non Classificato</option>
+              <option value="Information Technology">Information Technology</option>
+              <option value="Financials">Financials</option>
+              <option value="Health Care">Health Care</option>
+              <option value="Consumer Discretionary">Consumer Discretionary</option>
+              <option value="Consumer Staples">Consumer Staples</option>
+              <option value="Industrials">Industrials</option>
+              <option value="Energy">Energy</option>
+              <option value="Utilities">Utilities</option>
+              <option value="Materials">Materials</option>
+              <option value="Real Estate">Real Estate</option>
+              <option value="Communication Services">Communication Services</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Area Geografica</label>
+            <select id="modalAssetRegion" class="w-full px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+              <option value="Global">Global</option>
+              <option value="Americas">Americas / USA</option>
+              <option value="Europe">Europe</option>
+              <option value="Asia">Asia & Pacific</option>
+              <option value="Emerging Markets">Emerging Markets</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Prezzo Corrente</label>
+            <input type="number" id="modalAssetPrice" step="any" min="0" placeholder="0.00"
+              class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Borsa / Exchange</label>
+            <input type="text" id="modalAssetExchange" placeholder="es. BIT, MIL, NASDAQ"
+              class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-3 border-t border-gray-100 dark:border-white/5">
+          <button type="button" id="cancelAssetModalBtn" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10">Annulla</button>
+          <button type="submit" class="btn-pill px-5 py-2 bg-emerald-600 text-white font-semibold shadow-sm">Salva Titolo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Storico Quotazioni Asset -->
+  <div id="quotesHistoryModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card w-full max-w-4xl p-6 space-y-4 max-h-[92vh] flex flex-col my-auto border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12161f] shadow-2xl rounded-2xl">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-lg">
+            📊
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 id="quotesHistoryModalTitle" class="text-base font-bold text-gray-900 dark:text-white">Storico Quotazioni</h3>
+              <span id="quotesHistoryTickerBadge" class="font-mono text-xs px-2 py-0.5 rounded bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/10"></span>
+              <span id="quotesHistorySourceBadge" class="text-[10px] font-mono px-2 py-0.5 rounded"></span>
+            </div>
+            <p id="quotesHistoryModalSubtitle" class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">Dati archiviati in locale (tabella asset_quotes)</p>
+          </div>
+        </div>
+        <button type="button" id="closeQuotesHistoryModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-lg text-lg">✕</button>
+      </div>
+
+      <!-- Sync Error Alert Banner (if error exists) -->
+      <div id="quotesHistoryAlertBox" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-mono space-y-1">
+        <div class="font-bold flex items-center space-x-1.5">
+          <span>⚠️</span>
+          <span id="quotesHistoryAlertTitle">Errore Scaricamento Dati</span>
+        </div>
+        <p id="quotesHistoryAlertDesc" class="text-[11px] text-rose-600/90 dark:text-rose-400/90"></p>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+        <div class="p-3 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          <span class="text-gray-400 text-[10px] uppercase block">Quote in Cache</span>
+          <span id="qh-stat-count" class="text-lg font-bold tabular-nums text-gray-900 dark:text-white">0</span>
+        </div>
+        <div class="p-3 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          <span class="text-gray-400 text-[10px] uppercase block">Intervallo Date</span>
+          <span id="qh-stat-range" class="text-xs font-bold tabular-nums text-gray-800 dark:text-gray-200 block truncate">-</span>
+        </div>
+        <div class="p-3 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          <span class="text-gray-400 text-[10px] uppercase block">Min / Max Chiusura</span>
+          <span id="qh-stat-minmax" class="text-xs font-bold tabular-nums text-gray-800 dark:text-gray-200 block truncate">-</span>
+        </div>
+        <div class="p-3 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          <span class="text-gray-400 text-[10px] uppercase block">Ultima Chiusura</span>
+          <span id="qh-stat-latest" class="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">-</span>
+        </div>
+      </div>
+
+      <!-- Chart View Container -->
+      <div class="w-full bg-gray-50/50 dark:bg-black/20 rounded-xl p-3 border border-gray-100 dark:border-white/5" style="height: 220px; position: relative;">
+        <canvas id="quotesHistoryChart"></canvas>
+      </div>
+
+      <!-- Quotes Scrollable Table -->
+      <div class="flex-1 overflow-hidden flex flex-col min-h-0 border border-gray-200 dark:border-white/10 rounded-xl">
+        <div class="px-4 py-2 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 flex items-center justify-between text-xs font-mono">
+          <span class="font-bold text-gray-700 dark:text-gray-300">Dettaglio Quotazioni Giornaliere Archiviate</span>
+          <span id="qh-table-subtitle" class="text-gray-400 text-[11px]"></span>
+        </div>
+        <div class="overflow-y-auto max-h-48">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-gray-50/80 dark:bg-[#151922] border-b border-gray-200 dark:border-white/10 sticky top-0 text-gray-500 uppercase text-[10px]">
+              <tr>
+                <th class="px-4 py-2">Data</th>
+                <th class="px-4 py-2 text-right">Prezzo Chiusura</th>
+                <th class="px-4 py-2 text-right">Volume</th>
+                <th class="px-4 py-2">Fonte</th>
+                <th class="px-4 py-2 text-right">Data Download</th>
+              </tr>
+            </thead>
+            <tbody id="quotesHistoryTableBody" class="divide-y divide-gray-100 dark:divide-white/5 tabular-nums">
+              <tr>
+                <td colspan="5" class="px-4 py-6 text-center text-gray-400">Caricamento quotazioni...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-white/5">
+        <button type="button" id="btn-force-sync-history" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm flex items-center space-x-1.5" title="Scarica nuovamente lo storico a 5 anni per questo titolo dal provider configurato">
+          <span>🔄</span>
+          <span>Forza Riscarico Storico (5Y)</span>
+        </button>
+        <button type="button" id="cancelQuotesHistoryModalBtn" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configurazione & Test Provider Dati di Mercato -->
+  <div id="providerConfigModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden animate-fade-in">
+    <div class="signature-card w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#18181a]">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/40"></span>
+          <div>
+            <h3 id="providerModalTitle" class="text-base font-bold text-gray-900 dark:text-white">Configurazione Provider</h3>
+            <p id="providerModalDesc" class="text-xs text-gray-500 dark:text-gray-400 font-mono"></p>
+          </div>
+        </div>
+        <button type="button" id="closeProviderModalBtn" class="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-6">
+        <!-- Section 1: Configurazione Orari e Frequenza -->
+        <div class="space-y-4 bg-gray-50/60 dark:bg-white/[0.02] p-4 rounded-xl border border-gray-200/60 dark:border-white/5">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center space-x-1.5">
+              <span>⚙️</span>
+              <span>Parametri di Sincronizzazione & Orari</span>
+            </h4>
+            <span id="providerMarketStatusBadge" class="text-xs font-mono font-bold"></span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+            <div>
+              <label class="block text-gray-500 text-[11px] mb-1">Frequenza (minuti) *</label>
+              <input type="number" id="providerConfigFreq" min="1" max="1440" class="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-mono font-medium focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div>
+              <label class="block text-gray-500 text-[11px] mb-1">Apertura Mercato (HH:MM) *</label>
+              <input type="text" id="providerConfigOpen" placeholder="09:00" class="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-mono font-medium focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div>
+              <label class="block text-gray-500 text-[11px] mb-1">Chiusura Mercato (HH:MM) *</label>
+              <input type="text" id="providerConfigClose" placeholder="17:30" class="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-mono font-medium focus:ring-2 focus:ring-emerald-500">
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-1 text-xs font-mono">
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" id="providerConfigOnlyHours" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+              <span class="text-gray-700 dark:text-gray-300">Limita scarico quotazioni solo negli orari di apertura del mercato (escluso weekend)</span>
+            </label>
+
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" id="providerConfigEnabled" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+              <span class="text-gray-700 dark:text-gray-300">Provider Abilitato per sincronizzazione automatica</span>
+            </label>
+          </div>
+
+          <div class="flex items-center justify-end pt-2">
+            <button type="button" id="btnSaveProviderConfig" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition">
+              Salva Configurazione
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 2: Test Recupero Dati di Mercato -->
+        <div class="space-y-4 bg-gray-50/60 dark:bg-white/[0.02] p-4 rounded-xl border border-gray-200/60 dark:border-white/5">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center space-x-1.5">
+              <span>🧪</span>
+              <span>Test di Recupero Dati (Realtime & Storico)</span>
+            </h4>
+            <span class="text-[11px] text-gray-400 font-mono">Test di connettività immediata</span>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-mono text-gray-600 dark:text-gray-400">
+              Ticker / Codice Titolo / ISIN di Test:
+            </label>
+            <div class="flex items-center space-x-2">
+              <input type="text" id="providerTestTickerInput" placeholder="Es. AAPL, SWDA.MI, IT0005436693..." class="flex-1 px-3 py-2 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-mono text-xs uppercase focus:ring-2 focus:ring-emerald-500">
+              <button type="button" id="btnRunQuoteTest" class="btn-pill px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
+                <span>⚡</span>
+                <span>Test Realtime</span>
+              </button>
+              <button type="button" id="btnRunHistoryTest" class="btn-pill px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
+                <span>📈</span>
+                <span>Test Storico 5Y</span>
+              </button>
+            </div>
+            <!-- Sample tickers pills -->
+            <div class="flex items-center space-x-1.5 pt-1 text-[11px] font-mono">
+              <span class="text-gray-400">Esempi rapidi:</span>
+              <div id="providerSampleTickersPills" class="flex flex-wrap items-center gap-1">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Test Execution Result Container -->
+          <div id="providerTestResultBox" class="hidden rounded-xl border p-4 text-xs font-mono space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-200/60 dark:border-white/10">
+              <div class="flex items-center space-x-2">
+                <span id="testResultStatusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold"></span>
+                <span id="testResultTitle" class="font-bold text-gray-900 dark:text-white"></span>
+              </div>
+              <span id="testResultDuration" class="text-gray-400 text-[11px] font-mono"></span>
+            </div>
+            <div id="testResultContent" class="space-y-2">
+              <!-- Populated with quote or history data -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 bg-gray-50/70 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/5 flex items-center justify-end">
+        <button type="button" id="closeProviderModalBtn2" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-mono">
+          Chiudi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/push_client.js"></script>
+  <script src="/settings.js"></script>
+  <script src="/header_indices.js"></script>
+</body>
+</html>

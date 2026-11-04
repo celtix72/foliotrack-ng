@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accedi | FolioTrack</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  
+  <!-- Anti-FOUC Theme Script -->
+  <script src="/theme.js"></script>
+
+  <!-- Typography & CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+  <!-- Header Theme Switch -->
+  <div class="absolute top-6 right-6">
+    <button type="button" data-theme-toggle class="inline-flex items-center justify-center p-2.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-white/60 dark:bg-black/40 border border-gray-200/80 dark:border-white/10 shadow-sm backdrop-blur transition-all" title="Cambia tema">
+      <!-- Sun Icon -->
+      <svg class="theme-icon-sun w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+      <!-- Moon Icon -->
+      <svg class="theme-icon-moon w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+      </svg>
+    </button>
+  </div>
+
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <!-- Brand Logo -->
+    <div class="flex items-center justify-center space-x-3 mb-2">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white font-mono font-bold text-2xl">
+        FT
+      </div>
+    </div>
+    <h2 class="text-center text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+      FolioTrack
+    </h2>
+    <p class="mt-1 text-center text-sm text-gray-500 dark:text-gray-400 font-mono tracking-tight">
+      Multi-Asset Portfolio Tracker & Analytics
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
+    <div class="signature-card p-8 sm:p-10">
+
+      <!-- Alert Box for Notifications -->
+      <div id="alertBox" class="hidden mb-6 p-4 rounded-xl text-sm transition-all animate-fade-in font-medium" role="alert">
+        <div class="flex items-center space-x-2">
+          <span id="alertIcon" class="text-lg"></span>
+          <span id="alertMessage" class="flex-1"></span>
+        </div>
+      </div>
+
+      <form id="loginForm" class="space-y-6" novalidate>
+        <div>
+          <label for="username" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+            Username o Email
+          </label>
+          <div class="mt-1.5 relative">
+            <input id="username" name="username" type="text" autocomplete="username" required
+              class="block w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-white/10 bg-gray-50/50 dark:bg-[#141416] text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono text-sm transition"
+              placeholder="admin">
+          </div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+            Password
+          </label>
+          <div class="mt-1.5 relative">
+            <input id="password" name="password" type="password" autocomplete="current-password" required
+              class="block w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-white/10 bg-gray-50/50 dark:bg-[#141416] text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono text-sm transition"
+              placeholder="••••••••••••">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <input id="rememberMe" name="rememberMe" type="checkbox" checked
+              class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-white/20 rounded bg-gray-50 dark:bg-[#141416]">
+            <label for="rememberMe" class="ml-2 block text-xs text-gray-600 dark:text-gray-400 font-medium">
+              Ricordami su questo dispositivo
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <button id="submitBtn" type="submit"
+            class="btn-pill w-full py-3.5 px-4 text-white font-medium bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-lg shadow-emerald-600/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center justify-center space-x-2">
+            <span id="btnSpinner" class="hidden animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+            <span id="btnText">Accedi al Portafoglio</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="mt-6 pt-6 border-t border-gray-100 dark:border-white/5 text-center">
+        <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">
+          Self-Hosted Node.js & SQLite (WAL) • v1.0.0
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const alertBox = document.getElementById('alertBox');
+    const alertIcon = document.getElementById('alertIcon');
+    const alertMessage = document.getElementById('alertMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnSpinner = document.getElementById('btnSpinner');
+    const btnText = document.getElementById('btnText');
+
+    function showAlert(msg, isError = true) {
+      alertBox.classList.remove('hidden', 'bg-red-50', 'text-red-800', 'border', 'border-red-200', 'dark:bg-red-950/40', 'dark:text-red-300', 'dark:border-red-800/40', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'dark:bg-emerald-950/40', 'dark:text-emerald-300', 'dark:border-emerald-800/40');
+      
+      if (isError) {
+        alertBox.classList.add('bg-red-50', 'text-red-800', 'border', 'border-red-200', 'dark:bg-red-950/40', 'dark:text-red-300', 'dark:border-red-800/40');
+        alertIcon.textContent = '⚠️';
+      } else {
+        alertBox.classList.add('bg-emerald-50', 'text-emerald-800', 'border', 'border-emerald-200', 'dark:bg-emerald-950/40', 'dark:text-emerald-300', 'dark:border-emerald-800/40');
+        alertIcon.textContent = '✓';
+      }
+      alertMessage.textContent = msg;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        showAlert('Inserisci sia username che password.', true);
+        return;
+      }
+
+      // Loading state
+      submitBtn.disabled = true;
+      btnSpinner.classList.remove('hidden');
+      btnText.textContent = 'Verifica in corso...';
+      alertBox.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showAlert('Autenticazione riuscita! Reindirizzamento...', false);
+          // Store token in localStorage for client-side API calls if needed
+          if (data.token) {
+            localStorage.setItem('foliotrack_jwt', data.token);
+          }
+          if (data.user) {
+            localStorage.setItem('foliotrack_user', JSON.stringify(data.user));
+          }
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectTarget = urlParams.get('redirect') || '/';
+
+          setTimeout(() => {
+            window.location.href = redirectTarget;
+          }, 400);
+        } else {
+          showAlert(data.error || 'Credenziali errate o account non trovato.', true);
+          submitBtn.disabled = false;
+          btnSpinner.classList.add('hidden');
+          btnText.textContent = 'Accedi al Portafoglio';
+        }
+      } catch (err) {
+        showAlert('Errore di connessione al server: ' + err.message, true);
+        submitBtn.disabled = false;
+        btnSpinner.classList.add('hidden');
+        btnText.textContent = 'Accedi al Portafoglio';
+      }
+    });
+  </script>
+</body>
+</html>
+

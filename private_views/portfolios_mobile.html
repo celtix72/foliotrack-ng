@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>I Tuoi Portafogli | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24 select-none">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-[#131315]/90 backdrop-blur-md border-b border-gray-200/50 dark:border-white/5 px-4 py-3 flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-bold tracking-tight text-gray-900 dark:text-white">Portafogli</h1>
+      <p class="text-[10px] font-mono text-gray-400">Multi-conto & broker</p>
+    </div>
+
+    <button id="addPortfolioBtn" class="btn-pill px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 flex items-center space-x-1 active:scale-95 transition">
+      <span>+</span>
+      <span>Nuovo</span>
+    </button>
+  </header>
+
+  <!-- Live Market Ticker -->
+  <div id="live-ticker-container"></div>
+
+  <!-- Mobile Main Content -->
+  <main class="flex-1 px-4 py-4 space-y-4">
+    <div id="portfolios-list" class="space-y-4">
+      <div class="text-center py-12 text-xs font-mono text-gray-400">
+        Caricamento portafogli in corso...
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Creazione / Modifica Portafoglio (Responsive Mobile) -->
+  <div id="portfolioModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-md p-5 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <h3 id="portfolioModalTitle" class="text-sm font-bold text-gray-900 dark:text-white">Nuovo Portafoglio</h3>
+        <button type="button" id="closePortfolioModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 text-sm font-bold">✕</button>
+      </div>
+
+      <form id="portfolioForm" class="mt-3 space-y-3.5 text-xs font-mono">
+        <input type="hidden" id="modalPortfolioId">
+
+        <!-- Nome Portafoglio -->
+        <div>
+          <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Nome Portafoglio *</label>
+          <input type="text" id="modalPortfolioName" required placeholder="es. Directa Trading, Pensione ETF"
+            class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <!-- Tipologia & Valuta -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Tipologia *</label>
+            <select id="modalPortfolioType" class="w-full px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="Investimento">Investimento</option>
+              <option value="Pensione">Pensione</option>
+              <option value="Trading">Trading</option>
+              <option value="Liquidità">Liquidità</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Valuta Base *</label>
+            <select id="modalPortfolioCurrency" class="w-full px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="EUR">EUR (€)</option>
+              <option value="USD">USD ($)</option>
+              <option value="CHF">CHF (Fr)</option>
+              <option value="GBP">GBP (£)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Metodo Costo & Data Inizio -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Metodo Costo *</label>
+            <select id="modalPortfolioCostBasis" class="w-full px-2 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="WAC">WAC (PMC)</option>
+              <option value="FIFO">FIFO</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Data Inizio *</label>
+            <input type="date" id="modalPortfolioStartDate" required
+              class="w-full px-2 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <!-- Liquidità Iniziale & Colore -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Liquidità Iniziale (€)</label>
+            <input type="number" id="modalPortfolioInitialCash" step="any" min="0" placeholder="0"
+              class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <p class="text-[10px] text-gray-400 mt-1">Registrato come 1° movimento di deposito</p>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Colore Tematico</label>
+            <div class="flex items-center space-x-2">
+              <input type="color" id="modalPortfolioColor" value="#4f6b92" class="w-9 h-8 p-0.5 rounded-xl border border-gray-300 dark:border-white/10 cursor-pointer bg-transparent">
+              <span class="text-[10px] text-gray-400">Badge</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Includi nei Totali Globali -->
+        <div class="pt-1">
+          <label class="flex items-center space-x-2.5 cursor-pointer">
+            <input type="checkbox" id="modalPortfolioIncludeTotals" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300">
+            <span class="text-xs text-gray-700 dark:text-gray-300 font-medium font-sans">Includi nei totali patrimoniali</span>
+          </label>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="mt-5 pt-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-end space-x-2.5">
+          <button type="button" id="cancelPortfolioModalBtn" class="btn-pill px-3.5 py-1.5 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300">
+            Annulla
+          </button>
+          <button type="submit" id="savePortfolioBtn" class="btn-pill px-4 py-1.5 bg-emerald-600 text-white font-semibold shadow-sm">
+            Salva
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Tab Bar -->
+  <nav class="fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-[#131315]/95 backdrop-blur-lg border-t border-gray-200/60 dark:border-white/5 flex justify-around items-center h-16 px-2 safe-area-bottom">
+    <a href="/" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span class="text-[10px] tracking-tight">Dashboard</span>
+    </a>
+
+    <a href="/portfolios" class="flex flex-col items-center justify-center flex-1 py-1 text-emerald-600 dark:text-emerald-400 font-medium">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+      <span class="text-[10px] tracking-tight">Portafogli</span>
+    </a>
+
+    <a href="/transactions" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+      <span class="text-[10px] tracking-tight">Movimenti</span>
+    </a>
+
+    <a href="/settings" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span class="text-[10px] tracking-tight">Impostazioni</span>
+    </a>
+  </nav>
+
+  <script src="/header_indices.js"></script>
+  <script src="/portfolios_page.js"></script>
+</body>
+</html>

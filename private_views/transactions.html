@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro Movimenti & Transazioni | FolioTrack</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+  <!-- SIDEBAR_PARTIAL -->
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div id="live-ticker-container"></div>
+
+    <!-- Header & Top Actions -->
+    <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Registro Movimenti</h1>
+        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">Storico transazioni, compravendite, dividendi, cedole e versamenti</p>
+      </div>
+
+      <div class="flex items-center space-x-2.5">
+        <button id="recalculatePerfBtn" class="btn-pill px-3.5 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5 cursor-pointer" title="Ricostruisci andamento storico e ricalcola indicatori di performance">
+          <svg id="iconRecalculatePerf" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Ricalcola Performance</span>
+        </button>
+
+        <button id="exportWealthfolioBtn" class="btn-pill px-3.5 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span>Esporta Wealthfolio</span>
+        </button>
+
+        <button id="bulkImportBtn" class="btn-pill px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition shadow-md shadow-blue-600/20 flex items-center space-x-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <span>Importa CSV</span>
+        </button>
+
+        <button id="newTxBtn" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-1">
+          <span>+ Nuovo Movimento</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 px-8 pb-16 space-y-4">
+      <!-- Wealthfolio-style Summary KPIs Bar -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+        <div class="signature-card p-3 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[10px] uppercase font-bold text-gray-400">Movimenti Filtrati</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="kpiTxCount" class="text-lg font-bold text-gray-900 dark:text-white">0</span>
+            <span class="text-[10px] text-gray-400">operazioni</span>
+          </div>
+        </div>
+        <div class="signature-card p-3 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[10px] uppercase font-bold text-gray-400">Totale Entrate / Incassi</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="kpiTotalInflow" class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+€ 0,00</span>
+            <span class="text-[10px] text-emerald-500 font-bold">IN</span>
+          </div>
+        </div>
+        <div class="signature-card p-3 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[10px] uppercase font-bold text-gray-400">Totale Uscite / Acquisti</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="kpiTotalOutflow" class="text-lg font-bold text-gray-900 dark:text-gray-200">-€ 0,00</span>
+            <span class="text-[10px] text-gray-400 font-bold">OUT</span>
+          </div>
+        </div>
+        <div class="signature-card p-3 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[10px] uppercase font-bold text-gray-400">Flusso Netto Periodo</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="kpiNetFlow" class="text-lg font-bold text-gray-900 dark:text-white">€ 0,00</span>
+            <span id="kpiNetSign" class="text-[10px] font-bold text-gray-400">NET</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Filter Bar Card (Wealthfolio-style) -->
+      <div class="signature-card p-4 space-y-3 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5">
+        <!-- Row 1: Main Dropdowns & Search -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
+          <!-- Portfolio Filter -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Conto / Portafoglio</label>
+            <select id="filterPortfolio" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Tutti i portafogli</option>
+            </select>
+          </div>
+
+          <!-- Type Filter -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Tipo Operazione</label>
+            <select id="filterType" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Tutti i tipi</option>
+              <option value="BUY">BUY - Acquisto</option>
+              <option value="SELL">SELL - Vendita</option>
+              <option value="DIVIDEND">DIVIDEND - Dividendo</option>
+              <option value="INTEREST">INTEREST - Cedola / Interesse</option>
+              <option value="DEPOSIT">DEPOSIT - Versamento</option>
+              <option value="WITHDRAWAL">WITHDRAWAL - Prelievo</option>
+              <option value="TRANSFER">TRANSFER - Giroconto</option>
+              <option value="FEE">FEE - Commissioni</option>
+              <option value="TAX">TAX - Tasse / Bollo</option>
+              <option value="SPLIT">SPLIT - Frazionamento</option>
+            </select>
+          </div>
+
+          <!-- Instrument / Asset Type Filter -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Strumento / Asset Type</label>
+            <select id="filterInstrumentType" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Tutti gli strumenti</option>
+              <option value="EQUITY">Azioni (Equity / Stock)</option>
+              <option value="ETF">ETF / Fondi UCITS</option>
+              <option value="BOND">Obbligazioni (Bond / BTP)</option>
+              <option value="CRYPTO">Criptovalute (Crypto)</option>
+              <option value="COMMODITY">Materie Prime (Commodity)</option>
+              <option value="CASH">Liquidità Pura (Cassa)</option>
+            </select>
+          </div>
+
+          <!-- Search Ticker / Name / Notes -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cerca (Ticker, Nome, Note)</label>
+            <div class="relative">
+              <input type="text" id="filterSearch" placeholder="es. AAPL, SPM, cedola..."
+                class="w-full pl-8 pr-7 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <button id="clearSearchBtn" class="hidden absolute right-2.5 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Date Filters & Quick Presets -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2 border-t border-gray-200/50 dark:border-white/5 text-xs font-mono">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[10px] uppercase font-bold text-gray-400 mr-1">Periodo Rapido:</span>
+            <button data-range="all" class="date-preset-btn px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-semibold text-[11px] transition">Tutto</button>
+            <button data-range="ytd" class="date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">Quest'anno</button>
+            <button data-range="30d" class="date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">30 gg</button>
+            <button data-range="90d" class="date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">90 gg</button>
+            <button data-range="1y" class="date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">1 Anno</button>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-gray-400 text-[11px]">Da:</span>
+              <input type="date" id="filterStartDate"
+                class="px-2.5 py-1 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <span class="text-gray-400 text-[11px]">A:</span>
+              <input type="date" id="filterEndDate"
+                class="px-2.5 py-1 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Active Filters Pills & Reset -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/50 dark:border-white/5 text-xs font-mono">
+          <div id="activeFiltersList" class="flex flex-wrap items-center gap-1.5">
+            <span class="text-gray-400 text-[11px]">Nessun filtro attivo (mostrati tutti i movimenti)</span>
+          </div>
+          <button id="resetFiltersBtn" class="text-rose-600 hover:text-rose-700 dark:text-rose-400 font-semibold transition flex items-center space-x-1 text-xs">
+            <span>↺ Resetta Filtri</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Transactions Table Card -->
+      <div class="signature-card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-sm font-mono">
+            <thead class="bg-gray-50/70 dark:bg-white/5 text-gray-500 uppercase tracking-wider text-xs font-semibold">
+              <tr>
+                <th class="px-4 py-3">Data</th>
+                <th class="px-4 py-3">Conto</th>
+                <th class="px-3 py-3">Tipo</th>
+                <th class="px-3 py-3">Strumento</th>
+                <th class="px-4 py-3">Asset / Ticker</th>
+                <th class="px-3 py-3 text-right">Quantità</th>
+                <th class="px-3 py-3 text-right">Prezzo</th>
+                <th class="px-3 py-3 text-right">Comm./Tax</th>
+                <th class="px-4 py-3 text-right">Controvalore</th>
+                <th class="px-5 py-3 text-right font-bold text-gray-800 dark:text-gray-200">Liquidità Cumulativa</th>
+                <th class="px-4 py-3">Note</th>
+                <th class="px-4 py-3 text-center">Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="txTableBody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums">
+              <tr>
+                <td colspan="12" class="px-6 py-10 text-center text-gray-400">Caricamento movimenti in corso...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Bar -->
+        <div class="px-6 py-4 bg-gray-50/70 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-mono">
+          <div class="text-gray-500 flex items-center space-x-3">
+            <span>Mostrati <span id="paginationRange" class="font-bold text-gray-900 dark:text-white">0-0</span> di <span id="paginationTotal" class="font-bold text-gray-900 dark:text-white">0</span> movimenti</span>
+            <div class="flex items-center space-x-1.5 text-xs text-gray-400">
+              <span>Righe:</span>
+              <select id="pageSizeSelect" class="px-2 py-0.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-700 dark:text-gray-300 text-xs font-mono">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button id="prevPageBtn" disabled class="btn-pill px-3 py-1.5 bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-white/20 transition">
+              &larr; Precedente
+            </button>
+            <span id="pageIndicator" class="px-2 font-bold text-gray-700 dark:text-gray-300">1</span>
+            <button id="nextPageBtn" disabled class="btn-pill px-3 py-1.5 bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-white/20 transition">
+              Successiva &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden animate-fade-in font-sans">
+    <div class="signature-card w-full max-w-sm p-6 space-y-4 border border-gray-200 dark:border-white/10 bg-white dark:bg-[#18181a] shadow-2xl">
+      <div class="flex items-center space-x-3 text-rose-600 dark:text-rose-400">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        <h3 class="text-base font-bold text-gray-900 dark:text-white">Conferma Eliminazione</h3>
+      </div>
+      <p class="text-xs text-gray-600 dark:text-gray-400">
+        Sei sicuro di voler eliminare questa transazione? L'operazione ricalcolerà immediatamente il PMC e la liquidità disponibile del portafoglio.
+      </p>
+      <div class="flex items-center justify-end space-x-2 pt-2">
+        <button id="cancelDeleteBtn" class="btn-pill px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition">
+          Annulla
+        </button>
+        <button id="confirmDeleteBtn" class="btn-pill px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition shadow-md shadow-rose-600/20">
+          Elimina Transazione
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vendors & Component Scripts -->
+  <script src="/header_indices.js"></script>
+  <script src="/transaction_modal.js"></script>
+  <script src="/bulk_import.js"></script>
+
+  <script>
+    let currentLimit = 25;
+    let currentOffset = 0;
+    let totalTransactions = 0;
+    let txToDeleteId = null;
+    let userPortfolios = [];
+    let activeDateRange = 'all';
+
+    const fmtEur = (v) => '€ ' + Math.round(Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const fmtPrice = (v) => {
+      const n = Number(v) || 0;
+      const hasSubCents = (n !== 0) && (Math.abs(n * 100 - Math.round(n * 100)) > 0.001);
+      return '€ ' + n.toLocaleString('it-IT', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: hasSubCents ? 4 : 2
+      });
+    };
+    const fmtQty = (v) => (Number(v) || 0).toLocaleString('it-IT', { maximumFractionDigits: 4 });
+
+    async function loadPortfolios() {
+      try {
+        const res = await fetch('/api/portfolios');
+        const data = await res.json();
+        if (data.success && data.portfolios) {
+          userPortfolios = data.portfolios;
+          const select = document.getElementById('filterPortfolio');
+          select.innerHTML = '<option value="">Tutti i portafogli</option>' + userPortfolios.map(p => `
+            <option value="${p.id}">${p.name} (${p.currency})</option>
+          `).join('');
+
+          // URL param or LocalStorage pre-selection
+          const urlParams = new URLSearchParams(window.location.search);
+          const initialP = urlParams.get('portfolioId') || localStorage.getItem('foliotrack_selected_portfolio');
+          if (initialP && initialP !== 'all' && select.querySelector(`option[value="${initialP}"]`)) {
+            select.value = initialP;
+          }
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+
+    async function loadTransactions() {
+      const tbody = document.getElementById('txTableBody');
+      const pId = document.getElementById('filterPortfolio').value;
+      const type = document.getElementById('filterType').value;
+      const assetType = document.getElementById('filterInstrumentType').value;
+      const search = document.getElementById('filterSearch').value.trim();
+      const startDate = document.getElementById('filterStartDate').value;
+      const endDate = document.getElementById('filterEndDate').value;
+
+      updateActiveFiltersUI();
+
+      const params = new URLSearchParams();
+      params.append('limit', currentLimit);
+      params.append('offset', currentOffset);
+      if (pId) params.append('portfolioId', pId);
+      if (type) params.append('type', type);
+      if (assetType) params.append('assetType', assetType);
+      if (search) params.append('search', search);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      try {
+        const res = await fetch(`/api/transactions?${params.toString()}`);
+        const data = await res.json();
+
+        if (!data.success || !data.transactions) {
+          tbody.innerHTML = '<tr><td colspan="12" class="px-6 py-8 text-center text-rose-500">Errore nel caricamento dei movimenti</td></tr>';
+          return;
+        }
+
+        totalTransactions = data.total;
+        renderPagination(data.total, data.transactions.length);
+
+        // Update KPI summary cards
+        if (data.summary) {
+          document.getElementById('kpiTxCount').textContent = data.summary.totalCount.toLocaleString('it-IT');
+          document.getElementById('kpiTotalInflow').textContent = '+' + fmtEur(data.summary.totalInflow);
+          document.getElementById('kpiTotalOutflow').textContent = '-' + fmtEur(data.summary.totalOutflow);
+          const net = Number(data.summary.netFlow) || 0;
+          const netEl = document.getElementById('kpiNetFlow');
+          netEl.textContent = (net >= 0 ? '+' : '') + fmtEur(net);
+          netEl.className = 'text-lg font-bold ' + (net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400');
+        }
+
+        if (data.transactions.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="12" class="px-6 py-12 text-center text-gray-400">
+                Nessun movimento trovato con i filtri selezionati.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        const isSinglePortfolio = Boolean(pId);
+
+        tbody.innerHTML = data.transactions.map(t => {
+          let badgeClass = 'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wide leading-none ';
+          if (t.type === 'BUY') badgeClass += 'badge-profit';
+          else if (t.type === 'SELL') badgeClass += 'badge-loss';
+          else if (t.type === 'DIVIDEND' || t.type === 'INTEREST') badgeClass += 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
+          else if (t.type === 'DEPOSIT') badgeClass += 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300';
+          else if (t.type === 'WITHDRAWAL') badgeClass += 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+          else if (t.type === 'TRANSFER') badgeClass += 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300';
+          else badgeClass += 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300';
+
+          // Instrument Badge
+          const aType = (t.assetType || (t.assetTicker ? 'EQUITY' : 'CASH')).toUpperCase();
+          let instBadge = '';
+          if (aType === 'EQUITY' || aType === 'STOCK') {
+            instBadge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">EQUITY</span>';
+          } else if (aType === 'ETF') {
+            instBadge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300">ETF</span>';
+          } else if (aType === 'BOND') {
+            instBadge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">BOND</span>';
+          } else if (aType === 'CRYPTO') {
+            instBadge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-950/60 dark:text-yellow-300">CRYPTO</span>';
+          } else if (aType === 'COMMODITY') {
+            instBadge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">COMM</span>';
+          } else {
+            instBadge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300">CASH</span>';
+          }
+
+          const fees = (Number(t.commission) || 0) + (Number(t.tax) || 0);
+          const isInflow = ['DEPOSIT', 'SELL', 'DIVIDEND', 'INTEREST'].includes(t.type);
+          const flowColor = isInflow ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-900 dark:text-white font-bold';
+          const flowSign = isInflow ? '+' : (['BUY', 'WITHDRAWAL', 'FEE', 'TAX'].includes(t.type) ? '-' : '');
+
+          const runningCashVal = Number(t.runningCash) || 0.0;
+          const runningCashColor = runningCashVal < 0
+            ? 'text-amber-600 dark:text-amber-400 font-bold'
+            : 'text-emerald-600 dark:text-emerald-400 font-semibold';
+
+          return `
+            <tr class="hover:bg-gray-50/70 dark:hover:bg-white/5 transition group">
+              <td class="px-4 py-2.5 whitespace-nowrap text-xs text-gray-600 dark:text-gray-400 font-mono">${t.date}</td>
+              <td class="px-4 py-2.5 whitespace-nowrap font-medium text-xs text-gray-800 dark:text-gray-200">${t.portfolioName || 'P #' + t.portfolioId}</td>
+              <td class="px-3 py-2.5 whitespace-nowrap"><span class="${badgeClass}">${t.type}</span></td>
+              <td class="px-3 py-2.5 whitespace-nowrap">${instBadge}</td>
+              <td class="px-4 py-2.5 whitespace-nowrap">
+                ${t.assetTicker ? `
+                  <div class="inline-flex items-center space-x-1.5 leading-none">
+                    <span class="font-bold text-xs text-gray-900 dark:text-white">${t.assetTicker}</span>
+                    ${t.assetName ? `<span class="text-gray-400 text-[11px] truncate max-w-[130px] font-sans" title="${t.assetName}">(${t.assetName})</span>` : ''}
+                  </div>
+                ` : '<span class="text-gray-400 text-xs italic">Liquidità (Cassa)</span>'}
+              </td>
+              <td class="px-3 py-2.5 whitespace-nowrap text-right font-medium text-xs text-gray-800 dark:text-gray-200">${t.quantity ? fmtQty(t.quantity) : '-'}</td>
+              <td class="px-3 py-2.5 whitespace-nowrap text-right text-xs text-gray-700 dark:text-gray-300">${t.price ? fmtPrice(t.price) : '-'}</td>
+              <td class="px-3 py-2.5 whitespace-nowrap text-right text-[11px] text-gray-400 font-mono">${fees > 0 ? fmtEur(fees) : '-'}</td>
+              <td class="px-4 py-2.5 whitespace-nowrap text-right text-xs font-mono ${flowColor}">${flowSign}${fmtEur(t.amount)}</td>
+              <td class="px-5 py-2.5 whitespace-nowrap text-right font-mono text-xs">
+                <div class="${runningCashColor}">${fmtEur(t.runningCash)}</div>
+                ${!isSinglePortfolio && t.globalRunningCash !== undefined ? `
+                  <div class="text-[10px] text-gray-400 font-normal leading-tight" title="Liquidità totale aggregata di tutti i portafogli">
+                    Tot: ${fmtEur(t.globalRunningCash)}
+                  </div>
+                ` : ''}
+              </td>
+              <td class="px-4 py-2.5 whitespace-nowrap text-gray-400 truncate max-w-[140px] font-sans text-xs" title="${t.notes || ''}">${t.notes || '-'}</td>
+              <td class="px-4 py-2.5 whitespace-nowrap text-center">
+                <div class="inline-flex items-center space-x-1 opacity-80 group-hover:opacity-100 transition leading-none">
+                  <button data-edit-id="${t.id}" title="Modifica" class="p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                  <button data-delete-id="${t.id}" title="Elimina" class="p-1 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Bind Edit buttons
+        document.querySelectorAll('button[data-edit-id]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-edit-id'), 10);
+            const tx = data.transactions.find(x => x.id === id);
+            if (tx && window.TransactionModal) {
+              window.TransactionModal.open(tx);
+            }
+          });
+        });
+
+        // Bind Delete buttons
+        document.querySelectorAll('button[data-delete-id]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            txToDeleteId = parseInt(btn.getAttribute('data-delete-id'), 10);
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+          });
+        });
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function updateActiveFiltersUI() {
+      const container = document.getElementById('activeFiltersList');
+      const pSelect = document.getElementById('filterPortfolio');
+      const tSelect = document.getElementById('filterType');
+      const iSelect = document.getElementById('filterInstrumentType');
+      const searchInput = document.getElementById('filterSearch');
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+      clearSearchBtn.classList.toggle('hidden', !searchInput.value.trim());
+
+      const chips = [];
+
+      if (pSelect.value) {
+        const text = pSelect.options[pSelect.selectedIndex].text;
+        chips.push({ label: `Conto: ${text.split('(')[0].trim()}`, onClear: () => { pSelect.value = ''; pSelect.dispatchEvent(new Event('change')); } });
+      }
+      if (tSelect.value) {
+        chips.push({ label: `Tipo: ${tSelect.value}`, onClear: () => { tSelect.value = ''; tSelect.dispatchEvent(new Event('change')); } });
+      }
+      if (iSelect.value) {
+        chips.push({ label: `Strumento: ${iSelect.value}`, onClear: () => { iSelect.value = ''; iSelect.dispatchEvent(new Event('change')); } });
+      }
+      if (searchInput.value.trim()) {
+        chips.push({ label: `Cerca: "${searchInput.value.trim()}"`, onClear: () => { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); } });
+      }
+      if (startInput.value || endInput.value) {
+        const periodStr = `${startInput.value ? 'Dal ' + startInput.value : ''} ${endInput.value ? 'Al ' + endInput.value : ''}`.trim();
+        chips.push({ label: `Periodo: ${periodStr}`, onClear: () => { startInput.value = ''; endInput.value = ''; setDatePresetActive('all'); currentOffset = 0; loadTransactions(); } });
+      }
+
+      if (chips.length === 0) {
+        container.innerHTML = '<span class="text-gray-400 text-[11px]">Nessun filtro attivo (mostrati tutti i movimenti)</span>';
+      } else {
+        container.innerHTML = chips.map((c, idx) => `
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/40">
+            <span>${c.label}</span>
+            <button data-clear-idx="${idx}" class="ml-1.5 hover:text-emerald-950 dark:hover:text-white font-bold">&times;</button>
+          </span>
+        `).join('');
+
+        container.querySelectorAll('button[data-clear-idx]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-clear-idx'), 10);
+            if (chips[idx]) chips[idx].onClear();
+          });
+        });
+      }
+    }
+
+    function setDatePreset(range) {
+      activeDateRange = range;
+      const today = new Date();
+      const endStr = today.toISOString().split('T')[0];
+      let startStr = '';
+
+      if (range === 'ytd') {
+        startStr = `${today.getFullYear()}-01-01`;
+      } else if (range === '30d') {
+        const d = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        startStr = d.toISOString().split('T')[0];
+      } else if (range === '90d') {
+        const d = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+        startStr = d.toISOString().split('T')[0];
+      } else if (range === '1y') {
+        const d = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+        startStr = d.toISOString().split('T')[0];
+      } else {
+        startStr = '';
+      }
+
+      document.getElementById('filterStartDate').value = startStr;
+      document.getElementById('filterEndDate').value = range === 'all' ? '' : endStr;
+
+      setDatePresetActive(range);
+      currentOffset = 0;
+      loadTransactions();
+    }
+
+    function setDatePresetActive(activeRange) {
+      activeDateRange = activeRange;
+      document.querySelectorAll('.date-preset-btn').forEach(btn => {
+        const r = btn.getAttribute('data-range');
+        if (r === activeRange) {
+          btn.className = 'date-preset-btn px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-semibold text-[11px] transition';
+        } else {
+          btn.className = 'date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition';
+        }
+      });
+    }
+
+    function renderPagination(total, countOnPage) {
+      const start = total === 0 ? 0 : currentOffset + 1;
+      const end = currentOffset + countOnPage;
+      document.getElementById('paginationRange').textContent = `${start}-${end}`;
+      document.getElementById('paginationTotal').textContent = total;
+
+      const currentPage = Math.floor(currentOffset / currentLimit) + 1;
+      const totalPages = Math.ceil(total / currentLimit) || 1;
+      document.getElementById('pageIndicator').textContent = `${currentPage} / ${totalPages}`;
+
+      document.getElementById('prevPageBtn').disabled = currentOffset <= 0;
+      document.getElementById('nextPageBtn').disabled = currentOffset + currentLimit >= total;
+    }
+
+    // Pagination Handlers
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+      if (currentOffset > 0) {
+        currentOffset = Math.max(0, currentOffset - currentLimit);
+        loadTransactions();
+      }
+    });
+
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+      if (currentOffset + currentLimit < totalTransactions) {
+        currentOffset += currentLimit;
+        loadTransactions();
+      }
+    });
+
+    document.getElementById('pageSizeSelect')?.addEventListener('change', (e) => {
+      currentLimit = parseInt(e.target.value, 10) || 25;
+      currentOffset = 0;
+      loadTransactions();
+    });
+
+    // Date Preset buttons click
+    document.querySelectorAll('.date-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = btn.getAttribute('data-range');
+        setDatePreset(r);
+      });
+    });
+
+    // Delete Modal Actions
+    document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+      document.getElementById('deleteConfirmModal').classList.add('hidden');
+      txToDeleteId = null;
+    });
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+      if (!txToDeleteId) return;
+      try {
+        const res = await fetch(`/api/transactions/${txToDeleteId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          document.getElementById('deleteConfirmModal').classList.add('hidden');
+          txToDeleteId = null;
+          loadTransactions();
+        } else {
+          alert('Errore eliminazione: ' + (data.error || 'Operazione fallita'));
+        }
+      } catch (err) {
+        alert('Errore di connessione: ' + err.message);
+      }
+    });
+
+    // New Transaction button
+    document.getElementById('newTxBtn')?.addEventListener('click', () => {
+      if (window.TransactionModal) {
+        const currentP = document.getElementById('filterPortfolio').value;
+        window.TransactionModal.open({ portfolioId: currentP ? parseInt(currentP, 10) : undefined });
+      }
+    });
+
+    // Filter event listeners
+    document.getElementById('filterPortfolio').addEventListener('change', (e) => {
+      localStorage.setItem('foliotrack_selected_portfolio', e.target.value || 'all');
+      currentOffset = 0;
+      loadTransactions();
+    });
+
+    ['filterType', 'filterInstrumentType', 'filterStartDate', 'filterEndDate'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => {
+        if (id === 'filterStartDate' || id === 'filterEndDate') {
+          setDatePresetActive('custom');
+        }
+        currentOffset = 0;
+        loadTransactions();
+      });
+    });
+
+    let searchTimer = null;
+    const searchInput = document.getElementById('filterSearch');
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        currentOffset = 0;
+        loadTransactions();
+      }, 300);
+    });
+
+    document.getElementById('clearSearchBtn').addEventListener('click', () => {
+      searchInput.value = '';
+      currentOffset = 0;
+      loadTransactions();
+    });
+
+    document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+      document.getElementById('filterPortfolio').value = '';
+      localStorage.setItem('foliotrack_selected_portfolio', 'all');
+      document.getElementById('filterType').value = '';
+      document.getElementById('filterInstrumentType').value = '';
+      document.getElementById('filterSearch').value = '';
+      document.getElementById('filterStartDate').value = '';
+      document.getElementById('filterEndDate').value = '';
+      setDatePresetActive('all');
+      currentOffset = 0;
+      loadTransactions();
+    });
+
+    // Toast notification helper
+    function showTxToast(msg, isError = false) {
+      let t = document.getElementById('tx-live-toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'tx-live-toast';
+        document.body.appendChild(t);
+      }
+      t.className = `fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-2 text-xs font-mono font-semibold transition-all transform duration-300 ${
+        isError ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'
+      }`;
+      t.innerHTML = `<span>${isError ? '⚠️' : '✓'}</span><span>${msg}</span>`;
+      t.classList.remove('hidden', 'opacity-0', 'translate-y-4');
+      setTimeout(() => {
+        t.classList.add('opacity-0', 'translate-y-4');
+        setTimeout(() => t.classList.add('hidden'), 300);
+      }, 5000);
+    }
+
+    // Recalculate Performance & Reconstruct History On Demand
+    document.getElementById('recalculatePerfBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('recalculatePerfBtn');
+      const icon = document.getElementById('iconRecalculatePerf');
+      const pId = document.getElementById('filterPortfolio').value;
+
+      btn.disabled = true;
+      if (icon) icon.classList.add('animate-spin');
+      showTxToast('🚀 Avvio ricostruzione storico e ricalcolo indicatori di performance...');
+
+      try {
+        const res = await fetch('/api/history/recalculate-performance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            portfolioId: pId || 'all',
+            daysBack: 1825,
+            syncQuotes: true
+          })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Errore');
+
+        const m = data.metrics || {};
+        const twr1y = m.twr && m.twr['1Y'] !== undefined ? `${m.twr['1Y'] >= 0 ? '+' : ''}${m.twr['1Y']}%` : 'N/D';
+        const xirrStr = m.xirr !== undefined ? `${m.xirr >= 0 ? '+' : ''}${m.xirr}%` : 'N/D';
+        const ddStr = m.maxDrawdown !== undefined ? `-${m.maxDrawdown}%` : 'N/D';
+
+        showTxToast(`✓ Performance ricalcolata (${data.pointsReconstructed || 0} punti). TWR 1A: ${twr1y} • XIRR: ${xirrStr} • Max DD: ${ddStr}`);
+        await loadTransactions();
+      } catch (err) {
+        console.warn('Recalculate error:', err);
+        showTxToast('Errore durante il ricalcolo degli indicatori: ' + err.message, true);
+      } finally {
+        if (icon) icon.classList.remove('animate-spin');
+        btn.disabled = false;
+      }
+    });
+
+    // Export Wealthfolio Click
+    document.getElementById('exportWealthfolioBtn').addEventListener('click', () => {
+      const pId = document.getElementById('filterPortfolio').value;
+      let url = '/api/transactions/export/wealthfolio';
+      if (pId) url += `?portfolioId=${pId}`;
+      window.location.href = url;
+    });
+
+    document.addEventListener('transactionSaved', loadTransactions);
+    document.addEventListener('transactionsImported', loadTransactions);
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadPortfolios();
+      await loadTransactions();
+    });
+  </script>
+</body>
+</html>

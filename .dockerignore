@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log*
+.git
+.gitignore
+.DS_Store
+.env
+.gemini
+test
+coverage
+*.log
+data/backups/*
+data/*.db-wal
+data/*.db-shm
+

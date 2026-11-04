@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>I Tuoi Portafogli | FolioTrack</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+  <!-- SIDEBAR_PARTIAL -->
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div id="live-ticker-container"></div>
+
+    <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">I Tuoi Portafogli</h1>
+        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">Gestione multi-broker e multi-conto con contabilità fiscale WAC e FIFO</p>
+      </div>
+      <button id="addPortfolioBtn" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-1.5">
+        <span>+</span>
+        <span>Nuovo Portafoglio</span>
+      </button>
+    </header>
+
+    <main class="flex-1 px-8 pb-16 max-w-7xl mx-auto w-full">
+      <div id="portfolios-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Populated dynamically by public/portfolios_page.js -->
+        <div class="col-span-full text-center py-12 text-xs font-mono text-gray-400">
+          Caricamento portafogli in corso...
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Creazione / Modifica Portafoglio -->
+  <div id="portfolioModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-lg p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <h3 id="portfolioModalTitle" class="text-base font-bold text-gray-900 dark:text-white">Nuovo Portafoglio</h3>
+        <button type="button" id="closePortfolioModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg">✕</button>
+      </div>
+
+      <form id="portfolioForm" class="mt-4 space-y-4 text-xs font-mono">
+        <input type="hidden" id="modalPortfolioId">
+
+        <!-- Nome Portafoglio -->
+        <div>
+          <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Nome Portafoglio *</label>
+          <input type="text" id="modalPortfolioName" required placeholder="es. Directa Trading, ETF Pensione, Widiba Liquidità"
+            class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <!-- Tipologia & Valuta -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Tipologia *</label>
+            <select id="modalPortfolioType" class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="Investimento">Investimento</option>
+              <option value="Pensione">Pensione</option>
+              <option value="Trading">Trading</option>
+              <option value="Liquidità">Liquidità</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Valuta Base *</label>
+            <select id="modalPortfolioCurrency" class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="EUR">EUR (€)</option>
+              <option value="USD">USD ($)</option>
+              <option value="CHF">CHF (Fr)</option>
+              <option value="GBP">GBP (£)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Metodo Contabile & Data Inizio -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Metodo Costo *</label>
+            <select id="modalPortfolioCostBasis" class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="WAC">WAC (Prezzo Medio Ponderato)</option>
+              <option value="FIFO">FIFO (Lotti Fiscali)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Data Inizio *</label>
+            <input type="date" id="modalPortfolioStartDate" required
+              class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <!-- Liquidità Iniziale & Colore -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Liquidità Iniziale (€)</label>
+            <input type="number" id="modalPortfolioInitialCash" step="any" min="0" placeholder="0"
+              class="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <p class="text-[10px] text-gray-400 mt-1">Registrato come 1° movimento di deposito</p>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Colore Tematico</label>
+            <div class="flex items-center space-x-2">
+              <input type="color" id="modalPortfolioColor" value="#4f6b92" class="w-10 h-9 p-0.5 rounded-xl border border-gray-300 dark:border-white/10 cursor-pointer bg-transparent">
+              <span class="text-[10px] text-gray-400">Badge & grafici</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Includi nei Totali Globali -->
+        <div class="pt-2">
+          <label class="flex items-center space-x-2.5 cursor-pointer">
+            <input type="checkbox" id="modalPortfolioIncludeTotals" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300">
+            <span class="text-xs text-gray-700 dark:text-gray-300 font-medium font-sans">Includi nei totali e nel patrimonio globale aggregato</span>
+          </label>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="mt-6 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-end space-x-3">
+          <button type="button" id="cancelPortfolioModalBtn" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5">
+            Annulla
+          </button>
+          <button type="submit" id="savePortfolioBtn" class="btn-pill px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm">
+            Salva Portafoglio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/header_indices.js"></script>
+  <script src="/portfolios_page.js"></script>
+</body>
+</html>

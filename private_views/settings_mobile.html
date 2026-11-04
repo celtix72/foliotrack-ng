@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Impostazioni | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-bold text-gray-900 dark:text-white">Impostazioni & Dati</h1>
+      <span class="text-[10px] font-mono text-gray-400">FX, Titoli, Mercato 5Y, Notifiche & Backup</span>
+    </div>
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+      CORE
+    </span>
+  </header>
+
+  <div id="live-ticker-container"></div>
+
+  <!-- Horizontal Scrollable Tab Bar -->
+  <nav id="settings-tabs" class="flex overflow-x-auto no-scrollbar gap-2 px-4 py-2 border-b border-gray-200/50 dark:border-white/5 bg-white/50 dark:bg-[#121214]/50 sticky top-[53px] z-20 backdrop-blur-md">
+    <button type="button" data-settings-tab="fx" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center space-x-1">
+      <span>💱</span>
+      <span>FX</span>
+    </button>
+    <button type="button" data-settings-tab="assets" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+      <span>📈</span>
+      <span>Titoli</span>
+    </button>
+    <button type="button" data-settings-tab="classifications" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+      <span>🏷️</span>
+      <span>Tassonomia</span>
+    </button>
+    <button type="button" data-settings-tab="market" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+      <span>🌐</span>
+      <span>Mercato 5Y</span>
+    </button>
+    <button type="button" data-settings-tab="notifications" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+      <span>🔔</span>
+      <span>Notifiche</span>
+    </button>
+    <button type="button" data-settings-tab="backups" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+      <span>☁️</span>
+      <span>Backup</span>
+    </button>
+    <button type="button" data-settings-tab="ai" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+      <span>🤖</span>
+      <span>AI Keys</span>
+    </button>
+    <button type="button" data-settings-tab="theme" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+      <span>🎨</span>
+      <span>Aspetto</span>
+    </button>
+  </nav>
+
+  <!-- Mobile Main Content -->
+  <main class="flex-1 px-4 py-3 space-y-4">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: FX CURRENCY RATES                   -->
+    <!-- ========================================== -->
+    <div id="panel-fx" class="tab-panel space-y-4">
+      <div id="fx-cards-grid" class="grid grid-cols-2 gap-2"></div>
+
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Tassi di Cambio FX</h3>
+          <div class="flex items-center space-x-1.5">
+            <button type="button" id="btn-sync-fx" class="btn-pill px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-semibold">
+              🔄 Sync
+            </button>
+            <button type="button" id="btn-add-fx" class="btn-pill px-2.5 py-1 border border-gray-200 dark:border-white/10 text-[11px]">
+              ➕ Nuovo
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto text-xs font-mono">
+          <table class="w-full text-left">
+            <tbody id="fx-table-body" class="divide-y divide-gray-100 dark:divide-white/5">
+              <tr>
+                <td colspan="7" class="py-4 text-center text-gray-400">Caricamento tassi...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: ASSETS & MARKET DATA SOURCES        -->
+    <!-- ========================================== -->
+    <div id="panel-assets" class="tab-panel hidden space-y-4">
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Titoli & Fonti Dati</h3>
+          <button type="button" id="btn-add-asset" class="btn-pill px-2.5 py-1 border border-gray-200 dark:border-white/10 text-[11px] font-semibold">
+            ➕ Nuovo
+          </button>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" id="btn-sync-all-quotes" class="btn-pill w-full py-1.5 bg-blue-600 text-white text-[11px] font-semibold text-center">
+            ⚡ Prezzi Live
+          </button>
+          <button type="button" id="btn-sync-all-history" class="btn-pill w-full py-1.5 bg-emerald-600 text-white text-[11px] font-semibold text-center">
+            📥 Storico 5Y
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="space-y-2 text-xs font-mono">
+          <input type="text" id="assetSearchInput" placeholder="Cerca ticker o nome..."
+            class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+          <div class="grid grid-cols-2 gap-2">
+            <select id="assetTypeFilter" class="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[11px]">
+              <option value="">Tutti i Tipi</option>
+              <option value="EQUITY">Azioni</option>
+              <option value="ETF">ETF</option>
+              <option value="BOND">Obbligazioni</option>
+              <option value="COMMODITY">Commodity</option>
+              <option value="CRYPTO">Crypto</option>
+              <option value="CASH">Liquidità</option>
+            </select>
+            <select id="assetSourceFilter" class="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[11px]">
+              <option value="">Tutte le Fonti</option>
+              <option value="YAHOO">Yahoo Finance</option>
+              <option value="BORSA_ITALIANA">Borsa Italiana</option>
+              <option value="GOOGLE">Google Finance</option>
+              <option value="MANUAL">Manuale</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto text-xs font-mono">
+          <table class="w-full text-left">
+            <tbody id="assets-table-body" class="divide-y divide-gray-100 dark:divide-white/5">
+              <tr>
+                <td colspan="8" class="py-4 text-center text-gray-400">Caricamento titoli...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: CLASSIFICAZIONI                    -->
+    <!-- ========================================== -->
+    <div id="panel-classifications" class="tab-panel hidden space-y-4">
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between pb-1 border-b border-gray-100 dark:border-white/5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Asset Classes</h4>
+          <span id="class-count-badge" class="badge-profit text-[10px]">0 classi</span>
+        </div>
+        <div id="class-distribution-list" class="space-y-1 text-xs font-mono max-h-36 overflow-y-auto"></div>
+      </div>
+
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between pb-1 border-b border-gray-100 dark:border-white/5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Settori GICS</h4>
+          <span id="sector-count-badge" class="badge-profit text-[10px]">11 settori</span>
+        </div>
+        <div id="sector-distribution-list" class="space-y-1 text-xs font-mono max-h-36 overflow-y-auto"></div>
+      </div>
+
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between pb-1 border-b border-gray-100 dark:border-white/5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Aree Geografiche</h4>
+          <span id="region-count-badge" class="badge-profit text-[10px]">0 regioni</span>
+        </div>
+        <div id="region-distribution-list" class="space-y-1 text-xs font-mono max-h-36 overflow-y-auto"></div>
+      </div>
+
+      <div class="signature-card p-4 space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Assegnazione Rapida Tassonomie</h3>
+        <div class="overflow-x-auto text-xs font-mono">
+          <table class="w-full text-left">
+            <tbody id="taxonomy-table-body" class="divide-y divide-gray-100 dark:divide-white/5">
+              <tr>
+                <td colspan="5" class="py-4 text-center text-gray-400">Caricamento tassonomie...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: DATI DI MERCATO & 5Y               -->
+    <!-- ========================================== -->
+    <div id="panel-market" class="tab-panel hidden space-y-4">
+      <!-- Live Market Ticker Banner Configuration Mobile Card -->
+      <div id="card-market-ticker-settings" class="signature-card p-4 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-500 flex items-center space-x-1">
+            <span>📈</span>
+            <span>Barra Indici Scorrevole</span>
+          </h4>
+          <button type="button" id="btn-save-ticker-config" class="btn-pill px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold">
+            Salva
+          </button>
+        </div>
+
+        <div class="space-y-2 text-xs font-mono">
+          <label class="block text-gray-700 dark:text-gray-300 font-semibold">⏱️ Aggiornamento Quotazioni:</label>
+          <div class="flex items-center space-x-2">
+            <input type="number" id="tickerRefreshSecondsInput" min="5" max="3600" value="60" class="w-16 px-2 py-1 text-center font-bold rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-black/30">
+            <span class="text-gray-500">sec</span>
+            <div class="flex items-center space-x-1 ml-auto">
+              <button type="button" class="btn-freq-quick px-2 py-0.5 rounded bg-gray-200 dark:bg-white/10 text-[10px]" data-freq="15">15s</button>
+              <button type="button" class="btn-freq-quick px-2 py-0.5 rounded bg-gray-200 dark:bg-white/10 text-[10px]" data-freq="30">30s</button>
+              <button type="button" class="btn-freq-quick px-2 py-0.5 rounded bg-gray-200 dark:bg-white/10 text-[10px]" data-freq="60">60s</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-2 text-xs font-mono">
+          <label class="block text-gray-700 dark:text-gray-300 font-semibold">🏃 Velocità Scorrimento:</label>
+          <select id="tickerScrollSpeedSelect" class="w-full px-2 py-1 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-black/30">
+            <option value="very_slow">Ultralenta</option>
+            <option value="slow">Lenta</option>
+            <option value="normal" selected>Normale</option>
+            <option value="fast">Moderata</option>
+          </select>
+        </div>
+
+        <!-- Indici List Mobile -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="font-bold text-gray-500">Indici (<span id="ticker-indices-count">0</span>)</span>
+            <button type="button" id="btn-reset-ticker-config" class="text-[11px] text-gray-400 hover:text-rose-500 underline">Ripristina</button>
+          </div>
+          <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-white/10">
+            <table class="w-full text-left text-[11px] font-mono divide-y divide-gray-200 dark:divide-white/5">
+              <tbody id="ticker-indices-tbody" class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-[#18181a]">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="space-y-1.5">
+          <span class="text-[11px] font-mono text-gray-500 block">💡 Aggiungi suggeriti:</span>
+          <div id="ticker-presets-pills" class="flex flex-wrap gap-1"></div>
+        </div>
+
+        <!-- Custom Add Mobile -->
+        <div class="pt-2 border-t border-gray-200 dark:border-white/5 space-y-2">
+          <span class="text-[11px] font-mono text-gray-500 block">➕ Aggiungi Ticker:</span>
+          <div class="flex items-center space-x-1.5">
+            <input type="text" id="newTickerSymbolInput" placeholder="Simbolo (es. ^IXIC)" class="flex-1 px-2 py-1 text-xs font-mono uppercase rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-black/30">
+            <input type="text" id="newTickerNameInput" placeholder="Nome" class="flex-1 px-2 py-1 text-xs font-mono rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-black/30">
+          </div>
+          <div class="flex items-center space-x-2">
+            <select id="newTickerCurrencySelect" class="flex-1 px-2 py-1 text-xs font-mono rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-black/30">
+              <option value="EUR">EUR (€)</option>
+              <option value="USD">USD ($)</option>
+              <option value="%">% (Yield)</option>
+              <option value="">Forex</option>
+            </select>
+            <button type="button" id="btn-add-custom-ticker" class="btn-pill px-3 py-1 bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-xs font-semibold">
+              + Aggiungi
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+        <div class="signature-card p-3">
+          <span class="text-gray-400 text-[10px] uppercase block">Punti Prezzo</span>
+          <span id="market-total-quotes" class="text-lg font-bold tabular-nums">0</span>
+        </div>
+        <div class="signature-card p-3">
+          <span class="text-gray-400 text-[10px] uppercase block">Titoli Storicizzati</span>
+          <span id="market-distinct-tickers" class="text-lg font-bold tabular-nums">0</span>
+        </div>
+        <div class="signature-card p-3">
+          <span class="text-gray-400 text-[10px] uppercase block">Data Antica</span>
+          <span id="market-oldest-date" class="text-xs font-bold tabular-nums truncate block">-</span>
+        </div>
+        <div class="signature-card p-3">
+          <span class="text-gray-400 text-[10px] uppercase block">Data Recente</span>
+          <span id="market-newest-date" class="text-xs font-bold text-emerald-500 tabular-nums truncate block">-</span>
+        </div>
+      </div>
+
+      <div class="signature-card p-4 space-y-3 border-emerald-500/20 bg-emerald-500/5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-500 flex items-center space-x-1">
+          <span>🚀</span>
+          <span>Ricostruzione Storico 5Y</span>
+        </h4>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 font-mono leading-relaxed">
+          Ricalcola retroattivamente i saldi giornalieri del portafoglio combinando le transazioni con le quotazioni storiche memorizzate in cache.
+        </p>
+        <button type="button" id="btn-reconstruct-history" class="btn-pill w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold text-center">
+          Ricostruisci Storico Portafoglio 5Y
+        </button>
+        <span id="reconstruct-status" class="text-[10px] font-mono text-gray-400 block text-center"></span>
+      </div>
+
+      <div class="signature-card p-3 flex items-center justify-between">
+        <span class="text-xs font-mono text-gray-500">Pulizia quote &gt; 5 anni</span>
+        <button type="button" id="btn-clear-market-cache" class="btn-pill px-3 py-1 border border-rose-500/30 text-rose-600 text-xs font-mono">
+          🧹 Pulisci Cache
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: NOTIFICHE (TELEGRAM & PUSH)        -->
+    <!-- ========================================== -->
+    <div id="panel-notifications" class="tab-panel hidden space-y-4">
+      <div class="signature-card p-4 space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">✈️ Bot Telegram</h3>
+        <div class="space-y-2 text-xs font-mono">
+          <div>
+            <label class="block text-[10px] text-gray-400">Bot Token</label>
+            <input type="password" id="telegram_bot_token" placeholder="Token BotFather"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400">Chat ID</label>
+            <input type="text" id="telegram_chat_id" placeholder="es. 123456789"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button type="button" id="btn-telegram-test" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10 text-[11px] font-medium">
+            Test Msg
+          </button>
+          <button type="button" id="btn-telegram-digest" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10 text-[11px] font-medium">
+            Invia Digest
+          </button>
+          <button type="button" id="btn-check-alerts" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10 text-[11px] font-medium">
+            Verifica Alert
+          </button>
+        </div>
+      </div>
+
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">🔔 Notifiche Push</h3>
+          <span id="push-status-text" class="text-[10px] font-mono text-gray-400">...</span>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button type="button" id="btn-toggle-push" class="btn-pill w-full py-2 bg-emerald-600 text-white text-xs font-semibold text-center">
+            Attiva Notifiche Push
+          </button>
+          <button type="button" id="btn-test-push" class="btn-pill w-full py-2 border border-gray-200 dark:border-white/10 text-xs font-medium text-center hidden">
+            Invia Notifica Push di Prova
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 6: BACKUP & DR                        -->
+    <!-- ========================================== -->
+    <div id="panel-backups" class="tab-panel hidden space-y-4">
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">💾 Backup SQLite</h3>
+          <button type="button" id="btn-create-backup" class="btn-pill px-3 py-1 bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-[11px] font-semibold">
+            + Crea Backup
+          </button>
+        </div>
+        <div class="overflow-x-auto text-[11px] font-mono">
+          <table class="w-full text-left">
+            <tbody id="backups-table-body">
+              <tr>
+                <td class="py-3 text-center text-gray-400">Caricamento backup...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Zona Pericolo Mobile: Reset Database Finanziario -->
+      <div class="signature-card p-4 border border-rose-500/30 bg-rose-500/[0.02] space-y-2">
+        <h3 class="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center space-x-1.5">
+          <span>⚠️</span>
+          <span>Reset Database Finanziario</span>
+        </h3>
+        <p class="text-[11px] text-gray-600 dark:text-gray-300 font-mono">
+          Azzera tutti i portafogli, movimenti, titoli e quotazioni storiche. Crea un backup ZIP prima di svuotare.
+        </p>
+        <button type="button" id="btn-reset-financial-db-mobile" class="w-full btn-pill py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition">
+          🗑️ Reimposta Tutto (Azzera DB)
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 7: AI & API KEYS                      -->
+    <!-- ========================================== -->
+    <div id="panel-ai" class="tab-panel hidden space-y-4">
+      <div class="signature-card p-4 space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">🧠 Chiavi API AI</h3>
+        <div class="space-y-2 text-xs font-mono">
+          <div>
+            <label class="block text-[10px] text-gray-400">Google Gemini API Key</label>
+            <input type="password" id="gemini_api_key" placeholder="AIzaSy..."
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400">OpenAI API Key</label>
+            <input type="password" id="openai_api_key" placeholder="sk-..."
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400">Tavily Search Key</label>
+            <input type="password" id="tavily_api_key" placeholder="tvly-..."
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400">Google Drive Service Email</label>
+            <input type="text" id="gdrive_client_email" placeholder="backup-service@app.iam.gserviceaccount.com"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400">Google Drive Folder ID</label>
+            <input type="text" id="gdrive_folder_id" placeholder="1a2b3c4d5e..."
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+        </div>
+        <button type="button" id="btn-save-settings-ai" class="btn-pill w-full py-2 bg-blue-600 text-white text-xs font-semibold">
+          💾 Salva Impostazioni
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 8: TEMA & ASPETTO                     -->
+    <!-- ========================================== -->
+    <div id="panel-theme" class="tab-panel hidden space-y-4">
+      <div class="signature-card p-4 space-y-2">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Tema Visivo</h3>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" onclick="setTheme('light')" class="btn-pill py-1.5 border border-gray-200 dark:border-white/10 text-xs text-center">Chiaro</button>
+          <button type="button" onclick="setTheme('dark')" class="btn-pill py-1.5 border border-gray-200 dark:border-white/10 text-xs text-center">Scuro</button>
+          <button type="button" onclick="setTheme('system')" class="btn-pill py-1.5 border border-gray-200 dark:border-white/10 text-xs text-center">Sistema</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modals -->
+  <!-- FX Modal -->
+  <div id="fxModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-sm p-5 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <h3 id="fxModalTitle" class="text-sm font-bold text-gray-900 dark:text-white">Nuova Coppia FX</h3>
+        <button type="button" id="closeFxModalBtn" class="text-gray-400 p-1">✕</button>
+      </div>
+      <form id="fxForm" class="mt-4 space-y-3 text-xs font-mono">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Da (From)</label>
+            <input type="text" id="modalFxFrom" required maxlength="3" placeholder="EUR" class="w-full px-3 py-1.5 rounded-lg uppercase bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">A (To)</label>
+            <input type="text" id="modalFxTo" required maxlength="3" placeholder="USD" class="w-full px-3 py-1.5 rounded-lg uppercase bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          </div>
+        </div>
+        <div>
+          <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Tasso di Cambio</label>
+          <input type="number" id="modalFxRate" required step="any" min="0.000001" placeholder="1.0850" class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+        </div>
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100 dark:border-white/5">
+          <button type="button" id="cancelFxModalBtn" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10">Annulla</button>
+          <button type="submit" class="btn-pill px-3 py-1.5 bg-emerald-600 text-white font-semibold">Salva</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Asset Modal -->
+  <div id="assetModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-sm p-5 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <h3 id="assetModalTitle" class="text-sm font-bold text-gray-900 dark:text-white">Modifica Titolo</h3>
+        <button type="button" id="closeAssetModalBtn" class="text-gray-400 p-1">✕</button>
+      </div>
+      <form id="assetForm" class="mt-4 space-y-3 text-xs font-mono">
+        <div>
+          <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Ticker / ISIN *</label>
+          <input type="text" id="modalAssetTicker" required placeholder="es. CSPX.MI" class="w-full px-3 py-1.5 rounded-lg uppercase bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+        </div>
+        <div>
+          <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Nome Strumento *</label>
+          <input type="text" id="modalAssetName" required placeholder="es. iShares Core S&P 500" class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Tipo</label>
+            <select id="modalAssetType" class="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+              <option value="EQUITY">Azioni</option>
+              <option value="ETF">ETF</option>
+              <option value="BOND">Obbligazioni</option>
+              <option value="COMMODITY">Commodity</option>
+              <option value="CRYPTO">Crypto</option>
+              <option value="CASH">Liquidità</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Fonte Dati</label>
+            <select id="modalAssetDataSource" class="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 font-bold text-emerald-600">
+              <option value="YAHOO">Yahoo Finance</option>
+              <option value="BORSA_ITALIANA">Borsa Italiana</option>
+              <option value="GOOGLE">Google Finance</option>
+              <option value="MANUAL">Manuale</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Valuta</label>
+            <select id="modalAssetCurrency" class="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+              <option value="EUR">EUR (€)</option>
+              <option value="USD">USD ($)</option>
+              <option value="CHF">CHF (Fr)</option>
+              <option value="GBP">GBP (£)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Prezzo</label>
+            <input type="number" id="modalAssetPrice" step="any" min="0" placeholder="0.00" class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Settore</label>
+            <select id="modalAssetSector" class="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+              <option value="Unclassified">Non Classificato</option>
+              <option value="Information Technology">Information Technology</option>
+              <option value="Financials">Financials</option>
+              <option value="Health Care">Health Care</option>
+              <option value="Consumer Discretionary">Consumer Discretionary</option>
+              <option value="Consumer Staples">Consumer Staples</option>
+              <option value="Industrials">Industrials</option>
+              <option value="Energy">Energy</option>
+              <option value="Utilities">Utilities</option>
+              <option value="Materials">Materials</option>
+              <option value="Real Estate">Real Estate</option>
+              <option value="Communication Services">Communication Services</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Regione</label>
+            <select id="modalAssetRegion" class="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+              <option value="Global">Global</option>
+              <option value="Americas">Americas</option>
+              <option value="Europe">Europe</option>
+              <option value="Asia">Asia</option>
+              <option value="Emerging Markets">Emerging</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Borsa</label>
+          <input type="text" id="modalAssetExchange" placeholder="es. BIT, NASDAQ" class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+        </div>
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100 dark:border-white/5">
+          <button type="button" id="cancelAssetModalBtn" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10">Annulla</button>
+          <button type="submit" class="btn-pill px-4 py-1.5 bg-emerald-600 text-white font-semibold">Salva</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-[#121214]/90 backdrop-blur-md border-t border-gray-200/50 dark:border-white/5 py-2 px-6 flex items-center justify-around text-[10px] font-mono">
+    <a href="/dashboard" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
+      <span class="text-base">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="/portfolios" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
+      <span class="text-base">📁</span>
+      <span>Portafogli</span>
+    </a>
+    <a href="/transactions" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
+      <span class="text-base">📜</span>
+      <span>Movimenti</span>
+    </a>
+    <a href="/history" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
+      <span class="text-base">💰</span>
+      <span>Flussi</span>
+    </a>
+    <a href="/reports" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
+      <span class="text-base">🧠</span>
+      <span>AI & FIRE</span>
+    </a>
+    <a href="/settings" class="flex flex-col items-center text-blue-500 font-bold">
+      <span class="text-base">⚙️</span>
+      <span>Impostazioni</span>
+    </a>
+  </nav>
+
+  <script src="/push_client.js"></script>
+  <script src="/settings.js"></script>
+  <script src="/header_indices.js"></script>
+</body>
+</html>

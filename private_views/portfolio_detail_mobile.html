@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dettaglio Portafoglio | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+    <a href="/portfolios" class="p-1.5 -ml-1 text-gray-600 dark:text-gray-300">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </a>
+    <div class="text-center">
+      <h1 id="mPortfolioTitle" class="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[200px]">Caricamento...</h1>
+      <span id="mPortfolioBadge" class="text-[10px] font-mono text-gray-400">-</span>
+    </div>
+    <div class="flex items-center space-x-1">
+      <button id="mBulkImportBtn" class="p-2 text-blue-600 dark:text-blue-400">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      </button>
+      <a id="mExportBtn" href="#" class="p-2 text-gray-600 dark:text-gray-400">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- Mobile Portfolio Quick Switcher Bar -->
+  <div class="px-4 py-2 bg-white/60 dark:bg-black/30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+    <span class="text-gray-400 text-[11px]">Portafoglio:</span>
+    <select id="mDetailPortfolioSwitcher" class="px-2.5 py-1 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono">
+    </select>
+  </div>
+
+  <div id="live-ticker-container"></div>
+
+  <!-- Mobile Main Content -->
+  <main class="flex-1 px-4 py-4 space-y-4">
+    <!-- Total Value & Quick Metrics Card -->
+    <div class="signature-card p-4 space-y-3 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent">
+      <div>
+        <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Patrimonio Totale</span>
+        <div id="mStatNav" class="text-2xl font-bold font-mono tabular-nums text-gray-900 dark:text-white">€ 0.00</div>
+        <div id="mStat1D" class="text-xs font-mono font-semibold text-gray-400 mt-0.5">0.00% 1D</div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-white/5 text-xs font-mono tabular-nums">
+        <div>
+          <span class="text-gray-400 text-[10px] block">Liquidità</span>
+          <strong id="mStatCash" class="text-gray-900 dark:text-white">€ 0.00</strong>
+        </div>
+        <div>
+          <span class="text-gray-400 text-[10px] block">P&L Non Realizzato</span>
+          <strong id="mStatPnl">€ 0.00</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Links -->
+    <div class="grid grid-cols-3 gap-2 text-xs font-mono">
+      <a id="mLinkViewTx" href="#" class="btn-pill py-2 text-center bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium">
+        📋 Movimenti
+      </a>
+      <a id="mLinkViewHistory" href="#" class="btn-pill py-2 text-center bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium">
+        📈 Flussi
+      </a>
+      <a id="mLinkViewReports" href="#" class="btn-pill py-2 text-center bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium">
+        🤖 Advisor
+      </a>
+    </div>
+
+    <!-- Search Input -->
+    <div>
+      <input type="text" id="mHoldingSearch" placeholder="Cerca ticker o titolo..."
+        class="w-full px-3 py-2 rounded-xl text-xs font-mono border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white">
+    </div>
+
+    <!-- Mobile Section Tabs: Aperte vs Chiuse -->
+    <div class="flex items-center space-x-2 border-b border-gray-200 dark:border-white/10 pb-1 text-xs font-mono">
+      <button id="mTabOpen" type="button" class="pb-1.5 border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1">
+        <span>Posizioni Aperte</span>
+        <span id="mAssetCount" class="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">0</span>
+      </button>
+      <button id="mTabClosed" type="button" class="pb-1.5 border-b-2 border-transparent text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium flex items-center space-x-1">
+        <span>Posizioni Chiuse</span>
+        <span id="mClosedCount" class="text-[10px] px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300">0</span>
+      </button>
+    </div>
+
+    <!-- Mobile Holdings Cards List -->
+    <div id="mOpenSection" class="space-y-2">
+      <div id="mHoldingsContainer" class="space-y-2">
+        <div class="signature-card p-6 text-center text-xs text-gray-400 font-mono">
+          Caricamento titoli...
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Closed Positions List -->
+    <div id="mClosedSection" class="space-y-2 hidden">
+      <!-- Closed summary strip -->
+      <div class="signature-card p-2.5 flex items-center justify-between text-[11px] font-mono">
+        <div>
+          <span class="text-gray-400 block text-[9px]">P&L REALIZZATO</span>
+          <strong id="mClosedTotPnl" class="text-xs font-bold">€ 0</strong>
+        </div>
+        <div class="text-right">
+          <span class="text-gray-400 block text-[9px]">TOTALE VENDITE</span>
+          <strong id="mClosedTotProceeds" class="text-xs font-bold text-gray-900 dark:text-white">€ 0</strong>
+        </div>
+      </div>
+      <div id="mClosedContainer" class="space-y-2">
+        <div class="signature-card p-6 text-center text-xs text-gray-400 font-mono">
+          Caricamento posizioni chiuse...
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Floating Action Button for New Transaction -->
+  <button id="mNewTxFab" class="fixed right-5 bottom-20 z-40 w-12 h-12 rounded-full bg-emerald-600 text-white shadow-xl flex items-center justify-center hover:bg-emerald-700 transition">
+    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+    </svg>
+  </button>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#141416]/95 backdrop-blur-md border-t border-gray-200/60 dark:border-white/5 px-6 py-2 flex items-center justify-around z-30 text-[10px] font-mono">
+    <a href="/dashboard" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+      Dashboard
+    </a>
+    <a href="/portfolios" class="flex flex-col items-center text-emerald-600 dark:text-emerald-400 font-bold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+      Portafogli
+    </a>
+    <a href="/transactions" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Movimenti
+    </a>
+    <a href="/settings" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Impostazioni
+    </a>
+  </nav>
+
+  <!-- Vendors & Component Scripts -->
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/header_indices.js"></script>
+  <script src="/transaction_modal.js"></script>
+  <script src="/bulk_import.js"></script>
+  <script src="/asset_drawer.js"></script>
+
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const portfolioId = parseInt(pathParts[pathParts.length - 1], 10) || 1;
+    let portfolioData = null;
+    let allHoldings = [];
+    let allClosedPositions = [];
+    let activeMobileTab = 'open';
+
+    const fmtEur = (v) => '€ ' + Math.round(Number(v) || 0).toLocaleString('it-IT', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+
+    const fmtEurSigned = (v) => {
+      const n = Math.round(Number(v) || 0);
+      return (n >= 0 ? '+€ ' : '-€ ') + Math.abs(n).toLocaleString('it-IT', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      });
+    };
+
+    const fmtPrice = (v, curr = '€') => {
+      const n = Number(v) || 0;
+      const hasSubCents = (n !== 0) && (Math.abs(n * 100 - Math.round(n * 100)) > 0.001);
+      return curr + ' ' + n.toLocaleString('it-IT', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: hasSubCents ? 4 : 2
+      });
+    };
+
+    const fmtPct = (v) => {
+      const n = Number(v) || 0;
+      return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+    };
+
+    const fmtQty = (v) => {
+      const n = Number(v) || 0;
+      return n.toLocaleString('it-IT', {
+        maximumFractionDigits: (n % 1 === 0) ? 0 : 4
+      });
+    };
+
+    async function loadPortfolioDetail() {
+      try {
+        const res = await fetch(`/api/portfolios/${portfolioId}`);
+        const data = await res.json();
+        if (!data.success || !data.portfolio) {
+          document.getElementById('mPortfolioTitle').textContent = 'Non trovato';
+          return;
+        }
+
+        portfolioData = data.portfolio;
+        allHoldings = (portfolioData.metrics && portfolioData.metrics.holdings) || [];
+        allClosedPositions = (portfolioData.metrics && portfolioData.metrics.closedPositions) || portfolioData.closedPositions || [];
+
+        document.getElementById('mPortfolioTitle').textContent = portfolioData.name;
+        document.getElementById('mPortfolioBadge').textContent = `${portfolioData.type} • ${portfolioData.currency}`;
+        document.getElementById('mExportBtn').href = `/api/portfolios/${portfolioId}/export/wealthfolio`;
+        document.getElementById('mLinkViewTx').href = `/transactions?portfolioId=${portfolioId}`;
+        document.getElementById('mLinkViewHistory').href = `/history?portfolioId=${portfolioId}`;
+        document.getElementById('mLinkViewReports').href = `/reports?portfolioId=${portfolioId}`;
+        localStorage.setItem('foliotrack_selected_portfolio', String(portfolioId));
+
+        loadMobilePortfolioSwitcher();
+
+        const nav = portfolioData.totalValue || 0;
+        const cash = portfolioData.currentCash || 0;
+        const pnl = (portfolioData.metrics && portfolioData.metrics.unrealizedPnL) || 0;
+        const pnlPct = (portfolioData.metrics && portfolioData.metrics.unrealizedPnLPercent) || 0;
+        const p1d = portfolioData.performance1D || 0;
+
+        document.getElementById('mStatNav').textContent = fmtEur(nav);
+        const p1dEl = document.getElementById('mStat1D');
+        p1dEl.textContent = `${p1d >= 0 ? '+' : ''}${p1d.toFixed(2)}% 1D`;
+        p1dEl.className = `text-xs font-mono font-semibold ${p1d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+
+        document.getElementById('mStatCash').textContent = fmtEur(cash);
+
+        const pnlEl = document.getElementById('mStatPnl');
+        pnlEl.textContent = `${fmtEurSigned(pnl)} (${fmtPct(pnlPct)})`;
+        pnlEl.className = `${pnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+
+        document.getElementById('mAssetCount').textContent = allHoldings.length;
+        document.getElementById('mClosedCount').textContent = allClosedPositions.length;
+
+        renderMobileHoldings(allHoldings);
+        renderMobileClosed(allClosedPositions);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderMobileHoldings(holdings) {
+      const container = document.getElementById('mHoldingsContainer');
+      if (!holdings || holdings.length === 0) {
+        container.innerHTML = '<div class="signature-card p-6 text-center text-xs text-gray-400 font-mono">Nessuna posizione aperta</div>';
+        return;
+      }
+
+      container.innerHTML = holdings.map((h, idx) => {
+        const pnl = h.unrealizedPnL || 0;
+        const pnlPct = h.unrealizedPnLPercent || 0;
+        const pnlBadge = pnl >= 0 ? 'badge-profit' : 'badge-loss';
+
+        return `
+          <div class="signature-card p-3 space-y-2 cursor-pointer active:scale-[0.99] transition" data-m-holding-idx="${idx}">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="font-bold text-sm font-mono text-gray-900 dark:text-white">${h.ticker}</span>
+                <span class="ml-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500">${h.type || 'EQUITY'}</span>
+                <div class="text-[11px] text-gray-500 truncate max-w-[180px]">${h.name || '-'}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold font-mono text-sm text-gray-900 dark:text-white">${fmtEur(h.marketValue)}</div>
+                <span class="${pnlBadge} text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5">
+                  ${fmtEurSigned(pnl)} (${fmtPct(pnlPct)})
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] font-mono text-gray-400 pt-1 border-t border-gray-100 dark:border-white/5">
+              <span>Qtà: ${fmtQty(h.quantity)} @ ${fmtPrice(h.costBasis || h.pmc)}</span>
+              <span>Peso: <strong>${fmtPct(h.weight || 0)}</strong></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('#mHoldingsContainer [data-m-holding-idx]').forEach(card => {
+        card.addEventListener('click', () => {
+          const idx = parseInt(card.getAttribute('data-m-holding-idx'), 10);
+          const holding = holdings[idx];
+          if (holding && window.AssetDrawer) {
+            window.AssetDrawer.open(holding, portfolioId);
+          }
+        });
+      });
+    }
+
+    function renderMobileClosed(closedList) {
+      const container = document.getElementById('mClosedContainer');
+      if (!closedList || closedList.length === 0) {
+        container.innerHTML = '<div class="signature-card p-6 text-center text-xs text-gray-400 font-mono">Nessuna posizione chiusa</div>';
+        return;
+      }
+
+      const totPnl = closedList.reduce((acc, c) => acc + (Number(c.realizedPnl) || 0), 0);
+      const totProceeds = closedList.reduce((acc, c) => acc + (Number(c.proceeds) || 0), 0);
+
+      const pnlEl = document.getElementById('mClosedTotPnl');
+      if (pnlEl) {
+        pnlEl.textContent = fmtEurSigned(totPnl);
+        pnlEl.className = 'text-xs font-bold ' + (totPnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400');
+      }
+      const procEl = document.getElementById('mClosedTotProceeds');
+      if (procEl) procEl.textContent = fmtEur(totProceeds);
+
+      container.innerHTML = closedList.map((c, idx) => {
+        const pnl = Number(c.realizedPnl) || 0;
+        const pnlPct = Number(c.realizedPnlPercent) || 0;
+        const pnlBadge = pnl >= 0 ? 'badge-profit' : 'badge-loss';
+        const isTot = c.isTotal || c.closeType === 'TOTALE';
+
+        return `
+          <div class="signature-card p-3 space-y-2 cursor-pointer active:scale-[0.99] transition" data-m-closed-idx="${idx}">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="font-bold text-sm font-mono text-gray-900 dark:text-white">${c.ticker}</span>
+                <span class="ml-1 text-[10px] font-mono px-1.5 py-0.5 rounded ${isTot ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'} font-bold">
+                  ${isTot ? 'Totale' : 'Parziale'}
+                </span>
+                <div class="text-[11px] text-gray-500 truncate max-w-[180px]">${c.name || '-'}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold font-mono text-sm text-gray-900 dark:text-white">${fmtEur(c.proceeds)}</div>
+                <span class="${pnlBadge} text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5">
+                  ${fmtEurSigned(pnl)} (${fmtPct(pnlPct)})
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] font-mono text-gray-400 pt-1 border-t border-gray-100 dark:border-white/5">
+              <span>${c.date} • ${fmtQty(c.quantity)} quote</span>
+              <span>Carico: <strong>${fmtPrice(c.pmc)}</strong> | Vend: <strong>${fmtPrice(c.sellPrice)}</strong></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('#mClosedContainer [data-m-closed-idx]').forEach(card => {
+        card.addEventListener('click', () => {
+          const idx = parseInt(card.getAttribute('data-m-closed-idx'), 10);
+          const c = closedList[idx];
+          if (c && window.AssetDrawer) {
+            window.AssetDrawer.open({
+              ticker: c.ticker,
+              name: c.name,
+              currency: c.currency,
+              type: c.type,
+              quantity: c.remainingQuantity || 0,
+              pmc: c.pmc,
+              realizedPnl: c.realizedPnl
+            }, portfolioId);
+          }
+        });
+      });
+    }
+
+    // Tab switching: Aperte vs Chiuse
+    document.getElementById('mTabOpen').addEventListener('click', () => {
+      activeMobileTab = 'open';
+      document.getElementById('mOpenSection').classList.remove('hidden');
+      document.getElementById('mClosedSection').classList.add('hidden');
+      document.getElementById('mTabOpen').className = 'pb-1.5 border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1';
+      document.getElementById('mTabClosed').className = 'pb-1.5 border-b-2 border-transparent text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium flex items-center space-x-1';
+    });
+
+    document.getElementById('mTabClosed').addEventListener('click', () => {
+      activeMobileTab = 'closed';
+      document.getElementById('mOpenSection').classList.add('hidden');
+      document.getElementById('mClosedSection').classList.remove('hidden');
+      document.getElementById('mTabClosed').className = 'pb-1.5 border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1';
+      document.getElementById('mTabOpen').className = 'pb-1.5 border-b-2 border-transparent text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium flex items-center space-x-1';
+    });
+
+    async function loadMobilePortfolioSwitcher() {
+      try {
+        const res = await fetch('/api/portfolios');
+        const data = await res.json();
+        if (data.success && data.portfolios) {
+          const sel = document.getElementById('mDetailPortfolioSwitcher');
+          if (!sel) return;
+          sel.innerHTML = data.portfolios.map(p => `
+            <option value="${p.id}" ${p.id === portfolioId ? 'selected' : ''}>${p.name}</option>
+          `).join('');
+
+          sel.onchange = (e) => {
+            const nextId = e.target.value;
+            if (nextId) {
+              localStorage.setItem('foliotrack_selected_portfolio', nextId);
+              window.location.href = `/portfolios/${nextId}?view=mobile`;
+            }
+          };
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+
+    document.getElementById('mHoldingSearch').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      if (!q) {
+        renderMobileHoldings(allHoldings);
+        renderMobileClosed(allClosedPositions);
+        return;
+      }
+      renderMobileHoldings(allHoldings.filter(h =>
+        (h.ticker && h.ticker.toLowerCase().includes(q)) ||
+        (h.name && h.name.toLowerCase().includes(q))
+      ));
+      renderMobileClosed(allClosedPositions.filter(c =>
+        (c.ticker && c.ticker.toLowerCase().includes(q)) ||
+        (c.name && c.name.toLowerCase().includes(q))
+      ));
+    });
+
+    document.getElementById('mNewTxFab').addEventListener('click', () => {
+      if (window.TransactionModal) window.TransactionModal.open({ portfolioId });
+    });
+
+    document.getElementById('mBulkImportBtn').addEventListener('click', () => {
+      if (window.BulkImportModal) window.BulkImportModal.open({ portfolioId });
+    });
+
+    document.addEventListener('transactionSaved', loadPortfolioDetail);
+    document.addEventListener('transactionsImported', loadPortfolioDetail);
+    document.addEventListener('DOMContentLoaded', loadPortfolioDetail);
+  </script>
+</body>
+</html>
+
