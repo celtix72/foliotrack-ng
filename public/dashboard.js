@@ -38,6 +38,68 @@
     { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 6, h: 6, minW: 4, minH: 4 }
   ];
 
+  // Dedicated 1 or 2-column layout definition for mobile devices
+  const MOBILE_DEFAULT_LAYOUT = [
+    // Hero KPI Banner (full width)
+    { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 2, h: 2, x: 0, y: 0 },
+
+    // Core KPIs paired side-by-side (1 column each = 50% width)
+    { id: 'dayChange', name: 'Variazione Giornaliera (Oggi)', category: 'Performance', w: 1, h: 2, x: 0, y: 2 },
+    { id: 'pnl', name: 'P&L Totale', category: 'KPI', w: 1, h: 2, x: 1, y: 2 },
+
+    { id: 'cash', name: 'Liquidità', category: 'KPI', w: 1, h: 2, x: 0, y: 4 },
+    { id: 'invested', name: 'Versato', category: 'KPI', w: 1, h: 2, x: 1, y: 4 },
+
+    { id: 'twrr', name: 'Rendimento TWRR (Time-Weighted)', category: 'Performance', w: 1, h: 2, x: 0, y: 6 },
+    { id: 'mwrr', name: 'Rendimento MWRR / XIRR', category: 'Performance', w: 1, h: 2, x: 1, y: 6 },
+
+    { id: 'drawdown', name: 'Drawdown & Picco ATH', category: 'Rischio', w: 1, h: 2, x: 0, y: 8 },
+    { id: 'bookCost', name: 'Carico (PMC)', category: 'KPI', w: 1, h: 2, x: 1, y: 8 },
+
+    // Risk Metrics (full width)
+    { id: 'riskMetrics', name: 'Rischio & Efficienza (Sharpe, Volatilità)', category: 'Rischio', w: 2, h: 2, x: 0, y: 10 },
+
+    // Interactive Net Worth & Performance Chart (full width)
+    { id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 2, h: 5, x: 0, y: 12 },
+
+    // Portfolio Composition with Sparklines (full width)
+    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 17 },
+
+    // Daily Movers and All-Time Movers (full width)
+    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 24 },
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 29 },
+
+    // Multi-Period Return Matrix (full width)
+    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 34 },
+
+    // Allocation Donut Charts (full width)
+    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 38 },
+    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 43 },
+    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 48 },
+    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 53 },
+
+    // Strategy & Targets (full width)
+    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 58 },
+
+    // Portfolio Concentration (full width)
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 64 },
+
+    // Holdings Breakdown Table (full width)
+    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 69 }
+  ];
+
+  function isMobileDashboard() {
+    return document.querySelector('.grid-stack-2') !== null || document.getElementById('mDashboardPortfolioSelect') !== null;
+  }
+
+  function getLayoutSettingKey() {
+    return isMobileDashboard() ? 'insightsOverviewLayoutMobile' : 'insightsOverviewLayout';
+  }
+
+  function getLayoutStorageKey() {
+    return isMobileDashboard() ? 'foliotrack_dashboard_layout_mobile' : 'foliotrack_dashboard_layout';
+  }
+
   const PASTEL_COLORS = [
     '#4f6b92', '#b89a4c', '#8e7cb3', '#7b96c9', '#b74583',
     '#2f4f73', '#d2b98a', '#9c998e', '#cfccc6', '#357941', '#b3261e'
@@ -2065,7 +2127,8 @@
     hiddenWidgets.clear();
     localStorage.setItem('foliotrack_hidden_widgets', JSON.stringify([]));
     saveHiddenWidgetsSetting();
-    currentSavedLayout = WIDGET_DEFINITIONS.map(d => ({ ...d }));
+    const isMobile = isMobileDashboard();
+    currentSavedLayout = (isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS).map(d => ({ ...d }));
     scheduleAutoSaveLayout(true);
     await initGrid(currentSavedLayout);
   }
@@ -2115,6 +2178,8 @@
    * integer positions and preserving positions of hidden widgets.
    */
   function getCurrentGridLayout() {
+    const isMobile = isMobileDashboard();
+    const defaultList = isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS;
     if (!grid) return currentSavedLayout;
 
     const nodeMap = new Map();
@@ -2124,9 +2189,9 @@
       if (n.id) {
         nodeMap.set(n.id, {
           id: n.id,
-          x: Number.isInteger(n.x) ? n.x : 0,
+          x: Number.isInteger(n.x) ? (isMobile ? Math.min(1, Math.max(0, n.x)) : n.x) : 0,
           y: Number.isInteger(n.y) ? n.y : 0,
-          w: (Number.isInteger(n.w) && n.w > 0) ? n.w : 2,
+          w: (Number.isInteger(n.w) && n.w > 0) ? (isMobile ? Math.min(2, Math.max(1, n.w)) : n.w) : (isMobile ? 1 : 2),
           h: (Number.isInteger(n.h) && n.h > 0) ? n.h : 2
         });
       }
@@ -2139,14 +2204,15 @@
       if (!id) return;
       const x = parseInt(el.getAttribute('gs-x'), 10);
       const y = parseInt(el.getAttribute('gs-y'), 10);
-      const w = parseInt(el.getAttribute('gs-w'), 10);
+      let w = parseInt(el.getAttribute('gs-w'), 10);
       const h = parseInt(el.getAttribute('gs-h'), 10);
+      if (isMobile && !isNaN(w) && w > 2) w = 2;
       if (!isNaN(x) && !isNaN(y)) {
         nodeMap.set(id, {
           id,
-          x,
+          x: isMobile ? Math.min(1, Math.max(0, x)) : x,
           y,
-          w: !isNaN(w) && w > 0 ? w : (nodeMap.get(id)?.w || 2),
+          w: !isNaN(w) && w > 0 ? (isMobile ? Math.min(2, Math.max(1, w)) : w) : (nodeMap.get(id)?.w || (isMobile ? 1 : 2)),
           h: !isNaN(h) && h > 0 ? h : (nodeMap.get(id)?.h || 2)
         });
       }
@@ -2154,23 +2220,23 @@
 
     // Build complete layout for all widgets (visible + hidden)
     const fullLayout = [];
-    for (const def of WIDGET_DEFINITIONS) {
+    for (const def of defaultList) {
       const active = nodeMap.get(def.id);
       if (active) {
         fullLayout.push({
           id: def.id,
           x: active.x,
           y: active.y,
-          w: active.w || def.w || 2,
+          w: active.w || def.w || (isMobile ? 1 : 2),
           h: active.h || def.h || 2
         });
       } else {
         const prev = (currentSavedLayout || []).find(p => p.id === def.id);
         fullLayout.push({
           id: def.id,
-          x: prev && Number.isInteger(prev.x) ? prev.x : (def.x || 0),
+          x: prev && Number.isInteger(prev.x) ? (isMobile ? Math.min(1, Math.max(0, prev.x)) : prev.x) : (def.x || 0),
           y: prev && Number.isInteger(prev.y) ? prev.y : (def.y || 0),
-          w: prev && Number.isInteger(prev.w) && prev.w > 0 ? prev.w : (def.w || 2),
+          w: prev && Number.isInteger(prev.w) && prev.w > 0 ? (isMobile ? Math.min(2, prev.w) : prev.w) : (def.w || (isMobile ? 1 : 2)),
           h: prev && Number.isInteger(prev.h) && prev.h > 0 ? prev.h : (def.h || 2)
         });
       }
@@ -2188,9 +2254,15 @@
 
     currentSavedLayout = layoutArray;
 
+    const storageKey = getLayoutStorageKey();
+    const settingKey = getLayoutSettingKey();
+
     // 1. Immediately store in localStorage for instant access
     try {
-      localStorage.setItem('foliotrack_dashboard_layout', JSON.stringify(layoutArray));
+      localStorage.setItem(storageKey, JSON.stringify(layoutArray));
+      if (!isMobileDashboard()) {
+        localStorage.setItem('foliotrack_dashboard_layout', JSON.stringify(layoutArray));
+      }
     } catch {}
 
     // 2. Persist to server database via PUT /api/settings
@@ -2199,7 +2271,7 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          key: 'insightsOverviewLayout',
+          key: settingKey,
           value: JSON.stringify(layoutArray),
           encrypted: false
         })
@@ -2243,8 +2315,17 @@
     const gridContainer = document.querySelector('.grid-stack');
     if (!gridContainer || !window.GridStack) return;
 
+    const isMobile = isMobileDashboard();
+    const defaultList = isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS;
+
     if (savedLayout && Array.isArray(savedLayout) && savedLayout.length > 0) {
-      currentSavedLayout = savedLayout;
+      if (isMobile && savedLayout.some(item => (item.w || 0) > 2)) {
+        currentSavedLayout = defaultList.map(d => ({ ...d }));
+      } else {
+        currentSavedLayout = savedLayout;
+      }
+    } else if (!currentSavedLayout || (isMobile && currentSavedLayout.some(item => (item.w || 0) > 2))) {
+      currentSavedLayout = defaultList.map(d => ({ ...d }));
     }
 
     if (grid) {
@@ -2252,15 +2333,27 @@
       gridContainer.innerHTML = '';
     }
 
-    grid = GridStack.init({
-      column: 12,
-      cellHeight: 85,
-      animate: true,
-      margin: 12,
-      staticGrid: !isCustomizing,
-      draggable: { handle: '.widget-drag-handle' },
-      resizable: { handles: 'se,sw' }
-    }, gridContainer);
+    if (isMobile) {
+      grid = GridStack.init({
+        column: 2,
+        cellHeight: 70,
+        animate: true,
+        margin: 8,
+        staticGrid: !isCustomizing,
+        draggable: { handle: '.widget-drag-handle' },
+        resizable: { handles: 'se,sw' }
+      }, gridContainer);
+    } else {
+      grid = GridStack.init({
+        column: 12,
+        cellHeight: 85,
+        animate: true,
+        margin: 12,
+        staticGrid: !isCustomizing,
+        draggable: { handle: '.widget-drag-handle' },
+        resizable: { handles: 'se,sw' }
+      }, gridContainer);
+    }
 
     // Auto-save layout on any movement, drag or resize
     grid.on('change', function(event, items) {
@@ -2281,24 +2374,28 @@
     if (currentSavedLayout && Array.isArray(currentSavedLayout) && currentSavedLayout.length > 0) {
       layoutToApply = currentSavedLayout.map(item => {
         const effectiveId = item.id === 'movers' ? 'moversDay' : item.id;
-        const def = WIDGET_DEFINITIONS.find(d => d.id === effectiveId) || {};
+        const def = defaultList.find(d => d.id === effectiveId) || {};
+        let w = (Number.isInteger(item.w) && item.w > 0) ? item.w : (def.w || (isMobile ? 1 : 2));
+        if (isMobile) {
+          w = Math.min(2, Math.max(1, w));
+        }
         return {
           ...def,
           ...item,
           id: effectiveId,
-          w: (Number.isInteger(item.w) && item.w > 0) ? item.w : (def.w || 2),
+          w: w,
           h: (Number.isInteger(item.h) && item.h > 0) ? item.h : (def.h || 2),
-          x: Number.isInteger(item.x) ? item.x : (def.x !== undefined ? def.x : 0),
+          x: Number.isInteger(item.x) ? (isMobile ? Math.min(1, item.x) : item.x) : (def.x !== undefined ? def.x : 0),
           y: Number.isInteger(item.y) ? item.y : (def.y !== undefined ? def.y : 0)
         };
       });
-      for (const def of WIDGET_DEFINITIONS) {
+      for (const def of defaultList) {
         if (!layoutToApply.some(item => item.id === def.id)) {
           layoutToApply.push({ ...def });
         }
       }
     } else {
-      layoutToApply = WIDGET_DEFINITIONS.map(d => ({ ...d }));
+      layoutToApply = defaultList.map(d => ({ ...d }));
     }
 
     // Filter out hidden widgets
@@ -2326,7 +2423,8 @@
         y: item.y,
         w: item.w,
         h: item.h,
-        minW: item.minW || 2,
+        minW: isMobile ? 1 : (item.minW || 2),
+        maxW: isMobile ? 2 : undefined,
         minH: item.minH || 2,
         content: `
           <div class="signature-card h-full p-4 flex flex-col justify-between relative group overflow-hidden" data-widget-card-id="${item.id}">
@@ -2406,19 +2504,30 @@
   }
 
   async function loadSavedLayout() {
+    const isMobile = isMobileDashboard();
+    const settingKey = getLayoutSettingKey();
+    const storageKey = getLayoutStorageKey();
+
     // 1. Try fetching persisted layout from backend settings API
     try {
-      const res = await fetch('/api/settings/insightsOverviewLayout');
+      const res = await fetch(`/api/settings/${settingKey}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.value) {
           const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
           if (Array.isArray(parsed) && parsed.length > 0) {
-            currentSavedLayout = parsed;
-            try {
-              localStorage.setItem('foliotrack_dashboard_layout', JSON.stringify(parsed));
-            } catch {}
-            return parsed;
+            if (isMobile && parsed.some(item => (item.w || 0) > 2)) {
+              console.info('[Dashboard] Saved layout for mobile contained desktop width > 2, using mobile default.');
+            } else {
+              currentSavedLayout = parsed;
+              try {
+                localStorage.setItem(storageKey, JSON.stringify(parsed));
+                if (!isMobile) {
+                  localStorage.setItem('foliotrack_dashboard_layout', JSON.stringify(parsed));
+                }
+              } catch {}
+              return parsed;
+            }
           }
         }
       }
@@ -2428,15 +2537,24 @@
 
     // 2. Fallback to localStorage (e.g. during offline or fast server restart)
     try {
-      const local = localStorage.getItem('foliotrack_dashboard_layout');
+      const local = localStorage.getItem(storageKey);
       if (local) {
         const parsed = JSON.parse(local);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          currentSavedLayout = parsed;
-          return parsed;
+          if (isMobile && parsed.some(item => (item.w || 0) > 2)) {
+            console.info('[Dashboard] Local layout for mobile contained desktop width > 2, skipping.');
+          } else {
+            currentSavedLayout = parsed;
+            return parsed;
+          }
         }
       }
     } catch {}
+
+    if (isMobile) {
+      currentSavedLayout = MOBILE_DEFAULT_LAYOUT.map(d => ({ ...d }));
+      return currentSavedLayout;
+    }
 
     return null;
   }
@@ -2822,7 +2940,9 @@
     showAllWidgets,
     resetDefaultWidgets,
     openAssetDetail,
-    WIDGET_DEFINITIONS
+    WIDGET_DEFINITIONS,
+    MOBILE_DEFAULT_LAYOUT,
+    isMobileDashboard
   };
   window.refreshDashboard = refreshDashboard;
 })();

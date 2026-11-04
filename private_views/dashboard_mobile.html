@@ -18,6 +18,52 @@
 
   <!-- GridStack.js CSS -->
   <link rel="stylesheet" href="/vendor/gridstack/gridstack.min.css">
+
+  <style>
+    /* 2-Column Responsive GridStack layout for mobile */
+    .grid-stack.gs-2 > .grid-stack-item:not(.ui-draggable-dragging),
+    .grid-stack-2 > .grid-stack-item:not(.ui-draggable-dragging) {
+      width: 50% !important;
+    }
+    .grid-stack.gs-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-w="1"],
+    .grid-stack-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-w="1"] {
+      width: 50% !important;
+    }
+    .grid-stack.gs-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-w="2"],
+    .grid-stack-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-w="2"] {
+      width: 100% !important;
+    }
+    .grid-stack.gs-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-x="0"],
+    .grid-stack-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-x="0"] {
+      left: 0% !important;
+    }
+    .grid-stack.gs-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-x="1"],
+    .grid-stack-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-x="1"] {
+      left: 50% !important;
+    }
+
+    /* Mobile compact card styling */
+    .grid-stack > .grid-stack-item > .grid-stack-item-content {
+      border-radius: 1rem;
+    }
+    .grid-stack > .grid-stack-item .signature-card {
+      padding: 0.85rem !important;
+      border-radius: 1rem;
+    }
+    /* Compact typography for 1-column KPI cards on mobile */
+    .grid-stack-item[gs-w="1"] .signature-card .text-2xl,
+    .grid-stack-item[gs-w="1"] .signature-card .text-3xl {
+      font-size: 1.25rem !important;
+      line-height: 1.6rem !important;
+    }
+    .grid-stack-item[gs-w="1"] .signature-card .text-xs {
+      font-size: 0.7rem !important;
+    }
+    .grid-stack-item[gs-w="1"] .signature-card .text-\[11px\],
+    .grid-stack-item[gs-w="1"] .signature-card .text-\[10px\] {
+      font-size: 0.65rem !important;
+    }
+  </style>
 </head>
 <body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24 select-none">
 
