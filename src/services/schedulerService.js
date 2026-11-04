@@ -24,7 +24,7 @@ function getQuoteSyncFrequencyMinutes() {
     const row = db.prepare(`
       SELECT value FROM settings
       WHERE key = 'quote_sync_frequency_minutes'
-      ORDER BY updated_at DESC LIMIT 1
+      LIMIT 1
     `).get();
     if (row && row.value) {
       const parsed = parseInt(row.value, 10);
