@@ -2036,6 +2036,131 @@
   }
 
   /**
+   * Automatically packs an ordered list of mobile widgets into a 2-column grid
+   * ensuring 1-column widgets are paired side-by-side and 2-column widgets span full width.
+   */
+  function repackMobileCoordinates(orderedItems) {
+    let curY = 0;
+    let curCol = 0; // 0 or 1
+    let col0Height = 0;
+    let col1Height = 0;
+
+    return orderedItems.map(item => {
+      const isFullWidth = item.w === 2;
+      const h = Number.isInteger(item.h) && item.h > 0 ? item.h : 2;
+      let x = 0;
+      let y = 0;
+
+      if (isFullWidth) {
+        if (curCol === 1) {
+          curY += Math.max(col0Height, 2);
+          curCol = 0;
+          col0Height = 0;
+          col1Height = 0;
+        }
+        x = 0;
+        y = curY;
+        curY += h;
+      } else {
+        if (curCol === 0) {
+          x = 0;
+          y = curY;
+          col0Height = h;
+          curCol = 1;
+        } else {
+          x = 1;
+          y = curY;
+          col1Height = h;
+          curY += Math.max(col0Height, col1Height);
+          curCol = 0;
+          col0Height = 0;
+          col1Height = 0;
+        }
+      }
+
+      return {
+        ...item,
+        w: isFullWidth ? 2 : 1,
+        h,
+        x,
+        y
+      };
+    });
+  }
+
+  /**
+   * Moves a widget one step up in the visual flow and re-packs the layout
+   */
+  async function moveWidgetUp(widgetId) {
+    const isMobile = isMobileDashboard();
+    const layout = getCurrentGridLayout() || (isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS);
+    const sorted = [...layout].sort((a, b) => {
+      const yDiff = (a.y ?? 0) - (b.y ?? 0);
+      if (yDiff !== 0) return yDiff;
+      return (a.x ?? 0) - (b.x ?? 0);
+    });
+
+    const idx = sorted.findIndex(item => item.id === widgetId);
+    if (idx > 0) {
+      const temp = sorted[idx];
+      sorted[idx] = sorted[idx - 1];
+      sorted[idx - 1] = temp;
+
+      if (isMobile) {
+        currentSavedLayout = repackMobileCoordinates(sorted);
+      } else {
+        const prevX = sorted[idx - 1].x;
+        const prevY = sorted[idx - 1].y;
+        sorted[idx - 1].x = sorted[idx].x;
+        sorted[idx - 1].y = sorted[idx].y;
+        sorted[idx].x = prevX;
+        sorted[idx].y = prevY;
+        currentSavedLayout = sorted;
+      }
+
+      await saveCurrentLayout(false);
+      await initGrid(currentSavedLayout);
+      updateVisibilityDrawerUI();
+    }
+  }
+
+  /**
+   * Moves a widget one step down in the visual flow and re-packs the layout
+   */
+  async function moveWidgetDown(widgetId) {
+    const isMobile = isMobileDashboard();
+    const layout = getCurrentGridLayout() || (isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS);
+    const sorted = [...layout].sort((a, b) => {
+      const yDiff = (a.y ?? 0) - (b.y ?? 0);
+      if (yDiff !== 0) return yDiff;
+      return (a.x ?? 0) - (b.x ?? 0);
+    });
+
+    const idx = sorted.findIndex(item => item.id === widgetId);
+    if (idx >= 0 && idx < sorted.length - 1) {
+      const temp = sorted[idx];
+      sorted[idx] = sorted[idx + 1];
+      sorted[idx + 1] = temp;
+
+      if (isMobile) {
+        currentSavedLayout = repackMobileCoordinates(sorted);
+      } else {
+        const nextX = sorted[idx + 1].x;
+        const nextY = sorted[idx + 1].y;
+        sorted[idx + 1].x = sorted[idx].x;
+        sorted[idx + 1].y = sorted[idx].y;
+        sorted[idx].x = nextX;
+        sorted[idx].y = nextY;
+        currentSavedLayout = sorted;
+      }
+
+      await saveCurrentLayout(false);
+      await initGrid(currentSavedLayout);
+      updateVisibilityDrawerUI();
+    }
+  }
+
+  /**
    * Updates the Widget Management Drawer with interactive visibility checkboxes
    */
   function updateVisibilityDrawerUI() {
@@ -2051,12 +2176,25 @@
 
     if (!listContainer) return;
 
+    const isMobile = isMobileDashboard();
+    const activeLayout = currentSavedLayout || (isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS);
+    const orderMap = new Map();
+    activeLayout.forEach((item, index) => {
+      orderMap.set(item.id, index);
+    });
+
     const query = (widgetSearchQuery || '').toLowerCase().trim();
-    const filteredWidgets = query
+    const baseList = query
       ? WIDGET_DEFINITIONS.filter(item => (item.name || '').toLowerCase().includes(query) || (item.category || '').toLowerCase().includes(query))
       : WIDGET_DEFINITIONS;
 
-    if (filteredWidgets.length === 0) {
+    const sortedWidgets = [...baseList].sort((a, b) => {
+      const orderA = orderMap.has(a.id) ? orderMap.get(a.id) : 999;
+      const orderB = orderMap.has(b.id) ? orderMap.get(b.id) : 999;
+      return orderA - orderB;
+    });
+
+    if (sortedWidgets.length === 0) {
       listContainer.innerHTML = `
         <div class="p-6 text-center text-xs font-mono text-gray-400">
           Nessun widget trovato per "${widgetSearchQuery}".
@@ -2065,20 +2203,29 @@
       return;
     }
 
-    listContainer.innerHTML = filteredWidgets.map(item => {
+    listContainer.innerHTML = sortedWidgets.map((item, idx) => {
       const isVisible = !hiddenWidgets.has(item.id);
       return `
-        <div class="flex items-center justify-between p-2.5 rounded-xl border transition ${isVisible ? 'bg-gray-50/70 dark:bg-white/[0.03] border-gray-200/80 dark:border-white/10' : 'bg-transparent border-gray-100 dark:border-white/5 opacity-60'}">
-          <label class="flex items-center space-x-3 cursor-pointer flex-1 min-w-0" for="widget-chk-${item.id}">
+        <div class="flex items-center justify-between p-2 rounded-xl border transition ${isVisible ? 'bg-gray-50/70 dark:bg-white/[0.03] border-gray-200/80 dark:border-white/10' : 'bg-transparent border-gray-100 dark:border-white/5 opacity-60'}">
+          <label class="flex items-center space-x-2.5 cursor-pointer flex-1 min-w-0" for="widget-chk-${item.id}">
             <input type="checkbox" id="widget-chk-${item.id}" data-widget-checkbox="${item.id}" ${isVisible ? 'checked' : ''} class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600">
             <div class="truncate">
               <div class="text-xs font-semibold text-gray-900 dark:text-white truncate">${item.name}</div>
               <div class="text-[10px] text-gray-400 font-mono">${item.category || 'Widget'}</div>
             </div>
           </label>
-          <span class="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full ${isVisible ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-bold' : 'bg-gray-100 text-gray-400 dark:bg-white/5'}">
-            ${isVisible ? 'Visibile' : 'Nascosto'}
-          </span>
+          <div class="flex items-center space-x-1 shrink-0 ml-2">
+            <button type="button" data-move-widget-up="${item.id}" class="p-1.5 rounded-lg text-gray-500 hover:text-emerald-500 bg-gray-100 dark:bg-white/5 active:scale-90 transition ${idx === 0 ? 'opacity-30 pointer-events-none' : ''}" title="Sposta in alto">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+            <button type="button" data-move-widget-down="${item.id}" class="p-1.5 rounded-lg text-gray-500 hover:text-emerald-500 bg-gray-100 dark:bg-white/5 active:scale-90 transition ${idx === sortedWidgets.length - 1 ? 'opacity-30 pointer-events-none' : ''}" title="Sposta in basso">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
       `;
     }).join('');
@@ -2428,7 +2575,17 @@
         minH: item.minH || 2,
         content: `
           <div class="signature-card h-full p-4 flex flex-col justify-between relative group overflow-hidden" data-widget-card-id="${item.id}">
-            <div class="widget-controls ${isCustomizing ? '' : 'hidden'} absolute top-2 right-2 flex items-center space-x-1 z-10 bg-white/80 dark:bg-black/60 rounded-lg p-0.5 backdrop-blur shadow-sm border border-gray-200/50 dark:border-white/10">
+            <div class="widget-controls ${isCustomizing ? '' : 'hidden'} absolute top-1.5 right-1.5 flex items-center space-x-0.5 z-20 bg-white/95 dark:bg-black/90 rounded-lg p-0.5 backdrop-blur shadow-md border border-gray-200/70 dark:border-white/10">
+              <button type="button" class="p-1 text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-90 transition" data-move-widget-up="${item.id}" title="Sposta in alto">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              <button type="button" class="p-1 text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-90 transition" data-move-widget-down="${item.id}" title="Sposta in basso">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
               <button type="button" class="widget-hide-btn p-1 text-gray-400 hover:text-red-500 rounded transition" data-hide-widget="${item.id}" title="Nascondi questo widget">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
@@ -2742,6 +2899,11 @@
 
     // Bind customize and visibility buttons
     document.getElementById('customizeDashboardBtn')?.addEventListener('click', () => toggleCustomization(true));
+    document.getElementById('mobileCustomizeBtn')?.addEventListener('click', () => toggleCustomization(true));
+    document.getElementById('drawerStartCustomizeBtn')?.addEventListener('click', () => {
+      closeDrawer();
+      toggleCustomization(true);
+    });
     document.getElementById('widgetVisibilityBtn')?.addEventListener('click', openDrawer);
     document.getElementById('mobileVisibilityBtn')?.addEventListener('click', openDrawer);
     document.getElementById('bannerVisibilityBtn')?.addEventListener('click', openDrawer);
@@ -2753,6 +2915,26 @@
     document.getElementById('drawer-backdrop')?.addEventListener('click', closeDrawer);
     document.getElementById('drawerShowAllBtn')?.addEventListener('click', showAllWidgets);
     document.getElementById('drawerResetDefaultBtn')?.addEventListener('click', resetDefaultWidgets);
+
+    // Global click listener for touch-friendly move widget buttons (▲ and ▼)
+    document.addEventListener('click', async (e) => {
+      const upBtn = e.target.closest('[data-move-widget-up]');
+      if (upBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = upBtn.getAttribute('data-move-widget-up');
+        if (id) await moveWidgetUp(id);
+        return;
+      }
+      const downBtn = e.target.closest('[data-move-widget-down]');
+      if (downBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = downBtn.getAttribute('data-move-widget-down');
+        if (id) await moveWidgetDown(id);
+        return;
+      }
+    });
 
     // Bind manual market refresh buttons
     document.getElementById('refreshMarketBtn')?.addEventListener('click', (e) => {
@@ -2942,7 +3124,10 @@
     openAssetDetail,
     WIDGET_DEFINITIONS,
     MOBILE_DEFAULT_LAYOUT,
-    isMobileDashboard
+    isMobileDashboard,
+    moveWidgetUp,
+    moveWidgetDown,
+    repackMobileCoordinates
   };
   window.refreshDashboard = refreshDashboard;
 })();

@@ -176,4 +176,63 @@ describe('Dashboard Mobile Responsive Layout (Max 2 Columns) & Desktop Independe
     assert.equal(retrievedMob[0].w, 2, 'Mobile value must be 2 columns wide');
     assert.equal(retrievedMob[1].w, 1, 'Mobile dayChange must be 1 column wide');
   });
+
+  test('dashboard_mobile.html contains mobile customize button, customize banner and quick move buttons', () => {
+    const html = fs.readFileSync(path.join(__dirname, '../private_views/dashboard_mobile.html'), 'utf8');
+    assert.ok(html.includes('id="mobileCustomizeBtn"'), 'Must have mobileCustomizeBtn in header');
+    assert.ok(html.includes('id="customize-banner"'), 'Must have customize-banner');
+    assert.ok(html.includes('id="drawerStartCustomizeBtn"'), 'Must have drawerStartCustomizeBtn in drawer');
+  });
+
+  test('public/dashboard.js implements repackMobileCoordinates, moveWidgetUp and moveWidgetDown', () => {
+    const jsContent = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
+    assert.ok(jsContent.includes('function repackMobileCoordinates'), 'Must define repackMobileCoordinates');
+    assert.ok(jsContent.includes('async function moveWidgetUp'), 'Must define moveWidgetUp');
+    assert.ok(jsContent.includes('async function moveWidgetDown'), 'Must define moveWidgetDown');
+    assert.ok(jsContent.includes('data-move-widget-up'), 'Must use data-move-widget-up attributes');
+    assert.ok(jsContent.includes('data-move-widget-down'), 'Must use data-move-widget-down attributes');
+
+    // Extract repackMobileCoordinates to test packing logic
+    const fnMatch = jsContent.match(/function repackMobileCoordinates\(orderedItems\) \{([\s\S]*?)\n  \}/);
+    assert.ok(fnMatch, 'repackMobileCoordinates function body matched');
+    const repackFn = new Function('orderedItems', fnMatch[1]);
+
+    const sample = [
+      { id: 'w1', w: 1, h: 2 },
+      { id: 'w2', w: 1, h: 2 },
+      { id: 'hero', w: 2, h: 5 },
+      { id: 'w3', w: 1, h: 2 }
+    ];
+
+    const repacked = repackFn(sample);
+    // w1 at (0, 0)
+    assert.equal(repacked[0].x, 0);
+    assert.equal(repacked[0].y, 0);
+    // w2 at (1, 0)
+    assert.equal(repacked[1].x, 1);
+    assert.equal(repacked[1].y, 0);
+    // hero at (0, 2)
+    assert.equal(repacked[2].x, 0);
+    assert.equal(repacked[2].y, 2);
+    // w3 at (0, 7)
+    assert.equal(repacked[3].x, 0);
+    assert.equal(repacked[3].y, 7);
+  });
+
+  test('All other mobile views use compact screen margins (px-1.5 py-2) and compact card padding', () => {
+    const mobileViews = [
+      'portfolios_mobile.html',
+      'portfolio_detail_mobile.html',
+      'transactions_mobile.html',
+      'history_mobile.html',
+      'reports_mobile.html',
+      'settings_mobile.html'
+    ];
+
+    for (const view of mobileViews) {
+      const content = fs.readFileSync(path.join(__dirname, '../private_views', view), 'utf8');
+      assert.ok(content.includes('px-1.5'), `${view} must use compact horizontal gutter (px-1.5)`);
+      assert.ok(content.includes('signature-card'), `${view} must include signature-card styling`);
+    }
+  });
 });

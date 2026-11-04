@@ -94,6 +94,12 @@
         </svg>
       </button>
 
+      <button type="button" id="mobileCustomizeBtn" class="p-2 rounded-full text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 active:scale-95 transition" title="Riordina & Sposta Widget su Schermo">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      </button>
+
       <button type="button" data-theme-toggle class="p-2 rounded-full text-gray-500 dark:text-gray-400 bg-gray-100/70 dark:bg-white/5 active:scale-95 transition" title="Cambia tema">
         <svg class="theme-icon-sun w-4 h-4 hidden text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -110,6 +116,24 @@
       </button>
     </div>
   </header>
+
+  <!-- Customization / Reorder Active Banner (Hidden by default) -->
+  <div id="customize-banner" class="hidden sticky top-[53px] z-30 bg-emerald-600 text-white px-3 py-2 flex items-center justify-between text-xs font-mono shadow-md">
+    <div class="flex items-center space-x-1.5 min-w-0">
+      <span class="animate-pulse w-2 h-2 rounded-full bg-white shrink-0"></span>
+      <span class="truncate font-semibold text-[11px]">Riordina con frecce ▲ / ▼ o trascina</span>
+    </div>
+    <div class="flex items-center space-x-1.5 shrink-0">
+      <button id="saveLayoutBtn" type="button" class="btn-pill px-2.5 py-1 bg-white text-emerald-800 font-bold text-xs shadow-xs active:scale-95">Salva</button>
+      <button id="cancelCustomizeBtn" type="button" class="btn-pill px-2.5 py-1 bg-black/25 text-white text-xs active:scale-95">Fatto</button>
+    </div>
+  </div>
+
+  <!-- Save Success Toast -->
+  <div id="save-toast" class="hidden fixed bottom-20 left-4 right-4 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center justify-center space-x-2 text-xs font-mono font-semibold animate-bounce">
+    <span>✓</span>
+    <span>Layout mobile salvato con successo!</span>
+  </div>
 
   <!-- Live Market Ticker -->
   <div id="live-ticker-container"></div>
@@ -154,8 +178,15 @@
         Seleziona quali widget visualizzare sulla tua dashboard mobile.
       </p>
 
-      <!-- Search input for widgets -->
-      <div class="mt-2 shrink-0">
+      <div class="mt-2 shrink-0 space-y-2">
+        <button id="drawerStartCustomizeBtn" type="button" class="w-full py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-mono font-semibold flex items-center justify-center space-x-1.5 active:scale-95 transition">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+          <span>Attiva Modalità Riordina su Schermo</span>
+        </button>
+
+        <!-- Search input for widgets -->
         <div class="relative">
           <input type="text" id="widget-search-input" placeholder="🔍 Cerca widget..." class="w-full px-3 py-1.5 pl-8 rounded-xl text-xs font-mono border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
           <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
