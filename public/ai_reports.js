@@ -11,17 +11,19 @@
   const fmtPct = (v) => (Number(v) || 0).toFixed(1) + '%';
 
   async function loadSavedGoals() {
+    if (!document.getElementById('goalCurrentAge')) return;
     try {
       const res = await fetch('/api/goals/saved');
       const data = await res.json();
       if (data.success && data.params) {
         const p = data.params;
-        if (p.currentAge) document.getElementById('goalCurrentAge').value = p.currentAge;
-        if (p.retirementAge) document.getElementById('goalRetirementAge').value = p.retirementAge;
-        if (p.monthlySavings !== undefined) document.getElementById('goalMonthlySavings').value = p.monthlySavings;
-        if (p.monthlyExpenses !== undefined) document.getElementById('goalMonthlyExpenses').value = p.monthlyExpenses;
-        if (p.expectedReturn !== undefined) document.getElementById('goalExpectedReturn').value = (p.expectedReturn * 100).toFixed(1);
-        if (p.volatility !== undefined) document.getElementById('goalVolatility').value = (p.volatility * 100).toFixed(1);
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+        setVal('goalCurrentAge', p.currentAge);
+        setVal('goalRetirementAge', p.retirementAge);
+        setVal('goalMonthlySavings', p.monthlySavings);
+        setVal('goalMonthlyExpenses', p.monthlyExpenses);
+        if (p.expectedReturn !== undefined) setVal('goalExpectedReturn', (p.expectedReturn * 100).toFixed(1));
+        if (p.volatility !== undefined) setVal('goalVolatility', (p.volatility * 100).toFixed(1));
       }
     } catch (err) {
       console.warn('Error loading saved goals:', err);
@@ -29,13 +31,15 @@
   }
 
   async function runSimulation() {
-    const portfolioId = document.getElementById('reportPortfolioSelect').value;
-    const currentAge = parseInt(document.getElementById('goalCurrentAge').value, 10);
-    const retirementAge = parseInt(document.getElementById('goalRetirementAge').value, 10);
-    const monthlySavings = parseFloat(document.getElementById('goalMonthlySavings').value) || 0;
-    const monthlyExpenses = parseFloat(document.getElementById('goalMonthlyExpenses').value) || 0;
-    const expectedReturn = (parseFloat(document.getElementById('goalExpectedReturn').value) || 7.0) / 100.0;
-    const volatility = (parseFloat(document.getElementById('goalVolatility').value) || 14.0) / 100.0;
+    if (!document.getElementById('goalCurrentAge')) return;
+    const portfolioSelect = document.getElementById('reportPortfolioSelect');
+    const portfolioId = portfolioSelect ? portfolioSelect.value : 'all';
+    const currentAge = parseInt(document.getElementById('goalCurrentAge')?.value, 10);
+    const retirementAge = parseInt(document.getElementById('goalRetirementAge')?.value, 10);
+    const monthlySavings = parseFloat(document.getElementById('goalMonthlySavings')?.value) || 0;
+    const monthlyExpenses = parseFloat(document.getElementById('goalMonthlyExpenses')?.value) || 0;
+    const expectedReturn = (parseFloat(document.getElementById('goalExpectedReturn')?.value) || 7.0) / 100.0;
+    const volatility = (parseFloat(document.getElementById('goalVolatility')?.value) || 14.0) / 100.0;
 
     const payload = {
       portfolioId: portfolioId === 'all' ? null : portfolioId,
@@ -48,8 +52,10 @@
     };
 
     const runBtn = document.getElementById('runSimulationBtn');
-    runBtn.disabled = true;
-    runBtn.textContent = 'Simulazione in corso...';
+    if (runBtn) {
+      runBtn.disabled = true;
+      runBtn.textContent = 'Simulazione in corso...';
+    }
 
     try {
       const res = await fetch('/api/goals/simulate', {
@@ -60,17 +66,19 @@
 
       const data = await res.json();
       if (!data.success) {
-        alert(data.error || 'Errore durante la simulazione.');
+        if (runBtn) alert(data.error || 'Errore durante la simulazione.');
         return;
       }
 
       lastSimulationData = data;
       renderSimulationResults(data);
     } catch (err) {
-      alert('Errore di comunicazione: ' + err.message);
+      if (runBtn) alert('Errore di comunicazione: ' + err.message);
     } finally {
-      runBtn.disabled = false;
-      runBtn.textContent = 'Esegui Simulazione Monte Carlo';
+      if (runBtn) {
+        runBtn.disabled = false;
+        runBtn.textContent = 'Esegui Simulazione Monte Carlo';
+      }
     }
   }
 
@@ -78,17 +86,26 @@
     const m = data.metrics;
 
     // KPI Cards
-    document.getElementById('statSuccessRate').textContent = fmtPct(m.successRate);
     const successEl = document.getElementById('statSuccessRate');
-    if (m.successRate >= 85) successEl.className = 'text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums';
-    else if (m.successRate >= 70) successEl.className = 'text-2xl font-bold font-mono text-amber-500 tabular-nums';
-    else successEl.className = 'text-2xl font-bold font-mono text-rose-600 tabular-nums';
+    if (successEl) {
+      successEl.textContent = fmtPct(m.successRate);
+      if (m.successRate >= 85) successEl.className = 'text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums';
+      else if (m.successRate >= 70) successEl.className = 'text-2xl font-bold font-mono text-amber-500 tabular-nums';
+      else successEl.className = 'text-2xl font-bold font-mono text-rose-600 tabular-nums';
+    }
 
-    document.getElementById('statFireNumber').textContent = fmtEur(m.fireNumber);
-    document.getElementById('statRetirementMedian').textContent = fmtEur(m.wealthAtRetirementMedian);
-    document.getElementById('statSorrDepleted').textContent = typeof m.sorrDepletedAge === 'number'
-      ? `Esaurimento all'età di ${m.sorrDepletedAge} anni`
-      : 'Capitale resiliente (Nessun esaurimento)';
+    const fireNumEl = document.getElementById('statFireNumber');
+    if (fireNumEl) fireNumEl.textContent = fmtEur(m.fireNumber);
+
+    const retMedEl = document.getElementById('statRetirementMedian');
+    if (retMedEl) retMedEl.textContent = fmtEur(m.wealthAtRetirementMedian);
+
+    const sorrEl = document.getElementById('statSorrDepleted');
+    if (sorrEl) {
+      sorrEl.textContent = typeof m.sorrDepletedAge === 'number'
+        ? `Esaurimento all'età di ${m.sorrDepletedAge} anni`
+        : 'Capitale resiliente (Nessun esaurimento)';
+    }
 
     renderMonteCarloChart(data.percentiles, data.sorr);
   }
@@ -266,18 +283,20 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    await loadSavedGoals();
+    if (document.getElementById('goalCurrentAge')) {
+      await loadSavedGoals();
+    }
 
     document.getElementById('runSimulationBtn')?.addEventListener('click', runSimulation);
     document.getElementById('runAiBtn')?.addEventListener('click', runAiAnalysis);
 
     document.getElementById('saveGoalsBtn')?.addEventListener('click', async () => {
-      const currentAge = parseInt(document.getElementById('goalCurrentAge').value, 10);
-      const retirementAge = parseInt(document.getElementById('goalRetirementAge').value, 10);
-      const monthlySavings = parseFloat(document.getElementById('goalMonthlySavings').value);
-      const monthlyExpenses = parseFloat(document.getElementById('goalMonthlyExpenses').value);
-      const expectedReturn = (parseFloat(document.getElementById('goalExpectedReturn').value) || 7) / 100;
-      const volatility = (parseFloat(document.getElementById('goalVolatility').value) || 14) / 100;
+      const currentAge = parseInt(document.getElementById('goalCurrentAge')?.value, 10);
+      const retirementAge = parseInt(document.getElementById('goalRetirementAge')?.value, 10);
+      const monthlySavings = parseFloat(document.getElementById('goalMonthlySavings')?.value);
+      const monthlyExpenses = parseFloat(document.getElementById('goalMonthlyExpenses')?.value);
+      const expectedReturn = (parseFloat(document.getElementById('goalExpectedReturn')?.value) || 7) / 100;
+      const volatility = (parseFloat(document.getElementById('goalVolatility')?.value) || 14) / 100;
 
       await fetch('/api/goals/save', {
         method: 'POST',
@@ -287,8 +306,9 @@
       alert('Parametri previdenziali salvati con successo.');
     });
 
-    // Auto run first simulation
-    setTimeout(runSimulation, 400);
+    if (document.getElementById('runSimulationBtn')) {
+      setTimeout(runSimulation, 400);
+    }
   });
 
   window.AiReportsController = {

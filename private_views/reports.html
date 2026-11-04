@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pensione, FIRE & AI Advisor | FolioTrack</title>
+  <title>AI Advisor | FolioTrack</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
   <script src="/theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,8 +20,8 @@
 
     <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Pensione, FIRE & AI Advisor</h1>
-        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">Simulazioni stocastiche Monte Carlo (1000 iterazioni), stress test SORR e consulenza quantitativa AI</p>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">AI Portfolio Advisor</h1>
+        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">Analisi quantitativa e qualitativa dell'asset allocation con intelligenza artificiale</p>
       </div>
 
       <div class="flex items-center space-x-3 no-print">
@@ -36,90 +36,7 @@
     </header>
 
     <main class="flex-1 px-8 pb-16 space-y-8 max-w-7xl mx-auto w-full">
-      <!-- SECTION 1: Monte Carlo Retirement & FIRE Simulator -->
-      <section class="space-y-4">
-        <div class="signature-card p-6 space-y-5">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-white/5 pb-3 gap-2">
-            <div>
-              <h2 class="text-base font-bold text-gray-900 dark:text-white">Simulatore Monte Carlo & Piano FIRE</h2>
-              <p class="text-xs text-gray-500 font-mono">Modello geometrico lognormale su 1000 iterazioni stocastiche con inflazione</p>
-            </div>
-            <div class="flex items-center space-x-2 no-print">
-              <button id="saveGoalsBtn" class="btn-pill px-3 py-1.5 text-xs font-mono text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition">
-                Salva Parametri
-              </button>
-              <button id="runSimulationBtn" class="btn-pill px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition shadow-md shadow-blue-600/20">
-                Esegui Simulazione Monte Carlo
-              </button>
-            </div>
-          </div>
-
-          <!-- Input Parameters Grid -->
-          <div class="grid grid-cols-2 md:grid-cols-6 gap-3 text-xs font-mono no-print">
-            <div>
-              <label class="block text-[10px] uppercase text-gray-500 mb-1">Età Attuale</label>
-              <input type="number" id="goalCurrentAge" value="35" min="18" max="80" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
-            </div>
-            <div>
-              <label class="block text-[10px] uppercase text-gray-500 mb-1">Età Pensionamento</label>
-              <input type="number" id="goalRetirementAge" value="60" min="25" max="85" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
-            </div>
-            <div>
-              <label class="block text-[10px] uppercase text-gray-500 mb-1">Risparmio Mese (€)</label>
-              <input type="number" id="goalMonthlySavings" value="500" step="50" min="0" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
-            </div>
-            <div>
-              <label class="block text-[10px] uppercase text-gray-500 mb-1">Spesa Mese Pensione (€)</label>
-              <input type="number" id="goalMonthlyExpenses" value="2000" step="100" min="500" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
-            </div>
-            <div>
-              <label class="block text-[10px] uppercase text-gray-500 mb-1">Rendimento Atteso %</label>
-              <input type="number" id="goalExpectedReturn" value="7.0" step="0.5" min="1" max="20" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
-            </div>
-            <div>
-              <label class="block text-[10px] uppercase text-gray-500 mb-1">Volatilità %</label>
-              <input type="number" id="goalVolatility" value="14.0" step="0.5" min="2" max="40" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
-            </div>
-          </div>
-
-          <!-- 4 Output Scorecards -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-1">
-            <div class="signature-card p-4 space-y-1 bg-gray-50/70 dark:bg-white/[0.02]">
-              <span class="text-xs text-gray-500 font-medium">Tasso di Successo</span>
-              <div id="statSuccessRate" class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">0.0%</div>
-              <p class="text-[10px] text-gray-400 font-mono">% iterazioni con patrimonio residuo > 0</p>
-            </div>
-
-            <div class="signature-card p-4 space-y-1 bg-gray-50/70 dark:bg-white/[0.02]">
-              <span class="text-xs text-gray-500 font-medium">FIRE Number (Regola 4%)</span>
-              <div id="statFireNumber" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">€ 0</div>
-              <p class="text-[10px] text-gray-400 font-mono">25x la spesa annua programmata</p>
-            </div>
-
-            <div class="signature-card p-4 space-y-1 bg-gray-50/70 dark:bg-white/[0.02]">
-              <span class="text-xs text-gray-500 font-medium">Patrimonio Mediano a Pensione</span>
-              <div id="statRetirementMedian" class="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400 tabular-nums">€ 0</div>
-              <p class="text-[10px] text-gray-400 font-mono">Scenario Percentile 50</p>
-            </div>
-
-            <div class="signature-card p-4 space-y-1 bg-gray-50/70 dark:bg-white/[0.02] border-rose-500/20">
-              <span class="text-xs text-rose-600 dark:text-rose-400 font-medium">Stress Test SORR (-30%)</span>
-              <div id="statSorrDepleted" class="text-sm font-bold font-mono text-rose-600 dark:text-rose-400 mt-1">Nessun esaurimento</div>
-              <p class="text-[10px] text-gray-400 font-mono">Impatto di un crollo nei primi 3 anni</p>
-            </div>
-          </div>
-
-          <!-- Fan Chart (Ventaglio Monte Carlo) -->
-          <div class="space-y-2 pt-2">
-            <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-mono">Ventaglio di Probabilità Patrimonio (Accumulo & Decumulo)</h4>
-            <div class="h-72 relative w-full">
-              <canvas id="monteCarloChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- SECTION 2: Quantitative AI Advisor Assessment -->
+      <!-- AI Advisor Assessment -->
       <section class="space-y-4">
         <div class="signature-card p-6 space-y-5">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-white/5 pb-3 gap-2">
@@ -227,7 +144,7 @@
 
       <!-- Print Disclaimer Footer -->
       <footer id="printDisclaimer" class="pt-6 border-t border-gray-200 dark:border-white/5 text-[10px] font-mono text-gray-400 text-center leading-relaxed">
-        FolioTrack Signature Analytics • Generato il <span id="reportGenDate"></span>. Le proiezioni Monte Carlo e le analisi dell'AI Advisor hanno finalità puramente illustrative ed educative e non costituiscono consulenza finanziaria personalizzata o sollecitazione al pubblico risparmio.
+        FolioTrack Signature Analytics • Generato il <span id="reportGenDate"></span>. Le analisi dell'AI Advisor hanno finalità puramente illustrative ed educative e non costituiscono consulenza finanziaria personalizzata o sollecitazione al pubblico risparmio.
       </footer>
     </main>
   </div>
@@ -267,7 +184,6 @@
 
     document.getElementById('reportPortfolioSelect').addEventListener('change', (e) => {
       localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
-      if (window.AiReportsController) window.AiReportsController.runSimulation();
     });
 
     document.addEventListener('DOMContentLoaded', initPortfoliosDropdown);

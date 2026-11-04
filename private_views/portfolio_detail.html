@@ -428,7 +428,7 @@
         document.getElementById('exportWealthfolioBtn').href = `/api/portfolios/${portfolioId}/export/wealthfolio`;
         document.getElementById('linkViewTx').href = `/transactions?portfolioId=${portfolioId}`;
         document.getElementById('linkViewHistory').href = `/history?portfolioId=${portfolioId}`;
-        document.getElementById('linkViewReports').href = `/reports?portfolioId=${portfolioId}`;
+        document.getElementById('linkViewReports').href = `/ai-advisor?portfolioId=${portfolioId}`;
         localStorage.setItem('foliotrack_selected_portfolio', String(portfolioId));
 
         // Load portfolio switcher options

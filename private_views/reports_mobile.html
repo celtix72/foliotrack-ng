@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pensione & AI Advisor | FolioTrack Mobile</title>
+  <title>AI Advisor | FolioTrack Mobile</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
   <script src="/theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,8 +22,8 @@
   <!-- Mobile Top Header Bar -->
   <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
     <div>
-      <h1 class="text-base font-bold text-gray-900 dark:text-white">Pensione & AI</h1>
-      <span class="text-[10px] font-mono text-gray-400">Monte Carlo & Advisor</span>
+      <h1 class="text-base font-bold text-gray-900 dark:text-white">AI Advisor</h1>
+      <span class="text-[10px] font-mono text-gray-400">Analisi Portafoglio</span>
     </div>
     <select id="reportPortfolioSelect" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono">
       <option value="all">Tutti i portafogli</option>
@@ -34,70 +34,6 @@
 
   <!-- Mobile Main Content -->
   <main class="flex-1 px-1.5 py-2 space-y-2">
-    <!-- Quick Parameters Collapse -->
-    <div class="signature-card p-4 space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="font-bold text-xs uppercase tracking-wider text-gray-500">Parametri Pensione</span>
-        <button id="runSimulationBtn" class="btn-pill px-3 py-1 bg-blue-600 text-white text-[11px] font-semibold">
-          Simula
-        </button>
-      </div>
-
-      <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-        <div>
-          <label class="block text-[10px] text-gray-400">Età Attuale / Pensione</label>
-          <div class="flex items-center space-x-1">
-            <input type="number" id="goalCurrentAge" value="35" class="w-1/2 px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-            <span class="text-gray-400">/</span>
-            <input type="number" id="goalRetirementAge" value="60" class="w-1/2 px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-          </div>
-        </div>
-        <div>
-          <label class="block text-[10px] text-gray-400">Risparmio Mese (€)</label>
-          <input type="number" id="goalMonthlySavings" value="500" class="w-full px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-        </div>
-        <div>
-          <label class="block text-[10px] text-gray-400">Spesa Mese (€)</label>
-          <input type="number" id="goalMonthlyExpenses" value="2000" class="w-full px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-        </div>
-        <div>
-          <label class="block text-[10px] text-gray-400">Rendimento %</label>
-          <input type="number" id="goalExpectedReturn" value="7.0" class="w-full px-2 py-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-          <input type="hidden" id="goalVolatility" value="14.0">
-        </div>
-      </div>
-    </div>
-
-    <!-- Monte Carlo Output Scorecards -->
-    <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-      <div class="signature-card p-3 space-y-0.5">
-        <span class="text-[10px] text-gray-400">Tasso Successo</span>
-        <div id="statSuccessRate" class="text-lg font-bold text-emerald-600 dark:text-emerald-400">0.0%</div>
-      </div>
-      <div class="signature-card p-3 space-y-0.5">
-        <span class="text-[10px] text-gray-400">FIRE Number (4%)</span>
-        <div id="statFireNumber" class="text-lg font-bold text-gray-900 dark:text-white">€ 0</div>
-      </div>
-      <div class="signature-card p-3 space-y-0.5 col-span-2">
-        <span class="text-[10px] text-gray-400">Patrimonio Mediano a Pensione</span>
-        <div id="statRetirementMedian" class="text-base font-bold text-blue-600 dark:text-blue-400">€ 0</div>
-      </div>
-    </div>
-
-    <!-- Fan Chart Card -->
-    <div class="signature-card p-4 space-y-2">
-      <div class="flex items-center justify-between text-xs">
-        <span class="font-bold text-gray-900 dark:text-white">Ventaglio Monte Carlo</span>
-        <span class="text-[10px] font-mono text-gray-400">P90 • P50 • P10</span>
-      </div>
-      <div class="h-48 relative w-full">
-        <canvas id="monteCarloChart"></canvas>
-      </div>
-      <div id="statSorrDepleted" class="text-[10px] font-mono text-rose-500 pt-1 border-t border-gray-100 dark:border-white/5">
-        Stress-test SORR: -
-      </div>
-    </div>
-
     <!-- AI Advisor Trigger Card -->
     <div class="signature-card p-4 space-y-3">
       <div class="flex items-center justify-between">
@@ -161,9 +97,9 @@
       <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
       Portafogli
     </a>
-    <a href="/goals" class="flex flex-col items-center text-emerald-600 dark:text-emerald-400 font-bold">
-      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-      FIRE & AI
+    <a href="/ai-advisor" class="flex flex-col items-center text-emerald-600 dark:text-emerald-400 font-bold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      AI Advisor
     </a>
     <a href="/transactions" class="flex flex-col items-center text-gray-500 dark:text-gray-400 hover:text-emerald-500">
       <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -202,7 +138,6 @@
 
           sel.addEventListener('change', (e) => {
             localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
-            if (window.AiReportsController) window.AiReportsController.runSimulation();
           });
         }
       } catch (err) {

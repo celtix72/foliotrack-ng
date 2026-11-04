@@ -230,7 +230,7 @@
         document.getElementById('mExportBtn').href = `/api/portfolios/${portfolioId}/export/wealthfolio`;
         document.getElementById('mLinkViewTx').href = `/transactions?portfolioId=${portfolioId}`;
         document.getElementById('mLinkViewHistory').href = `/history?portfolioId=${portfolioId}`;
-        document.getElementById('mLinkViewReports').href = `/reports?portfolioId=${portfolioId}`;
+        document.getElementById('mLinkViewReports').href = `/ai-advisor?portfolioId=${portfolioId}`;
         localStorage.setItem('foliotrack_selected_portfolio', String(portfolioId));
 
         loadMobilePortfolioSwitcher();

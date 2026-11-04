@@ -273,28 +273,32 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
     });
 
     test('GET /goals, /ai-advisor and /reports serve desktop reports view with injected sidebar', async () => {
-      const res = await fetch(`${baseUrl}/goals`, {
+      const res = await fetch(`${baseUrl}/ai-advisor`, {
         headers: { Cookie: `foliotrack_token=${authToken}` }
       });
       assert.strictEqual(res.status, 200);
       const html = await res.text();
-      assert.ok(html.includes('Pensione, FIRE & AI Advisor'));
-      assert.ok(html.includes('monteCarloChart'));
-      assert.ok(html.includes('statFireNumber'));
+      assert.ok(html.includes('AI Portfolio Advisor'));
+      assert.ok(!html.includes('monteCarloChart'), 'monteCarloChart should be removed');
+      assert.ok(!html.includes('statFireNumber'), 'statFireNumber should be removed');
       assert.ok(html.includes('aiRiskScore'));
+      assert.ok(html.includes('aiDiversificationScore'));
       assert.ok(html.includes('/ai_reports.js'));
       assert.ok(html.includes('/pdf_report.js'));
+      assert.ok(!html.includes('Pensione & FIRE'), 'Pensione & FIRE link should be removed from sidebar');
     });
 
     test('GET /goals?view=mobile serves mobile layout', async () => {
-      const res = await fetch(`${baseUrl}/goals?view=mobile`, {
+      const res = await fetch(`${baseUrl}/ai-advisor?view=mobile`, {
         headers: { Cookie: `foliotrack_token=${authToken}` }
       });
       assert.strictEqual(res.status, 200);
       const html = await res.text();
-      assert.ok(html.includes('monteCarloChart'));
-      assert.ok(html.includes('statFireNumber'));
-      assert.ok(html.includes('statSuccessRate'));
+      assert.ok(html.includes('AI Advisor'));
+      assert.ok(!html.includes('monteCarloChart'), 'monteCarloChart should be removed on mobile');
+      assert.ok(!html.includes('statFireNumber'), 'statFireNumber should be removed on mobile');
+      assert.ok(html.includes('aiRiskScore'));
+      assert.ok(html.includes('aiDiversificationScore'));
     });
   });
 });
