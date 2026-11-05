@@ -130,7 +130,7 @@ async function fetchQuote(ticker, exchange) {
     const { price, currency } = parsePriceAndCurrency(mainPriceMatch[1]);
     if (price <= 0) return null;
 
-    // Percent change extraction
+    // Percent and value change extraction
     let changePercent = 0.0;
     const pctMatch = html.match(/class=\"ymyBi\"[^>]*>([+-]?[0-9.,]+)%?<\/span>/i);
     if (pctMatch && pctMatch[1]) {
@@ -138,15 +138,26 @@ async function fetchQuote(ticker, exchange) {
       changePercent = parseFloat(cleanPct) || 0.0;
     }
 
+    const changeValue = changePercent !== 0 ? (price - (price / (1 + changePercent / 100))) : 0.0;
+    const previousClose = price - changeValue;
+
+    let todayDateStr = '';
+    try {
+      todayDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+    } catch {
+      todayDateStr = new Date().toISOString().split('T')[0];
+    }
+
     return {
       ticker: ticker.toUpperCase().trim(),
       name,
       currentPrice: price,
       changePercent,
-      changeValue: 0.0,
+      changeValue,
+      previousClose,
       currency,
       exchange: exchange || 'Google Finance',
-      quoteDate: new Date().toISOString().split('T')[0],
+      quoteDate: todayDateStr,
       source: 'GOOGLE'
     };
   } catch (err) {

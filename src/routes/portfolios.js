@@ -151,9 +151,31 @@ function recalculatePortfolio(portfolioId, assetsMap = null) {
     assetCount: metrics.assetCount,
     dayPnl: metrics.dayPnl,
     dayPnlPercent: metrics.dayPnlPercent,
+    performance1D: metrics.dayPnlPercent,
     closedPositions: metrics.closedPositions || [],
     metrics
   };
+}
+
+/**
+ * Resets daily deltas for assets quoted prior to today.
+ */
+function resetPriorDayAssetDeltas() {
+  let todayRome = '';
+  try {
+    todayRome = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+  } catch {
+    todayRome = new Date().toISOString().split('T')[0];
+  }
+  try {
+    db.prepare(`
+      UPDATE assets
+      SET previousClose = currentPrice,
+          changeValue = 0.0,
+          changePercent = 0.0
+      WHERE quoteDate IS NOT NULL AND trim(quoteDate) != '' AND quoteDate < ?
+    `).run(todayRome);
+  } catch {}
 }
 
 /**
@@ -161,6 +183,7 @@ function recalculatePortfolio(portfolioId, assetsMap = null) {
  * Lists all portfolios accessible by the authenticated user, along with aggregated totals.
  */
 router.get('/', (req, res) => {
+  resetPriorDayAssetDeltas();
   const userId = req.user.id;
   const userRole = req.user.role;
 

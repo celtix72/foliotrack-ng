@@ -522,8 +522,24 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
       const unrealizedPnlNative = marketValueNative - bookValueNative;
       const unrealizedPnlPercentNative = bookValueNative > 0 ? (unrealizedPnlNative / bookValueNative) * 100.0 : 0.0;
 
-      const changeVal = Number(asset.changeValue) || 0.0;
-      const changePct = Number(asset.changePercent !== undefined ? asset.changePercent : (asset.change24h || 0.0)) || 0.0;
+      // Check if quote is from a prior trading day (not today's session)
+      let todayRomeStr = '';
+      try {
+        todayRomeStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+      } catch {
+        todayRomeStr = new Date().toISOString().split('T')[0];
+      }
+
+      const assetQuoteDate = asset.quoteDate ? String(asset.quoteDate).substring(0, 10) : null;
+      // If the asset has a quote date from a prior day, it has not traded yet in today's regular session.
+      // At start of trading day, its delta starts strictly at 0 without carrying yesterday's variation.
+      const isPriorDay = Boolean(assetQuoteDate && assetQuoteDate < todayRomeStr);
+
+      const rawChangeVal = Number(asset.changeValue) || 0.0;
+      const rawChangePct = Number(asset.changePercent !== undefined ? asset.changePercent : (asset.change24h || 0.0)) || 0.0;
+
+      const changeVal = isPriorDay ? 0.0 : rawChangeVal;
+      const changePct = isPriorDay ? 0.0 : rawChangePct;
       const dayPnlNative = changeVal * pos.quantity;
       const dayPnlEur = dayPnlNative * fxRateToPortfolio;
 
@@ -536,11 +552,11 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
       const totalReturnNative = unrealizedPnlNative + dividendsNative;
       const totalReturnPercentNative = bookValueNative > 0 ? (totalReturnNative / bookValueNative) * 100.0 : 0.0;
 
-      const openPrice = Number(asset.openPrice) || currentPriceNative;
-      const highPrice = Number(asset.highPrice) || currentPriceNative;
-      const lowPrice = Number(asset.lowPrice) || currentPriceNative;
+      const openPrice = isPriorDay ? currentPriceNative : (Number(asset.openPrice) || currentPriceNative);
+      const highPrice = isPriorDay ? currentPriceNative : (Number(asset.highPrice) || currentPriceNative);
+      const lowPrice = isPriorDay ? currentPriceNative : (Number(asset.lowPrice) || currentPriceNative);
       const closePrice = currentPriceNative;
-      const previousClose = Number(asset.previousClose) || (currentPriceNative - changeVal);
+      const previousClose = isPriorDay ? currentPriceNative : (Number(asset.previousClose) || (currentPriceNative - changeVal));
 
       totalAssetValue += marketValue;
       totalCostBasis += bookValue;

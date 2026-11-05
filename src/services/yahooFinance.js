@@ -58,6 +58,17 @@ async function search(query) {
 }
 
 /**
+ * Returns current date in Europe/Rome timezone in YYYY-MM-DD format.
+ */
+function getTradingDateStr(d = new Date()) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(d);
+  } catch {
+    return d.toISOString().split('T')[0];
+  }
+}
+
+/**
  * Fetches real-time quote for a given symbol from Yahoo Finance.
  *
  * @param {string} symbol
@@ -75,7 +86,7 @@ async function getQuote(symbol) {
 
     const price = Number(q.regularMarketPrice) || 0.0;
     const change = Number(q.regularMarketChange) || 0.0;
-    const changePercent = Number(q.regularMarketChangePercent) || 0.0;
+    const changePercentRaw = Number(q.regularMarketChangePercent) || 0.0;
 
     let dividendYield = 0.0;
     if (q.dividendYield !== undefined && q.dividendYield !== null) {
@@ -83,32 +94,58 @@ async function getQuote(symbol) {
       dividendYield = q.dividendYield < 0.2 ? q.dividendYield * 100 : q.dividendYield;
     }
 
+    // Determine the calendar date of the regular market session trade
+    let quoteDateStr = null;
+    let regularMarketTimeIso = null;
+    if (q.regularMarketTime) {
+      const d = q.regularMarketTime instanceof Date
+        ? q.regularMarketTime
+        : new Date(Number(q.regularMarketTime) * (Number(q.regularMarketTime) < 1e11 ? 1000 : 1));
+      regularMarketTimeIso = d.toISOString();
+      quoteDateStr = getTradingDateStr(d);
+    } else {
+      quoteDateStr = getTradingDateStr();
+    }
+
+    const todayStr = getTradingDateStr();
+    const isTodayQuote = Boolean(quoteDateStr && quoteDateStr === todayStr);
+
+    // If the asset has not traded in today's regular session yet (e.g. quote is from yesterday),
+    // start-of-day delta starts from 0 without yesterday's variation:
+    let changeValue = 0.0;
+    let changePercent = 0.0;
+    let previousClose = price;
+
+    if (isTodayQuote) {
+      changeValue = change;
+      changePercent = changePercentRaw;
+      previousClose = Number(q.regularMarketPreviousClose) || (price - change);
+    } else {
+      previousClose = price;
+      changeValue = 0.0;
+      changePercent = 0.0;
+    }
+
     return {
       ticker: cleanSymbol,
       name: q.shortName || q.longName || cleanSymbol,
       type: mapQuoteType(q.quoteType),
       currentPrice: price,
-      changeValue: change,
+      changeValue,
       changePercent,
-      openPrice: Number(q.regularMarketOpen) || price,
-      highPrice: Number(q.regularMarketDayHigh) || price,
-      lowPrice: Number(q.regularMarketDayLow) || price,
-      previousClose: Number(q.regularMarketPreviousClose) || (price - change),
+      openPrice: isTodayQuote ? (Number(q.regularMarketOpen) || price) : price,
+      highPrice: isTodayQuote ? (Number(q.regularMarketDayHigh) || price) : price,
+      lowPrice: isTodayQuote ? (Number(q.regularMarketDayLow) || price) : price,
+      previousClose,
       pe: q.trailingPE || null,
       forwardPE: q.forwardPE || null,
       eps: q.epsTrailingTwelveMonths || null,
       dividendYield,
       currency: q.currency || 'EUR',
       exchange: q.exchange || '',
-      quoteDate: q.regularMarketTime
-        ? new Date(q.regularMarketTime).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0],
+      quoteDate: quoteDateStr || todayStr,
       marketState: q.marketState || null,
-      regularMarketTime: q.regularMarketTime
-        ? (q.regularMarketTime instanceof Date
-            ? q.regularMarketTime.toISOString()
-            : new Date(Number(q.regularMarketTime) * (Number(q.regularMarketTime) < 1e11 ? 1000 : 1)).toISOString())
-        : null,
+      regularMarketTime: regularMarketTimeIso,
       source: 'YAHOO'
     };
   } catch (err) {

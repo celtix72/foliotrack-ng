@@ -75,6 +75,28 @@ async function fetchRealtimeQuote(isin) {
       changePercent = parseItalianNumber(pctMatch[1]);
     }
 
+    const changeValue = changePercent !== 0 ? (currentPrice - (currentPrice / (1 + changePercent / 100))) : 0.0;
+    const previousClose = currentPrice - changeValue;
+
+    // Check if Italian market has opened today (weekdays after 09:00 CET)
+    const now = new Date();
+    let todayRome = '';
+    let isWeekend = false;
+    let isBeforeOpen = false;
+    try {
+      todayRome = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(now);
+      const romeHours = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', hour12: false }).format(now), 10);
+      const dayNum = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Rome' })).getDay();
+      isWeekend = dayNum === 0 || dayNum === 6;
+      isBeforeOpen = (romeHours < 9);
+    } catch {
+      todayRome = now.toISOString().split('T')[0];
+    }
+
+    const finalChangePct = (isWeekend || isBeforeOpen) ? 0.0 : changePercent;
+    const finalChangeVal = (isWeekend || isBeforeOpen) ? 0.0 : changeValue;
+    const finalPrevClose = (isWeekend || isBeforeOpen) ? currentPrice : previousClose;
+
     // Optional instrument title extraction
     let name = cleanIsin;
     const titleMatch = html.match(/<h1[^>]*class=\"[^\"]*t-text[^\"]*\"[^>]*>([^<]+)<\/h1>/i);
@@ -91,11 +113,12 @@ async function fetchRealtimeQuote(isin) {
       name,
       type,
       currentPrice,
-      changePercent,
-      changeValue: 0.0,
+      changePercent: finalChangePct,
+      changeValue: finalChangeVal,
+      previousClose: finalPrevClose,
       currency: 'EUR',
       exchange: 'Borsa Italiana',
-      quoteDate: new Date().toISOString().split('T')[0],
+      quoteDate: todayRome,
       source: 'BORSA_ITALIANA'
     };
   } catch (err) {

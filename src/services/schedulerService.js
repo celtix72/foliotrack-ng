@@ -3,9 +3,10 @@ const { recordDailySnapshot } = require('../routes/history');
 const { createBackup } = require('../backup_manager');
 const { sendDailyDigest, checkAndSendAssetAlerts } = require('./telegramService');
 const { sendPushNotification } = require('./pushService');
-const { updateAllAssetPrices } = require('./marketService');
+const { updateAllAssetPrices, resetDailyAssetDeltas } = require('./marketService');
 
 let schedulerInterval = null;
+let lastResetDate = null;
 let lastSnapshotDate = null;
 let lastBackupDate = null;
 let lastDigestDate = null;
@@ -103,6 +104,23 @@ async function runScheduledTick() {
   const currentDateStr = now.toISOString().split('T')[0];
   const currentHour = now.getHours();
   const nowMs = now.getTime();
+
+  let todayRomeStr = '';
+  try {
+    todayRomeStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(now);
+  } catch {
+    todayRomeStr = currentDateStr;
+  }
+
+  // At the start of every trading day (or on startup), reset prior day deltas so today's session starts strictly at 0 delta
+  if (lastResetDate !== todayRomeStr) {
+    try {
+      resetDailyAssetDeltas();
+      lastResetDate = todayRomeStr;
+    } catch (err) {
+      console.warn('[Scheduler] Errore azzeramento delta inizio giornata:', err.message);
+    }
+  }
 
   // 0. Configurable Realtime Quote Sync (Default 30 min)
   const freqMinutes = getQuoteSyncFrequencyMinutes();

@@ -504,7 +504,9 @@
       tbody.innerHTML = holdings.map((h, idx) => {
         const pnl = h.unrealizedPnL || 0;
         const pnlPct = h.unrealizedPnLPercent || 0;
-        const chg1D = h.changePercent || 0;
+        const todayIso = new Date().toISOString().split('T')[0];
+        const isPriorDay = h.quoteDate && String(h.quoteDate).substring(0, 10) < todayIso;
+        const chg1D = isPriorDay ? 0 : (h.changePercent || 0);
         const weight = h.weight || 0;
 
         const pnlClass = pnl >= 0 ? 'badge-profit' : 'badge-loss';

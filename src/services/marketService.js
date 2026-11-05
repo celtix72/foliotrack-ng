@@ -14,6 +14,45 @@ function normalizeTicker(ticker) {
 }
 
 /**
+ * Returns current date in Europe/Rome timezone in YYYY-MM-DD format.
+ */
+function getTradingDateStr(d = new Date()) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(d);
+  } catch {
+    return d.toISOString().split('T')[0];
+  }
+}
+
+/**
+ * Resets daily deltas (changeValue, changePercent) to 0.0 for any asset
+ * whose last recorded quoteDate is prior to the current trading date.
+ * Sets previousClose to currentPrice so today's session starts strictly at 0 delta.
+ *
+ * @returns {number} number of asset rows updated
+ */
+function resetDailyAssetDeltas() {
+  const todayStr = getTradingDateStr();
+  try {
+    const info = db.prepare(`
+      UPDATE assets
+      SET previousClose = currentPrice,
+          changeValue = 0.0,
+          changePercent = 0.0
+      WHERE quoteDate IS NOT NULL AND trim(quoteDate) != '' AND quoteDate < ?
+    `).run(todayStr);
+
+    if (info.changes > 0) {
+      console.log(`[Market] Inizio giornata: resettati a delta 0 i titoli precedenti al ${todayStr} (${info.changes} aggiornati)`);
+    }
+    return info.changes;
+  } catch (err) {
+    console.warn('[Market] resetDailyAssetDeltas error:', err.message);
+    return 0;
+  }
+}
+
+/**
  * Resilient cascading real-time quote fetcher respecting the asset's configured dataSource.
  *
  * @param {string} ticker
@@ -97,6 +136,17 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
   if (quote && quote.currentPrice > 0) {
     try {
       const usedSource = quote.source || preferredSource || 'YAHOO';
+      const todayDateStr = getTradingDateStr();
+      const quoteDateStr = quote.quoteDate || todayDateStr;
+      const isPriorDay = Boolean(quoteDateStr < todayDateStr);
+
+      const finalChangeVal = isPriorDay ? 0.0 : (quote.changeValue || 0.0);
+      const finalChangePct = isPriorDay ? 0.0 : (quote.changePercent || 0.0);
+      const finalPrevClose = isPriorDay ? quote.currentPrice : (quote.previousClose || (quote.currentPrice - finalChangeVal));
+
+      quote.changeValue = finalChangeVal;
+      quote.changePercent = finalChangePct;
+      quote.previousClose = finalPrevClose;
 
       const upsertAsset = db.prepare(`
         INSERT INTO assets (
@@ -135,8 +185,8 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
         quote.exchange || '',
         quote.currency || 'EUR',
         quote.currentPrice,
-        quote.changePercent || 0.0,
-        quote.changeValue || 0.0,
+        finalChangePct,
+        finalChangeVal,
         quote.pe || null,
         quote.forwardPE || null,
         quote.eps || null,
@@ -144,15 +194,15 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
         quote.openPrice || quote.currentPrice,
         quote.highPrice || quote.currentPrice,
         quote.lowPrice || quote.currentPrice,
-        quote.previousClose || (quote.currentPrice - (quote.changeValue || 0.0)),
+        finalPrevClose,
         preferredSource || 'YAHOO',
-        quote.quoteDate || new Date().toISOString().split('T')[0],
+        quoteDateStr,
         quote.marketState || null,
         quote.regularMarketTime || null
       );
 
       // Save close price to asset_quotes cache
-      const dateStr = quote.quoteDate || new Date().toISOString().split('T')[0];
+      const dateStr = quoteDateStr;
       const upsertQuote = db.prepare(`
         INSERT INTO asset_quotes (ticker, date, close, volume, source, updatedAt)
         VALUES (?, ?, ?, ?, ?, datetime('now'))
@@ -981,6 +1031,8 @@ module.exports = {
   syncAllCurrencyRates,
   fetchWorldIndices,
   normalizeTicker,
+  resetDailyAssetDeltas,
+  getTradingDateStr,
   getTickerConfig,
   setTickerConfig,
   resetTickerConfig,

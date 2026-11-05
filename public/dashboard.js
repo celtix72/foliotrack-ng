@@ -160,15 +160,20 @@
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     const todayLocal = `${y}-${m}-${d}`;
+    let todayRome = '';
+    try {
+      todayRome = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(now);
+    } catch {}
 
     const qd = h.quoteDate ? String(h.quoteDate).substring(0, 10) : '';
-    if (qd && (qd === todayIso || qd === todayLocal)) {
+    if (qd && (qd === todayIso || qd === todayLocal || qd === todayRome)) {
       return true;
     }
     const rmt = h.regularMarketTime ? String(h.regularMarketTime).substring(0, 10) : '';
-    if (rmt && (rmt === todayIso || rmt === todayLocal)) {
+    if (rmt && (rmt === todayIso || rmt === todayLocal || rmt === todayRome)) {
       return true;
     }
+    if (!qd && !rmt) return true;
     return false;
   }
 
@@ -1007,14 +1012,18 @@
               // Sparkline mini chart
               const sparkData = generateSparklineData(h.sparkline, activeSparklinePeriod, h.ticker, h);
 
-              // DAY Variation
-              const dayPct = Number(h.changePercent !== undefined ? h.changePercent : (h.change24h || 0)) || 0;
-              const dayNative = h.dayPnlNative !== undefined ? h.dayPnlNative : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
-              let dayEur = h.dayPnlEur !== undefined ? h.dayPnlEur : 0;
-              if (!dayEur && h.changeValue && h.quantity) {
-                dayEur = Number(h.changeValue) * Number(h.quantity);
-              } else if (!dayEur && dayPct !== 0 && h.marketValue) {
-                dayEur = h.marketValue - (h.marketValue / (1 + (dayPct / 100)));
+              // DAY Variation: strictly 0 if holding has not traded in today's regular session
+              const isToday = isHoldingQuotedToday(h);
+              const dayPct = isToday ? (Number(h.changePercent !== undefined ? h.changePercent : (h.change24h || 0)) || 0) : 0;
+              const dayNative = isToday ? (h.dayPnlNative !== undefined ? h.dayPnlNative : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0))) : 0;
+              let dayEur = 0;
+              if (isToday) {
+                dayEur = h.dayPnlEur !== undefined ? h.dayPnlEur : 0;
+                if (!dayEur && h.changeValue && h.quantity) {
+                  dayEur = Number(h.changeValue) * Number(h.quantity);
+                } else if (!dayEur && dayPct !== 0 && h.marketValue) {
+                  dayEur = h.marketValue - (h.marketValue / (1 + (dayPct / 100)));
+                }
               }
               const isDayPos = dayPct >= 0;
 

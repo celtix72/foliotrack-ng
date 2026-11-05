@@ -811,10 +811,23 @@
       priceEurEl.textContent = '';
     }
 
-    // 1D Change Badge
+    // 1D Change Badge: strictly 0 if holding has not traded in today's regular session
+    let todayRomeStr = '';
+    try {
+      todayRomeStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+    } catch {
+      todayRomeStr = new Date().toISOString().split('T')[0];
+    }
+    const holdingDate = holding.quoteDate ? String(holding.quoteDate).substring(0, 10) : null;
+    const isPriorDay = Boolean(holdingDate && holdingDate < todayRomeStr);
+
+    const rawDayChgPct = Number(holding.changePercent !== undefined ? holding.changePercent : (holding.change24h || 0)) || 0;
+    const rawDayPnlVal = holding.dayPnlNative !== undefined ? holding.dayPnlNative : ((Number(holding.changeValue) || 0) * qty);
+
+    const dayChgPct = isPriorDay ? 0.0 : rawDayChgPct;
+    const dayPnlVal = isPriorDay ? 0.0 : rawDayPnlVal;
+
     const dayBadge = document.getElementById('drawerDayChangeBadge');
-    const dayChgPct = Number(holding.changePercent !== undefined ? holding.changePercent : (holding.change24h || 0)) || 0;
-    const dayPnlVal = holding.dayPnlNative !== undefined ? holding.dayPnlNative : ((Number(holding.changeValue) || 0) * qty);
     dayBadge.textContent = `${fmtCurrencySigned(dayPnlVal, curr)} (${fmtPercent(dayChgPct)})`;
     dayBadge.className = `mt-1 text-[11px] font-bold px-2 py-0.5 rounded-md inline-block ${dayChgPct >= 0 ? 'badge-profit' : 'badge-loss'}`;
 
