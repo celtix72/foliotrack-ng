@@ -69,7 +69,18 @@
   </div>
 
   <!-- Bottom Section: Theme Switch, Build Badge & User Logout -->
-  <div class="p-4 border-t border-gray-200/50 dark:border-white/5 space-y-3">
+  <div class="p-4 border-t border-gray-200/50 dark:border-white/5 space-y-2.5">
+    <!-- PWA Install Button (Revealed when installable) -->
+    <button type="button" data-pwa-install-btn onclick="window.PwaInstaller && window.PwaInstaller.promptInstall()" class="hidden w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition shadow-sm">
+      <span class="flex items-center space-x-2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        <span>Installa App</span>
+      </span>
+      <span class="text-[9px] font-mono uppercase bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">PWA</span>
+    </button>
+
     <!-- Theme Switch Button -->
     <button type="button" data-theme-toggle class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100/70 dark:bg-white/5 hover:bg-gray-200/70 dark:hover:bg-white/10 transition">
       <span class="flex items-center space-x-2">

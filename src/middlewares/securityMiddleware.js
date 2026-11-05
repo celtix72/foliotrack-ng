@@ -51,6 +51,8 @@ function helmetSecurity() {
           ],
           imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
           connectSrc: ["'self'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'],
+          manifestSrc: ["'self'"],
+          workerSrc: ["'self'"],
           objectSrc: ["'none'"],
           upgradeInsecureRequests: isHttps ? [] : null
         }

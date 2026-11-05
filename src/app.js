@@ -38,6 +38,12 @@ app.use(cookieParser());
 // Static Files (Styles, Scripts, Icons, public HTML)
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Web App Manifest explicit endpoints for PWA installation on Android
+app.get(['/manifest.webmanifest', '/manifest.json'], (req, res) => {
+  res.type('application/manifest+json');
+  res.sendFile(path.join(__dirname, '..', 'public', 'manifest.webmanifest'));
+});
+
 // General Rate Limiter for all API routes
 app.use('/api/', generalApiLimiter);
 

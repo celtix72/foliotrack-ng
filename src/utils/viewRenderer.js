@@ -7,6 +7,33 @@ const PARTIALS_DIR = path.join(VIEWS_DIR, 'partials');
 // In-memory HTML cache with mtime invalidation
 const htmlCache = new Map();
 
+const PWA_TAGS = `
+  <!-- Progressive Web App (PWA) & Mobile Meta -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FolioTrack">
+  <meta name="application-name" content="FolioTrack">
+  <meta name="theme-color" content="#059669">
+  <meta name="msapplication-TileColor" content="#0B0F19">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png">
+  <script src="/pwa_installer.js" defer></script>
+`;
+
+function injectPwaTags(html) {
+  if (!html) return html;
+  if (html.includes('manifest.webmanifest')) {
+    return html;
+  }
+  if (html.includes('</head>')) {
+    return html.replace('</head>', `${PWA_TAGS}\n</head>`);
+  }
+  return html;
+}
+
 /**
  * Checks whether a request should be served the mobile view.
  * Detects ?view=mobile query override or mobile User-Agent.
@@ -62,7 +89,7 @@ function serveWithSidebar(req, res, viewName) {
     // 1. Mobile Client
     if (isMobileClient && fs.existsSync(mobileFile)) {
       const mobileHtml = readFileCached(mobileFile);
-      return res.type('html').send(mobileHtml);
+      return res.type('html').send(injectPwaTags(mobileHtml));
     }
 
     // 2. Desktop Client (or mobile fallback)
@@ -86,7 +113,7 @@ function serveWithSidebar(req, res, viewName) {
       }
     }
 
-    return res.type('html').send(desktopHtml);
+    return res.type('html').send(injectPwaTags(desktopHtml));
   } catch (err) {
     console.error(`[ViewRenderer Error] Error rendering view ${viewName}:`, err);
     return res.status(500).send('Errore nel rendering della pagina.');

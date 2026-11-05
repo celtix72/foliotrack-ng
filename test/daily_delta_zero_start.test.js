@@ -203,3 +203,4 @@ describe('Start-of-Day Delta Zero Engine & Prior-Day Variation Isolation', () =>
     assert.equal(holding.dayPnlEur, 0.0, 'Holding dayPnlEur must be 0');
   });
 });
+

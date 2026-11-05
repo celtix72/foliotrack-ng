@@ -1,15 +1,125 @@
 /**
- * FolioTrack - Service Worker for Native Web Push Notifications
+ * FolioTrack - Progressive Web App (PWA) Service Worker
+ * Handles offline caching, PWA installability criteria, and native Web Push Notifications.
  */
 
+const CACHE_NAME = 'foliotrack-pwa-v1';
+
+// Core static assets to pre-cache on install
+const PRECACHE_ASSETS = [
+  '/',
+  '/manifest.webmanifest',
+  '/manifest.json',
+  '/dist/style.css',
+  '/theme.js',
+  '/pwa_installer.js',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-192.png',
+  '/icons/icon-maskable-512.png',
+  '/icons/icon.svg',
+  '/favicon.svg',
+  '/favicon.ico',
+  '/vendor/gridstack/gridstack-all.js',
+  '/vendor/gridstack/gridstack.min.css',
+  '/vendor/chartjs/chart.umd.min.js'
+];
+
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      // Gracefully attempt caching without failing install if a single asset is 404
+      return Promise.allSettled(
+        PRECACHE_ASSETS.map((url) =>
+          cache.add(url).catch((err) => {
+            console.warn('[PWA SW] Precache warning for', url, err.message);
+          })
+        )
+      );
+    }).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log('[PWA SW] Removing obsolete cache:', key);
+            return caches.delete(key);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
+/**
+ * Fetch event listener required by Google Chrome for PWA installability criteria & WebAPK.
+ */
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Only handle GET requests originating from same-origin
+  if (req.method !== 'GET' || url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Never cache API calls, SSE event streams, or auth endpoints
+  if (url.pathname.startsWith('/api/') || url.pathname.includes('/sse')) {
+    return;
+  }
+
+  // 1. Navigation requests (HTML pages): Network-first with cache fallback
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((networkRes) => {
+          if (networkRes && networkRes.status === 200) {
+            const resClone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+          }
+          return networkRes;
+        })
+        .catch(async () => {
+          const cached = await caches.match(req);
+          if (cached) return cached;
+          return caches.match('/') || caches.match('/dashboard');
+        })
+    );
+    return;
+  }
+
+  // 2. Static assets (JS, CSS, images, fonts): Stale-while-revalidate / Cache-first
+  event.respondWith(
+    caches.match(req).then((cachedRes) => {
+      if (cachedRes) {
+        // Fetch in background to keep cache fresh
+        fetch(req).then((networkRes) => {
+          if (networkRes && networkRes.status === 200) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, networkRes));
+          }
+        }).catch(() => {});
+        return cachedRes;
+      }
+
+      return fetch(req).then((networkRes) => {
+        if (!networkRes || networkRes.status !== 200 || networkRes.type !== 'basic') {
+          return networkRes;
+        }
+        const resClone = networkRes.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+        return networkRes;
+      });
+    })
+  );
+});
+
+/**
+ * Native Web Push Notifications
+ */
 self.addEventListener('push', (event) => {
   let data = {};
   if (event.data) {
@@ -23,7 +133,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'FolioTrack Aggiornamento';
   const options = {
     body: data.body || 'Nuova notifica disponibile.',
-    icon: data.icon || '/favicon.svg',
+    icon: data.icon || '/icons/icon-192.png',
     badge: data.badge || '/favicon.svg',
     tag: data.tag || 'foliotrack-notification',
     data: {
@@ -57,4 +167,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-

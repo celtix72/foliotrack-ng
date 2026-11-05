@@ -785,6 +785,36 @@
             <button type="button" onclick="setTheme('system')" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5">Predefinito di Sistema</button>
           </div>
         </div>
+
+        <div class="signature-card p-6">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-4">
+              <img src="/icons/icon-192.png" alt="FolioTrack" class="w-12 h-12 rounded-xl shadow-md">
+              <div>
+                <h3 class="text-base font-bold text-gray-900 dark:text-white">Applicazione Mobile Android (PWA)</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Installabile come applicazione autonoma sul tuo smartphone Android</p>
+              </div>
+            </div>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              PWA Ready
+            </span>
+          </div>
+
+          <div class="mt-4 text-xs text-gray-600 dark:text-gray-300 leading-relaxed max-w-2xl">
+            FolioTrack supporta lo standard <strong>Progressive Web App (PWA)</strong> e le <strong>WebAPK Android</strong>.
+            Una volta installata sul dispositivo, l'app si avvia dalla schermata iniziale a pieno schermo, senza barra di navigazione del browser e con cache offline per avvii istantanei.
+          </div>
+
+          <div class="mt-5 flex items-center space-x-3">
+            <button type="button" onclick="window.PwaInstaller && window.PwaInstaller.promptInstall()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>Installa FolioTrack su questo dispositivo</span>
+            </button>
+            <button type="button" onclick="window.PwaInstaller && window.PwaInstaller.showHelp()" class="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5 transition">
+              Istruzioni Android
+            </button>
+          </div>
+        </div>
       </div>
 
     </main>
