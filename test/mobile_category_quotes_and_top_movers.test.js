@@ -176,7 +176,7 @@ describe('Mobile Custom Widgets: Category Quotes & Top Winner/Loser 1D (Photos 1
     // 4. Check Rows & Badges
     assert.ok(html.includes('MSF.DE'), 'Must render MSF.DE ticker');
     assert.ok(html.includes('485,00 €'), 'Must format EUR price');
-    assert.ok(html.includes('0.0%'), 'Must format 0.0% day variation');
+    assert.ok(html.includes('0,00%') || html.includes('0.0%'), 'Must format day variation badge');
 
     assert.ok(html.includes('PRX.AS'), 'Must render PRX.AS ticker');
     assert.ok(html.includes('-11,43 €'), 'Must format negative day value delta');
@@ -253,14 +253,14 @@ describe('Mobile Custom Widgets: Category Quotes & Top Winner/Loser 1D (Photos 1
     assert.ok(html.includes('MIGLIORI (1D)'), 'Must have MIGLIORI (1D) column');
     assert.ok(html.includes('PEGGIORI (1D)'), 'Must have PEGGIORI (1D) column');
 
-    // 3. Gainer XEO with +0.0% (+€ 6,00)
+    // 3. Gainer XEO with +0.0% / +0,00% (+€ 6,00)
     assert.ok(html.includes('XEO.DE'), 'Gainer XEO must be present');
-    assert.ok(html.includes('+0.00%') || html.includes('+0.0%'), 'Must report +0.0%');
+    assert.ok(html.includes('+0,00%') || html.includes('+0.00%') || html.includes('+0.0%'), 'Must report +0.0% or +0,00%');
     assert.ok(html.includes('+€ 6,00'), 'Must report +€ 6,00');
 
     // 4. Losers NEXI.MI and ISP.MI
     assert.ok(html.includes('NEXI.MI'), 'Loser NEXI must be present');
-    assert.ok(html.includes('-3.50%'), 'Must report -3.50%');
+    assert.ok(html.includes('-3,50%') || html.includes('-3.50%'), 'Must report -3.50%');
     assert.ok(html.includes('-€ 189,00'), 'Must report -€ 189,00');
   });
 

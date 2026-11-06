@@ -153,7 +153,7 @@
   function formatPct(val) {
     const num = Number(val) || 0;
     const sign = num >= 0 ? '+' : '';
-    return `${sign}${num.toFixed(2)}%`;
+    return `${sign}${num.toFixed(2).replace('.', ',')}%`;
   }
 
   let activeMoversMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_movers_mode') : null) || 'pct';
@@ -1421,22 +1421,22 @@
                     CHIUSO
                   </span>
                 `;
-              } else if (Math.abs(dayPct) < 0.001) {
+              } else if (Math.abs(dayPct) < 0.0001) {
                 pctBadgeHtml = `
                   <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #F1F5F9; color: #334155;">
-                    0.0%
+                    0,00%
                   </span>
                 `;
               } else if (dayPct > 0) {
                 pctBadgeHtml = `
                   <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #DCFCE7; color: #15803D;">
-                    +${dayPct.toFixed(2)}%
+                    +${dayPct.toFixed(2).replace('.', ',')}%
                   </span>
                 `;
               } else {
                 pctBadgeHtml = `
                   <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #FFE4E6; color: #BE123C;">
-                    ${dayPct.toFixed(2)}%
+                    ${dayPct.toFixed(2).replace('.', ',')}%
                   </span>
                 `;
               }
@@ -1667,29 +1667,29 @@
                               CHIUSO
                             </span>
                           `;
-                        } else if (Math.abs(dayPct) < 0.001) {
+                        } else if (Math.abs(dayPct) < 0.0001) {
                           pctBadgeHtml = `
                             <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #F1F5F9; color: #334155;">
-                              0.0%
+                              0,00%
                             </span>
                           `;
                         } else if (dayPct > 0) {
                           pctBadgeHtml = `
                             <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #DCFCE7; color: #15803D;">
-                              +${dayPct.toFixed(1)}%
+                              +${dayPct.toFixed(2).replace('.', ',')}%
                             </span>
                           `;
                         } else {
                           pctBadgeHtml = `
                             <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #FFE4E6; color: #BE123C;">
-                              ${dayPct.toFixed(1)}%
+                              ${dayPct.toFixed(2).replace('.', ',')}%
                             </span>
                           `;
                         }
 
                         let valGiornoHtml = '';
                         if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
-                          const zeroLabel = isClosed ? '0,00' : `0,00 ${cat.currSym}`;
+                          const zeroLabel = `0,00 ${cat.currSym}`;
                           valGiornoHtml = `
                             <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
                               ${zeroLabel}

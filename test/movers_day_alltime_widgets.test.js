@@ -144,11 +144,11 @@ describe('Movers Widgets: Movers Giornalieri (1D) vs Movers All-Time', () => {
 
     // NOV.DE and PRX.AS should be included
     assert.ok(htmlDay.includes('NOV.DE'), 'NOV.DE should be included in moversDay');
-    assert.ok(htmlDay.includes('+2.66%'), 'NOV.DE % variation should be reported');
+    assert.ok(htmlDay.includes('+2,66%') || htmlDay.includes('+2.66%'), 'NOV.DE % variation should be reported');
     assert.ok(htmlDay.includes('+€ 96,00'), 'NOV.DE monetary variation of total position should be reported');
 
     assert.ok(htmlDay.includes('PRX.AS'), 'PRX.AS should be included in moversDay');
-    assert.ok(htmlDay.includes('+2.11%'), 'PRX.AS % variation should be reported');
+    assert.ok(htmlDay.includes('+2,11%') || htmlDay.includes('+2.11%'), 'PRX.AS % variation should be reported');
     assert.ok(htmlDay.includes('+€ 94,61'), 'PRX.AS monetary variation of total position should be reported');
 
     // MSFT and TSLA from previous day MUST be excluded!
@@ -159,8 +159,8 @@ describe('Movers Widgets: Movers Giornalieri (1D) vs Movers All-Time', () => {
     const htmlAllTime = evalEnv.renderAllTime(testData);
     assert.ok(htmlAllTime.includes('MSFT'), 'MSFT should be included in moversAllTime');
     assert.ok(htmlAllTime.includes('TSLA'), 'TSLA should be included in moversAllTime');
-    assert.ok(htmlAllTime.includes('+28.87%'), 'MSFT all-time % gain should be reported');
-    assert.ok(htmlAllTime.includes('-5.88%'), 'TSLA all-time % loss should be reported');
+    assert.ok(htmlAllTime.includes('+28,87%') || htmlAllTime.includes('+28.87%'), 'MSFT all-time % gain should be reported');
+    assert.ok(htmlAllTime.includes('-5,88%') || htmlAllTime.includes('-5.88%'), 'TSLA all-time % loss should be reported');
   });
 
   test('moversDay handles empty state when no titles have traded today', () => {

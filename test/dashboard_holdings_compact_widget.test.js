@@ -147,13 +147,13 @@ describe('Compact 1-Row Holdings Widget (Titoli Compatti - Var. Day)', () => {
     // 3. Positive gainer NOV.DE
     assert.ok(html.includes('NOV.DE'), 'Must render NOV.DE');
     assert.ok(html.includes('36,22 €'), 'Must render price formatted');
-    assert.ok(html.includes('+0.18%'), 'Must render positive day % badge');
+    assert.ok(html.includes('+0,18%') || html.includes('+0.18%'), 'Must render positive day % badge with decimals');
     assert.ok(html.includes('+6,50 €') || html.includes('+6,50'), 'Must render positive day EUR value');
 
     // 4. Negative loser NEXI.MI
     assert.ok(html.includes('NEXI.MI'), 'Must render NEXI.MI');
     assert.ok(html.includes('4,51 €'), 'Must render NEXI price');
-    assert.ok(html.includes('-3.45%'), 'Must render negative day % badge');
+    assert.ok(html.includes('-3,45%') || html.includes('-3.45%'), 'Must render negative day % badge with decimals');
     assert.ok(html.includes('-193,20 €') || html.includes('-193,20'), 'Must render negative day EUR value');
 
     // 5. US Closed Stock ABNB
@@ -179,3 +179,4 @@ describe('Compact 1-Row Holdings Widget (Titoli Compatti - Var. Day)', () => {
     assert.ok(html.includes('24 / 24'), 'Drawer visible count badge must be 24 / 24');
   });
 });
+

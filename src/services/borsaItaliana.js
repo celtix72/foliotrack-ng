@@ -70,7 +70,11 @@ async function fetchRealtimeQuote(isin) {
 
     // Optional percent change extraction
     let changePercent = 0.0;
-    const pctMatch = html.match(/-formatPercent[^>]*>\s*<strong[^>]*>([+-]?[0-9.,]+)%?<\/strong>/i);
+    const pctMatch =
+      html.match(/-percPrice[^>]*>\s*<strong[^>]*>([+-]?[0-9.,]+)%?<\/strong>/i) ||
+      html.match(/-formatPercent[^>]*>\s*<strong[^>]*>([+-]?[0-9.,]+)%?<\/strong>/i) ||
+      html.match(/class=\"[^\"]*-percPrice[^\"]*\"[^>]*>\s*<strong>([^<]+)<\/strong>/i) ||
+      html.match(/class=\"[^\"]*-formatPercent[^\"]*\"[^>]*>\s*<strong>([^<]+)<\/strong>/i);
     if (pctMatch) {
       changePercent = parseItalianNumber(pctMatch[1]);
     }
