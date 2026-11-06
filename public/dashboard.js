@@ -1354,16 +1354,19 @@
               const isCollapsed = collapsedCategorySet.has(cat.id);
               const dayNum = Math.round(cat.totDayPnl);
               const daySign = dayNum > 0 ? '+' : (dayNum < 0 ? '-' : '+');
+              const dayStyleColor = dayNum > 0 ? '#15803D' : (dayNum < 0 ? '#DC2626' : '#78350F');
               const dayColor = dayNum > 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : (dayNum < 0 ? 'text-[#E11D48] dark:text-[#FB7185]' : 'text-[#6B7280] dark:text-gray-400');
               const dayStr = `${daySign}${Math.abs(dayNum).toLocaleString('it-IT')} ${cat.currSym}`;
 
               const totNum = Math.round(cat.totUnrealizedPnl);
               const totSign = totNum > 0 ? '+' : (totNum < 0 ? '-' : '');
+              const totStyleColor = totNum >= 0 ? '#15803D' : '#DC2626';
               const totColor = totNum >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]';
               const totStr = `${totSign}${Math.abs(totNum).toLocaleString('it-IT')} ${cat.currSym}`;
 
               const pctNum = Number(cat.totUnrealizedPnlPct) || 0;
               const pctSign = pctNum >= 0 ? '+' : '';
+              const totPctStyleColor = pctNum >= 0 ? '#15803D' : '#DC2626';
               const totPctColor = pctNum >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]';
               const totPctStr = `${pctSign}${pctNum.toFixed(1).replace('.', ',')} %`;
 
@@ -1375,11 +1378,11 @@
                        data-toggle-category="${cat.id}">
                     <!-- Left: Chevron + Dot + Title -->
                     <div class="flex items-center space-x-2 min-w-0 pr-2">
-                      <span id="cat-chevron-${cat.id}" class="transform transition-transform duration-200 text-[#78350F] font-black text-sm shrink-0 ${isCollapsed ? '-rotate-90' : 'rotate-0'}">
+                      <span id="cat-chevron-${cat.id}" class="transform transition-transform duration-200 font-black text-sm shrink-0 ${isCollapsed ? '-rotate-90' : 'rotate-0'}" style="color: #78350F !important;">
                         ⌄
                       </span>
                       <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style="background-color: #2563EB;"></span>
-                      <span class="font-extrabold text-xs sm:text-sm tracking-wider text-[#78350F] uppercase font-mono truncate">
+                      <span class="font-extrabold text-xs sm:text-sm tracking-wider uppercase font-mono truncate" style="color: #78350F !important;">
                         ${cat.title}
                       </span>
                     </div>
@@ -1388,20 +1391,20 @@
                     <div class="flex items-center space-x-3.5 shrink-0">
                       <!-- Column 1: Daily delta -->
                       <div class="text-right">
-                        <div class="text-xs sm:text-sm font-extrabold font-mono leading-tight ${dayColor}">
+                        <div class="text-xs sm:text-sm font-extrabold font-mono leading-tight ${dayColor}" style="color: ${dayStyleColor} !important;">
                           ${dayStr}
                         </div>
-                        <div class="text-[9px] font-black tracking-widest text-[#92400E] uppercase font-mono">
+                        <div class="text-[9px] font-black tracking-widest uppercase font-mono" style="color: #92400E !important;">
                           DAILY
                         </div>
                       </div>
 
                       <!-- Column 2: Total P&L / Return -->
                       <div class="text-right">
-                        <div class="text-xs sm:text-sm font-extrabold font-mono leading-tight ${totColor}">
+                        <div class="text-xs sm:text-sm font-extrabold font-mono leading-tight ${totColor}" style="color: ${totStyleColor} !important;">
                           ${totStr}
                         </div>
-                        <div class="text-[10px] font-extrabold font-mono leading-tight ${totPctColor}">
+                        <div class="text-[10px] font-extrabold font-mono leading-tight ${totPctColor}" style="color: ${totPctStyleColor} !important;">
                           ${totPctStr}
                         </div>
                       </div>
@@ -1411,10 +1414,11 @@
                   <!-- Table Section -->
                   <div id="cat-body-${cat.id}" class="${isCollapsed ? 'hidden' : ''}">
                     <!-- Table Header Row -->
-                    <div class="grid grid-cols-4 px-3 py-1.5 bg-gray-50/90 dark:bg-[#18181b] border-b border-gray-200/60 dark:border-white/5 text-[10px] sm:text-[11px] font-extrabold font-mono text-gray-500 uppercase tracking-wider">
+                    <div class="px-3 py-1.5 bg-gray-50/90 dark:bg-[#18181b] border-b border-gray-200/60 dark:border-white/5 text-[10px] sm:text-[11px] font-extrabold font-mono text-gray-500 uppercase tracking-wider"
+                         style="display: grid; grid-template-columns: 1.1fr 1.3fr 1.1fr 1.2fr; align-items: center;">
                       <div class="text-left pl-0.5">TICKER</div>
                       <div class="text-right">PREZZO</div>
-                      <div class="text-right pr-2">% GIORNO</div>
+                      <div class="text-right pr-1.5">% GIORNO</div>
                       <div class="text-right pr-0.5">VAL GIORNO</div>
                     </div>
 
@@ -1444,25 +1448,25 @@
                         let pctBadgeHtml = '';
                         if (isClosed) {
                           pctBadgeHtml = `
-                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#E2E8F0] dark:bg-[#334155] text-[#475569] dark:text-[#94A3B8] font-bold font-mono text-[10px] sm:text-[11px] tracking-wide uppercase">
+                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tracking-wide uppercase" style="background-color: #E2E8F0; color: #475569;">
                               CHIUSO
                             </span>
                           `;
                         } else if (Math.abs(dayPct) < 0.001) {
                           pctBadgeHtml = `
-                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#F1F5F9] dark:bg-white/10 text-[#334155] dark:text-[#CBD5E1] font-bold font-mono text-[10px] sm:text-[11px] tabular-nums">
+                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #F1F5F9; color: #334155;">
                               0.0%
                             </span>
                           `;
                         } else if (dayPct > 0) {
                           pctBadgeHtml = `
-                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#DCFCE7] dark:bg-[#052E16] text-[#15803D] dark:text-[#4ADE80] font-bold font-mono text-[10px] sm:text-[11px] tabular-nums">
+                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #DCFCE7; color: #15803D;">
                               +${dayPct.toFixed(1)}%
                             </span>
                           `;
                         } else {
                           pctBadgeHtml = `
-                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#FFE4E6] dark:bg-[#4C0519] text-[#BE123C] dark:text-[#FB7185] font-bold font-mono text-[10px] sm:text-[11px] tabular-nums">
+                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #FFE4E6; color: #BE123C;">
                               ${dayPct.toFixed(1)}%
                             </span>
                           `;
@@ -1472,30 +1476,31 @@
                         if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
                           const zeroLabel = isClosed ? '0,00' : `0,00 ${cat.currSym}`;
                           valGiornoHtml = `
-                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm text-gray-700 dark:text-gray-300 tabular-nums">
+                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
                               ${zeroLabel}
                             </span>
                           `;
                         } else if (dayVal > 0) {
                           valGiornoHtml = `
-                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm text-[#15803D] dark:text-[#4ADE80] tabular-nums">
+                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;">
                               +${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cat.currSym}
                             </span>
                           `;
                         } else {
                           valGiornoHtml = `
-                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm text-[#BE123C] dark:text-[#FB7185] tabular-nums">
+                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;">
                               -${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cat.currSym}
                             </span>
                           `;
                         }
 
                         return `
-                          <div class="grid grid-cols-4 items-center px-3 py-2 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition"
+                          <div class="px-3 py-2 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition"
+                               style="display: grid; grid-template-columns: 1.1fr 1.3fr 1.1fr 1.2fr; align-items: center;"
                                data-open-asset="${h.ticker}">
                             <!-- Ticker Badge (Pink Box) -->
                             <div class="text-left pl-0.5">
-                              <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md border border-[#FECDD3] dark:border-[#9F1239]/60 bg-[#FFF1F2] dark:bg-[#4C0519]/40 text-gray-900 dark:text-gray-100 font-black font-mono text-xs sm:text-sm tracking-tight shadow-2xs cursor-pointer active:scale-95 transition">
+                              <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-black font-mono text-xs sm:text-sm tracking-tight cursor-pointer active:scale-95 transition" style="border: 1px solid #FCA5A5; background-color: #FFF1F2; color: #111827 !important;">
                                 ${h.ticker}
                               </span>
                             </div>
@@ -1506,7 +1511,7 @@
                             </div>
 
                             <!-- % Giorno -->
-                            <div class="text-right pr-2">
+                            <div class="text-right pr-1.5">
                               ${pctBadgeHtml}
                             </div>
 
