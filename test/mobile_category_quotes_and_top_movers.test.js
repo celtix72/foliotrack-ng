@@ -264,7 +264,7 @@ describe('Mobile Custom Widgets: Category Quotes & Top Winner/Loser 1D (Photos 1
     assert.ok(html.includes('-€ 189,00'), 'Must report -€ 189,00');
   });
 
-  test('Mobile Dashboard HTML served at /?view=mobile includes 23 widgets in drawer and scripts', async () => {
+  test('Mobile Dashboard HTML served at /?view=mobile includes 24 widgets in drawer and scripts', async () => {
     const res = await fetch(`${baseUrl}/?view=mobile`, {
       headers: {
         Authorization: `Bearer ${authToken}`,
@@ -274,6 +274,6 @@ describe('Mobile Custom Widgets: Category Quotes & Top Winner/Loser 1D (Photos 1
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.ok(html.includes('grid-stack-2'), 'Must have grid-stack-2');
-    assert.ok(html.includes('23 / 23'), 'Drawer count must be 23 / 23');
+    assert.ok(html.includes('24 / 24'), 'Drawer count must be 24 / 24');
   });
 });

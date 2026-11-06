@@ -31,6 +31,7 @@
     { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3 },
     { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3 },
     { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 9, h: 8, minW: 6, minH: 6 },
+    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 12, h: 6, minW: 4, minH: 3 },
     { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5 },
     { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 3, h: 8, minW: 3, minH: 6 },
     { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 12, h: 5, minW: 8, minH: 4 },
@@ -66,30 +67,33 @@
     // Quotazioni per Categoria (Accordion live view - Photo 1 & 2)
     { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 2, h: 8, x: 0, y: 17 },
 
+    // Titoli Compatti in Singola Riga (Variazioni Giornaliere)
+    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 25 },
+
     // Portfolio Composition with Sparklines (full width)
-    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 25 },
+    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 31 },
 
     // Daily Movers and All-Time Movers (full width)
-    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 32 },
-    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 37 },
+    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 38 },
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 43 },
 
     // Multi-Period Return Matrix (full width)
-    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 42 },
+    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 48 },
 
     // Allocation Donut Charts (full width)
-    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 46 },
-    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 51 },
-    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 56 },
-    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 61 },
+    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 52 },
+    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 57 },
+    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 62 },
+    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 67 },
 
     // Strategy & Targets (full width)
-    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 66 },
+    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 72 },
 
     // Portfolio Concentration (full width)
-    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 72 },
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 78 },
 
     // Holdings Breakdown Table (full width)
-    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 77 }
+    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 83 }
   ];
 
   function isMobileDashboard() {
@@ -153,6 +157,7 @@
   }
 
   let activeMoversMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_movers_mode') : null) || 'pct';
+  let activeCompactSort = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_compact_sort') : null) || 'day_desc';
   let collapsedCategorySet = new Set();
   try {
     const rawCollapsed = typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_collapsed_categories') : null;
@@ -1279,6 +1284,216 @@
                 </div>
               `;
             }).join('') || '<div class="col-span-full text-center py-12 text-xs text-gray-400 font-mono">Nessun titolo in portafoglio. Aggiungi il tuo primo movimento!</div>'}
+          </div>
+        </div>
+      `;
+    },
+
+    // 10b. Titoli Compatti (Var. Day in 1 Sola Riga per Asset)
+    holdingsCompact: (data) => {
+      const holdings = data.activeHoldings || [];
+      if (holdings.length === 0) {
+        return `
+          <div class="h-full flex flex-col items-center justify-center p-6 text-center">
+            <span class="text-xs font-mono text-gray-400">Nessun titolo in portafoglio</span>
+          </div>
+        `;
+      }
+
+      const totalNav = data.totals?.totalValue || 1;
+      const sortedHoldings = [...holdings];
+      const closedCount = sortedHoldings.filter(h => isAssetMarketClosed(h)).length;
+
+      sortedHoldings.sort((a, b) => {
+        const aClosed = isAssetMarketClosed(a);
+        const bClosed = isAssetMarketClosed(b);
+        const aIsToday = isHoldingQuotedToday(a);
+        const bIsToday = isHoldingQuotedToday(b);
+
+        // In day sorts, open and today-quoted assets come first
+        if (activeCompactSort === 'day_desc' || activeCompactSort === 'day_asc') {
+          const aActive = aIsToday && !aClosed;
+          const bActive = bIsToday && !bClosed;
+          if (aActive && !bActive) return -1;
+          if (!aActive && bActive) return 1;
+
+          const aDayPct = aActive ? (Number(a.changePercent) || 0) : 0;
+          const bDayPct = bActive ? (Number(b.changePercent) || 0) : 0;
+          if (activeCompactSort === 'day_desc') {
+            if (bDayPct !== aDayPct) return bDayPct - aDayPct;
+            const aVal = Number(a.dayPnlEur) || 0;
+            const bVal = Number(b.dayPnlEur) || 0;
+            return bVal - aVal;
+          } else {
+            if (aDayPct !== bDayPct) return aDayPct - bDayPct;
+            const aVal = Number(a.dayPnlEur) || 0;
+            const bVal = Number(b.dayPnlEur) || 0;
+            return aVal - bVal;
+          }
+        }
+
+        if (activeCompactSort === 'value_desc') {
+          return (Number(b.marketValue) || 0) - (Number(a.marketValue) || 0);
+        }
+
+        if (activeCompactSort === 'ticker_asc') {
+          return (a.ticker || '').localeCompare(b.ticker || '');
+        }
+
+        return 0;
+      });
+
+      return `
+        <div class="h-full flex flex-col justify-between select-none">
+          <!-- Header compatto con contatore e filtri ordinamento -->
+          <div class="flex flex-wrap items-center justify-between gap-1.5 pb-2.5 border-b border-gray-100 dark:border-white/5 shrink-0">
+            <div class="flex items-center space-x-2 min-w-0">
+              <span class="text-xs sm:text-sm font-bold font-mono tracking-wider text-gray-800 dark:text-gray-100 uppercase truncate">
+                Titoli (Var. Day)
+              </span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold shrink-0">
+                ${sortedHoldings.length} ${closedCount > 0 ? `<span class="text-amber-600 dark:text-amber-400">(${closedCount} chiusi)</span>` : ''}
+              </span>
+            </div>
+
+            <!-- Bottoni Ordinamento -->
+            <div class="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 text-[10px] font-mono shrink-0">
+              <button type="button" data-compact-sort="day_desc"
+                class="px-2 py-0.5 rounded transition ${activeCompactSort === 'day_desc' ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+                title="Ordina per variazione giornaliera migliore (1D)">
+                Day ▼
+              </button>
+              <button type="button" data-compact-sort="day_asc"
+                class="px-2 py-0.5 rounded transition ${activeCompactSort === 'day_asc' ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+                title="Ordina per variazione giornaliera peggiore (1D)">
+                Day ▲
+              </button>
+              <button type="button" data-compact-sort="value_desc"
+                class="px-2 py-0.5 rounded transition ${activeCompactSort === 'value_desc' ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+                title="Ordina per controvalore totale">
+                Valore
+              </button>
+              <button type="button" data-compact-sort="ticker_asc"
+                class="px-2 py-0.5 rounded transition ${activeCompactSort === 'ticker_asc' ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+                title="Ordina alfabeticamente A-Z">
+                A-Z
+              </button>
+            </div>
+          </div>
+
+          <!-- Intestazione colonne a 4 sezioni (1 riga) -->
+          <div class="px-2 py-1.5 bg-gray-50/80 dark:bg-[#18181b] border-b border-gray-200/60 dark:border-white/5 text-[10px] sm:text-[11px] font-extrabold font-mono text-gray-500 uppercase tracking-wider shrink-0"
+               style="display: grid; grid-template-columns: 1.15fr 1.15fr 1.05fr 1.25fr; align-items: center;">
+            <div class="text-left pl-0.5">TICKER</div>
+            <div class="text-right">PREZZO</div>
+            <div class="text-right pr-1">% DAY</div>
+            <div class="text-right pr-0.5">Δ VALORE</div>
+          </div>
+
+          <!-- Lista Titoli in Singola Riga -->
+          <div class="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-white/5 no-scrollbar">
+            ${sortedHoldings.map(h => {
+              const isClosed = isAssetMarketClosed(h);
+              const isToday = isHoldingQuotedToday(h);
+              const isNonEur = h.currency && h.currency !== 'EUR';
+              const currSym = h.currency === 'USD' ? '$' : (h.currency === 'EUR' ? '€' : (h.currency || '€'));
+
+              const rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;
+              const priceStr = rawPrice.toLocaleString('it-IT', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              }) + ' ' + currSym;
+
+              let dayVal = 0;
+              if (isToday && !isClosed) {
+                dayVal = Number(isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur) || 0;
+                if (!dayVal && h.changeValue && h.quantity) {
+                  dayVal = Number(h.changeValue) * Number(h.quantity);
+                }
+              }
+
+              const dayPct = (isToday && !isClosed) ? (Number(h.changePercent) || 0) : 0;
+
+              let pctBadgeHtml = '';
+              if (isClosed) {
+                pctBadgeHtml = `
+                  <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tracking-wide uppercase" style="background-color: #E2E8F0; color: #475569;">
+                    CHIUSO
+                  </span>
+                `;
+              } else if (Math.abs(dayPct) < 0.001) {
+                pctBadgeHtml = `
+                  <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #F1F5F9; color: #334155;">
+                    0.0%
+                  </span>
+                `;
+              } else if (dayPct > 0) {
+                pctBadgeHtml = `
+                  <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #DCFCE7; color: #15803D;">
+                    +${dayPct.toFixed(2)}%
+                  </span>
+                `;
+              } else {
+                pctBadgeHtml = `
+                  <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #FFE4E6; color: #BE123C;">
+                    ${dayPct.toFixed(2)}%
+                  </span>
+                `;
+              }
+
+              let valGiornoHtml = '';
+              if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
+                valGiornoHtml = `
+                  <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
+                    0,00 ${currSym}
+                  </span>
+                `;
+              } else if (dayVal > 0) {
+                valGiornoHtml = `
+                  <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;">
+                    +${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currSym}
+                  </span>
+                `;
+              } else {
+                valGiornoHtml = `
+                  <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;">
+                    -${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currSym}
+                  </span>
+                `;
+              }
+
+              return `
+                <div class="px-2 py-2 hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer select-none"
+                     style="display: grid; grid-template-columns: 1.15fr 1.15fr 1.05fr 1.25fr; align-items: center;"
+                     data-open-asset="${h.ticker}">
+                  <!-- Ticker + Dot / Closed indicator -->
+                  <div class="flex items-center space-x-1.5 min-w-0 pl-0.5">
+                    <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-black font-mono text-xs sm:text-sm tracking-tight cursor-pointer active:scale-95 transition"
+                          style="border: 1px solid #FCA5A5; background-color: #FFF1F2; color: #111827 !important;">
+                      ${h.ticker}
+                    </span>
+                    ${!isClosed ? `
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Mercato Aperto"></span>
+                    ` : ''}
+                  </div>
+
+                  <!-- Prezzo -->
+                  <div class="text-right font-extrabold font-mono text-xs sm:text-sm text-gray-900 dark:text-gray-100 tabular-nums">
+                    ${priceStr}
+                  </div>
+
+                  <!-- % Day -->
+                  <div class="text-right pr-1">
+                    ${pctBadgeHtml}
+                  </div>
+
+                  <!-- Valore Day -->
+                  <div class="text-right pr-0.5">
+                    ${valGiornoHtml}
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -3486,6 +3701,21 @@
         }
       }
 
+      // 5b. Sort toggle on Titoli Compatti widget
+      const compactSortBtn = e.target.closest('[data-compact-sort]');
+      if (compactSortBtn) {
+        const s = compactSortBtn.getAttribute('data-compact-sort');
+        if (s && s !== activeCompactSort) {
+          activeCompactSort = s;
+          localStorage.setItem('foliotrack_compact_sort', s);
+          const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+          const bodyEl = document.getElementById('widget-body-holdingsCompact');
+          if (bodyEl && WIDGET_RENDERERS.holdingsCompact) {
+            bodyEl.innerHTML = WIDGET_RENDERERS.holdingsCompact(activeView);
+          }
+        }
+      }
+
       // 6. Open Asset Detail Drawer
       const assetCard = e.target.closest('[data-open-asset]');
       if (assetCard && !isCustomizing) {
@@ -3589,7 +3819,17 @@
     openAssetDetail,
     toggleCategoryAccordion,
     setMoversMode,
+    setCompactSort: (s) => {
+      activeCompactSort = s;
+      try { localStorage.setItem('foliotrack_compact_sort', s); } catch {}
+      const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+      const bodyEl = document.getElementById('widget-body-holdingsCompact');
+      if (bodyEl && WIDGET_RENDERERS.holdingsCompact) {
+        bodyEl.innerHTML = WIDGET_RENDERERS.holdingsCompact(activeView);
+      }
+    },
     WIDGET_DEFINITIONS,
+    WIDGET_RENDERERS,
     MOBILE_DEFAULT_LAYOUT,
     isMobileDashboard,
     moveWidgetUp,
