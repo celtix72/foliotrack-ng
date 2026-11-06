@@ -31,6 +31,7 @@
     { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3 },
     { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3 },
     { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 9, h: 8, minW: 6, minH: 6 },
+    { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5 },
     { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 3, h: 8, minW: 3, minH: 6 },
     { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 12, h: 5, minW: 8, minH: 4 },
     { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4 },
@@ -62,30 +63,33 @@
     // Interactive Net Worth & Performance Chart (full width)
     { id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 2, h: 5, x: 0, y: 12 },
 
+    // Quotazioni per Categoria (Accordion live view - Photo 1 & 2)
+    { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 2, h: 8, x: 0, y: 17 },
+
     // Portfolio Composition with Sparklines (full width)
-    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 17 },
+    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 25 },
 
     // Daily Movers and All-Time Movers (full width)
-    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 24 },
-    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 29 },
+    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 32 },
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 37 },
 
     // Multi-Period Return Matrix (full width)
-    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 34 },
+    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 42 },
 
     // Allocation Donut Charts (full width)
-    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 38 },
-    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 43 },
-    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 48 },
-    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 53 },
+    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 46 },
+    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 51 },
+    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 56 },
+    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 61 },
 
     // Strategy & Targets (full width)
-    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 58 },
+    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 66 },
 
     // Portfolio Concentration (full width)
-    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 64 },
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 72 },
 
     // Holdings Breakdown Table (full width)
-    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 69 }
+    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 77 }
   ];
 
   function isMobileDashboard() {
@@ -147,6 +151,13 @@
     const sign = num >= 0 ? '+' : '';
     return `${sign}${num.toFixed(2)}%`;
   }
+
+  let activeMoversMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_movers_mode') : null) || 'pct';
+  let collapsedCategorySet = new Set();
+  try {
+    const rawCollapsed = typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_collapsed_categories') : null;
+    if (rawCollapsed) collapsedCategorySet = new Set(JSON.parse(rawCollapsed));
+  } catch {}
 
   /**
    * Checks whether a holding was quoted/traded during the current calendar/trading day.
@@ -665,7 +676,133 @@
     };
   }
 
-  // Widget HTML Renderers for each of the 14 widgets
+  /**
+   * Groups holdings by Asset Category & Currency for the mobile accordion view (Photos 1 & 2)
+   */
+  function groupHoldingsByCategory(holdings) {
+    const groups = new Map();
+
+    for (const h of holdings) {
+      const type = (h.type || 'EQUITY').toUpperCase();
+      const curr = (h.currency || 'EUR').toUpperCase();
+      let catKey = 'AZIONI EUR';
+      let catTitle = 'AZIONI EUR';
+      let catCurrency = curr;
+      let sortPriority = 10;
+
+      if (type === 'ETF') {
+        catKey = curr === 'EUR' ? 'ETF' : `ETF ${curr}`;
+        catTitle = catKey;
+        sortPriority = 30;
+      } else if (type.includes('BOND') || type === 'FIXED_INCOME') {
+        catKey = curr === 'EUR' ? 'OBBLIGAZIONI' : `OBBLIGAZIONI ${curr}`;
+        catTitle = catKey;
+        sortPriority = 40;
+      } else if (type === 'CRYPTO') {
+        catKey = 'CRYPTO';
+        catTitle = 'CRYPTO';
+        sortPriority = 50;
+      } else if (type.includes('COMMODIT') || type === 'GOLD') {
+        catKey = 'MATERIE PRIME / ORO';
+        catTitle = 'MATERIE PRIME / ORO';
+        sortPriority = 60;
+      } else if (type === 'CASH' || type === 'LIQUIDITY') {
+        catKey = 'LIQUIDITÀ';
+        catTitle = 'LIQUIDITÀ';
+        sortPriority = 70;
+      } else {
+        // Equity / Stocks
+        if (curr === 'EUR') {
+          catKey = 'AZIONI EUR';
+          catTitle = 'AZIONI EUR';
+          sortPriority = 10;
+        } else if (curr === 'USD') {
+          catKey = 'AZIONI USD';
+          catTitle = 'AZIONI USD';
+          sortPriority = 20;
+        } else {
+          catKey = `AZIONI ${curr}`;
+          catTitle = `AZIONI ${curr}`;
+          sortPriority = 25;
+        }
+      }
+
+      if (!groups.has(catKey)) {
+        groups.set(catKey, {
+          id: catKey.replace(/[^a-zA-Z0-9]/g, '_'),
+          key: catKey,
+          title: catTitle,
+          currency: catCurrency,
+          sortPriority,
+          holdings: []
+        });
+      }
+      groups.get(catKey).holdings.push(h);
+    }
+
+    const categories = Array.from(groups.values());
+    categories.sort((a, b) => a.sortPriority - b.sortPriority);
+
+    for (const cat of categories) {
+      const isUSD = cat.currency === 'USD';
+      const isNonEur = cat.currency !== 'EUR';
+      const currSym = isUSD ? '$' : (cat.currency === 'EUR' ? '€' : cat.currency);
+
+      let totMarketVal = 0;
+      let totCostBasis = 0;
+      let totUnrealizedPnl = 0;
+      let totDayPnl = 0;
+
+      for (const h of cat.holdings) {
+        const isToday = isHoldingQuotedToday(h);
+        const isClosed = isAssetMarketClosed(h);
+
+        const mv = Number(isNonEur && h.marketValueNative !== undefined ? h.marketValueNative : h.marketValue) || 0;
+        const cost = (Number(isNonEur && h.pmcNative !== undefined ? h.pmcNative : (h.pmc || h.costBasis)) || 0) * (Number(h.quantity) || 0);
+        const pnl = Number(isNonEur && h.unrealizedPnlNative !== undefined ? h.unrealizedPnlNative : h.unrealizedPnl) || 0;
+
+        let dayVal = 0;
+        if (isToday && !isClosed) {
+          dayVal = Number(isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur) || 0;
+          if (!dayVal && h.changeValue && h.quantity) {
+            dayVal = Number(h.changeValue) * Number(h.quantity);
+          }
+        }
+
+        totMarketVal += mv;
+        totCostBasis += cost;
+        totUnrealizedPnl += pnl;
+        totDayPnl += dayVal;
+      }
+
+      const totUnrealizedPnlPct = totCostBasis > 0 ? (totUnrealizedPnl / totCostBasis) * 100 : 0;
+
+      cat.totMarketVal = totMarketVal;
+      cat.totCostBasis = totCostBasis;
+      cat.totUnrealizedPnl = totUnrealizedPnl;
+      cat.totUnrealizedPnlPct = totUnrealizedPnlPct;
+      cat.totDayPnl = totDayPnl;
+      cat.currSym = currSym;
+
+      cat.holdings.sort((a, b) => {
+        const aClosed = isAssetMarketClosed(a);
+        const bClosed = isAssetMarketClosed(b);
+        if (!aClosed && bClosed) return -1;
+        if (aClosed && !bClosed) return 1;
+
+        if (!aClosed && !bClosed) {
+          const aPct = Number(a.changePercent) || 0;
+          const bPct = Number(b.changePercent) || 0;
+          if (bPct !== aPct) return bPct - aPct;
+        }
+        return (a.ticker || '').localeCompare(b.ticker || '');
+      });
+    }
+
+    return categories;
+  }
+
+  // Widget HTML Renderers for each of the widgets
   const WIDGET_RENDERERS = {
     // 1. Portfolio Value
     value: (data) => {
@@ -1197,8 +1334,204 @@
       `;
     },
 
+    // 11b. Quotazioni per Categoria (Accordion live view - Photos 1 & 2)
+    categoryQuotes: (data) => {
+      const holdings = data.activeHoldings || [];
+      if (holdings.length === 0) {
+        return `
+          <div class="h-full flex flex-col items-center justify-center p-6 text-center">
+            <span class="text-xs font-mono text-gray-400">Nessun titolo in portafoglio</span>
+          </div>
+        `;
+      }
+
+      const categories = groupHoldingsByCategory(holdings);
+
+      return `
+        <div class="h-full flex flex-col -m-2 sm:-m-3 overflow-hidden select-none">
+          <div class="flex-1 overflow-y-auto no-scrollbar space-y-2 py-1">
+            ${categories.map(cat => {
+              const isCollapsed = collapsedCategorySet.has(cat.id);
+              const dayNum = Math.round(cat.totDayPnl);
+              const daySign = dayNum > 0 ? '+' : (dayNum < 0 ? '-' : '+');
+              const dayColor = dayNum > 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : (dayNum < 0 ? 'text-[#E11D48] dark:text-[#FB7185]' : 'text-[#6B7280] dark:text-gray-400');
+              const dayStr = `${daySign}${Math.abs(dayNum).toLocaleString('it-IT')} ${cat.currSym}`;
+
+              const totNum = Math.round(cat.totUnrealizedPnl);
+              const totSign = totNum > 0 ? '+' : (totNum < 0 ? '-' : '');
+              const totColor = totNum >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]';
+              const totStr = `${totSign}${Math.abs(totNum).toLocaleString('it-IT')} ${cat.currSym}`;
+
+              const pctNum = Number(cat.totUnrealizedPnlPct) || 0;
+              const pctSign = pctNum >= 0 ? '+' : '';
+              const totPctColor = pctNum >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]';
+              const totPctStr = `${pctSign}${pctNum.toFixed(1).replace('.', ',')} %`;
+
+              return `
+                <div class="category-block border-y border-amber-300 dark:border-amber-700/60 shadow-xs mb-2 bg-white dark:bg-[#141416]">
+                  <!-- Accordion Header Banner (Yellow/Warm theme matching Photo 1 & 2) -->
+                  <div class="category-header cursor-pointer select-none px-3 py-2 flex items-center justify-between"
+                       style="background-color: #FEF9C3;"
+                       data-toggle-category="${cat.id}">
+                    <!-- Left: Chevron + Dot + Title -->
+                    <div class="flex items-center space-x-2 min-w-0 pr-2">
+                      <span id="cat-chevron-${cat.id}" class="transform transition-transform duration-200 text-[#78350F] font-black text-sm shrink-0 ${isCollapsed ? '-rotate-90' : 'rotate-0'}">
+                        ⌄
+                      </span>
+                      <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style="background-color: #2563EB;"></span>
+                      <span class="font-extrabold text-xs sm:text-sm tracking-wider text-[#78350F] uppercase font-mono truncate">
+                        ${cat.title}
+                      </span>
+                    </div>
+
+                    <!-- Right: Two Metric Columns -->
+                    <div class="flex items-center space-x-3.5 shrink-0">
+                      <!-- Column 1: Daily delta -->
+                      <div class="text-right">
+                        <div class="text-xs sm:text-sm font-extrabold font-mono leading-tight ${dayColor}">
+                          ${dayStr}
+                        </div>
+                        <div class="text-[9px] font-black tracking-widest text-[#92400E] uppercase font-mono">
+                          DAILY
+                        </div>
+                      </div>
+
+                      <!-- Column 2: Total P&L / Return -->
+                      <div class="text-right">
+                        <div class="text-xs sm:text-sm font-extrabold font-mono leading-tight ${totColor}">
+                          ${totStr}
+                        </div>
+                        <div class="text-[10px] font-extrabold font-mono leading-tight ${totPctColor}">
+                          ${totPctStr}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Table Section -->
+                  <div id="cat-body-${cat.id}" class="${isCollapsed ? 'hidden' : ''}">
+                    <!-- Table Header Row -->
+                    <div class="grid grid-cols-4 px-3 py-1.5 bg-gray-50/90 dark:bg-[#18181b] border-b border-gray-200/60 dark:border-white/5 text-[10px] sm:text-[11px] font-extrabold font-mono text-gray-500 uppercase tracking-wider">
+                      <div class="text-left pl-0.5">TICKER</div>
+                      <div class="text-right">PREZZO</div>
+                      <div class="text-right pr-2">% GIORNO</div>
+                      <div class="text-right pr-0.5">VAL GIORNO</div>
+                    </div>
+
+                    <!-- Table Rows -->
+                    <div class="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-[#141416]">
+                      ${cat.holdings.map(h => {
+                        const isClosed = isAssetMarketClosed(h);
+                        const isToday = isHoldingQuotedToday(h);
+                        const isNonEur = cat.currency !== 'EUR';
+
+                        const rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;
+                        const priceStr = rawPrice.toLocaleString('it-IT', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        }) + ' ' + cat.currSym;
+
+                        let dayVal = 0;
+                        if (isToday && !isClosed) {
+                          dayVal = Number(isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur) || 0;
+                          if (!dayVal && h.changeValue && h.quantity) {
+                            dayVal = Number(h.changeValue) * Number(h.quantity);
+                          }
+                        }
+
+                        const dayPct = isToday && !isClosed ? (Number(h.changePercent) || 0) : 0;
+
+                        let pctBadgeHtml = '';
+                        if (isClosed) {
+                          pctBadgeHtml = `
+                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#E2E8F0] dark:bg-[#334155] text-[#475569] dark:text-[#94A3B8] font-bold font-mono text-[10px] sm:text-[11px] tracking-wide uppercase">
+                              CHIUSO
+                            </span>
+                          `;
+                        } else if (Math.abs(dayPct) < 0.001) {
+                          pctBadgeHtml = `
+                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#F1F5F9] dark:bg-white/10 text-[#334155] dark:text-[#CBD5E1] font-bold font-mono text-[10px] sm:text-[11px] tabular-nums">
+                              0.0%
+                            </span>
+                          `;
+                        } else if (dayPct > 0) {
+                          pctBadgeHtml = `
+                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#DCFCE7] dark:bg-[#052E16] text-[#15803D] dark:text-[#4ADE80] font-bold font-mono text-[10px] sm:text-[11px] tabular-nums">
+                              +${dayPct.toFixed(1)}%
+                            </span>
+                          `;
+                        } else {
+                          pctBadgeHtml = `
+                            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#FFE4E6] dark:bg-[#4C0519] text-[#BE123C] dark:text-[#FB7185] font-bold font-mono text-[10px] sm:text-[11px] tabular-nums">
+                              ${dayPct.toFixed(1)}%
+                            </span>
+                          `;
+                        }
+
+                        let valGiornoHtml = '';
+                        if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
+                          const zeroLabel = isClosed ? '0,00' : `0,00 ${cat.currSym}`;
+                          valGiornoHtml = `
+                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm text-gray-700 dark:text-gray-300 tabular-nums">
+                              ${zeroLabel}
+                            </span>
+                          `;
+                        } else if (dayVal > 0) {
+                          valGiornoHtml = `
+                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm text-[#15803D] dark:text-[#4ADE80] tabular-nums">
+                              +${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cat.currSym}
+                            </span>
+                          `;
+                        } else {
+                          valGiornoHtml = `
+                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm text-[#BE123C] dark:text-[#FB7185] tabular-nums">
+                              -${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cat.currSym}
+                            </span>
+                          `;
+                        }
+
+                        return `
+                          <div class="grid grid-cols-4 items-center px-3 py-2 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition"
+                               data-open-asset="${h.ticker}">
+                            <!-- Ticker Badge (Pink Box) -->
+                            <div class="text-left pl-0.5">
+                              <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md border border-[#FECDD3] dark:border-[#9F1239]/60 bg-[#FFF1F2] dark:bg-[#4C0519]/40 text-gray-900 dark:text-gray-100 font-black font-mono text-xs sm:text-sm tracking-tight shadow-2xs cursor-pointer active:scale-95 transition">
+                                ${h.ticker}
+                              </span>
+                            </div>
+
+                            <!-- Prezzo -->
+                            <div class="text-right font-extrabold font-mono text-xs sm:text-sm text-gray-900 dark:text-gray-100 tabular-nums">
+                              ${priceStr}
+                            </div>
+
+                            <!-- % Giorno -->
+                            <div class="text-right pr-2">
+                              ${pctBadgeHtml}
+                            </div>
+
+                            <!-- Val Giorno -->
+                            <div class="text-right pr-0.5">
+                              ${valGiornoHtml}
+                            </div>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    },
+
     // 12. Complete Breakdown Table
     breakdown: (data) => {
+      if (isMobileDashboard()) {
+        return WIDGET_RENDERERS.categoryQuotes(data);
+      }
       const holdings = data.activeHoldings || [];
       return `
         <div class="h-full flex flex-col">
@@ -1252,7 +1585,7 @@
       `;
     },
 
-    // 13a. Top Gainers & Losers Giornalieri (Movers 1D)
+    // 13a. Top Gainers & Losers Giornalieri (TOP WINNER / LOSER 1D - Photo 3)
     moversDay: (data) => {
       const allHoldings = data.activeHoldings || [];
       const dayHoldings = allHoldings.filter(h => isHoldingQuotedToday(h));
@@ -1260,8 +1593,10 @@
       if (dayHoldings.length === 0) {
         return `
           <div class="h-full flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Movers Giornalieri (1D)</span>
+            <div class="flex items-center justify-between pb-2.5 border-b border-gray-100 dark:border-white/5">
+              <span class="text-xs sm:text-sm font-bold font-mono tracking-wider text-gray-700 dark:text-gray-200 uppercase">
+                TOP WINNER / LOSER (1D)
+              </span>
               <span class="text-[10px] font-mono text-gray-400">Sessione Odierna</span>
             </div>
             <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
@@ -1274,63 +1609,128 @@
       }
 
       const gainers = dayHoldings
-        .filter(h => (Number(h.changePercent) || 0) > 0)
-        .sort((a, b) => (Number(b.changePercent) || 0) - (Number(a.changePercent) || 0))
-        .slice(0, 3);
+        .filter(h => {
+          const pct = Number(h.changePercent) || 0;
+          const val = Number(h.dayPnlEur) || ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
+          return pct > 0 || (pct === 0 && val >= 0);
+        })
+        .sort((a, b) => {
+          const aPct = Number(a.changePercent) || 0;
+          const bPct = Number(b.changePercent) || 0;
+          if (bPct !== aPct) return bPct - aPct;
+          const aVal = Number(a.dayPnlEur) || 0;
+          const bVal = Number(b.dayPnlEur) || 0;
+          return bVal - aVal;
+        })
+        .slice(0, 5);
 
       const losers = dayHoldings
-        .filter(h => (Number(h.changePercent) || 0) < 0)
-        .sort((a, b) => (Number(a.changePercent) || 0) - (Number(b.changePercent) || 0))
-        .slice(0, 3);
+        .filter(h => {
+          const pct = Number(h.changePercent) || 0;
+          const val = Number(h.dayPnlEur) || ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
+          return pct < 0 || (pct === 0 && val < 0);
+        })
+        .sort((a, b) => {
+          const aPct = Number(a.changePercent) || 0;
+          const bPct = Number(b.changePercent) || 0;
+          if (aPct !== bPct) return aPct - bPct;
+          const aVal = Number(a.dayPnlEur) || 0;
+          const bVal = Number(b.dayPnlEur) || 0;
+          return aVal - bVal;
+        })
+        .slice(0, 5);
+
+      const isValMode = (typeof activeMoversMode !== 'undefined' ? activeMoversMode : 'pct') === 'val';
 
       return `
-        <div class="h-full flex flex-col justify-between">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Movers Giornalieri (1D)</span>
-            <span class="text-[10px] font-mono text-gray-400">${dayHoldings.length} ${dayHoldings.length === 1 ? 'titolo attivo' : 'titoli attivi'}</span>
-          </div>
-          <div class="grid grid-cols-2 gap-4 flex-1">
-            <!-- Gainers -->
-            <div class="space-y-2">
-              <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase font-mono">Gainers ▲</span>
-              ${gainers.map(g => {
-                const dayVal = (g.dayPnlEur !== undefined && !isNaN(g.dayPnlEur))
-                  ? Number(g.dayPnlEur)
-                  : ((Number(g.changeValue) || 0) * (Number(g.quantity) || 0));
-                return `
-                  <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono flex items-center justify-between cursor-pointer hover:opacity-80 transition" data-open-asset="${g.ticker}">
-                    <div class="min-w-0 pr-2">
-                      <span class="font-bold text-gray-900 dark:text-white block truncate">${g.ticker}</span>
-                      <span class="text-[10px] text-gray-400 block">${formatEur(g.marketValue)}</span>
-                    </div>
-                    <div class="text-right flex-shrink-0">
-                      <span class="badge-profit tabular-nums inline-block">${formatPct(g.changePercent)}</span>
-                      <span class="text-[11px] font-bold block mt-0.5 text-emerald-600 dark:text-emerald-400 tabular-nums">${formatEurSignedDec(dayVal)}</span>
-                    </div>
-                  </div>
-                `;
-              }).join('') || '<div class="text-xs text-gray-400 font-mono py-2">Nessun rialzo</div>'}
+        <div class="h-full flex flex-col justify-between select-none">
+          <!-- Top Header with Segmented Toggle (Photo 3) -->
+          <div class="flex items-center justify-between pb-2.5 border-b border-gray-100 dark:border-white/5">
+            <span class="text-xs sm:text-sm font-bold font-mono tracking-wider text-gray-700 dark:text-gray-200 uppercase">
+              TOP WINNER / LOSER (1D)
+            </span>
+            <div class="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 text-xs font-mono">
+              <button type="button" data-movers-mode="pct"
+                class="px-2.5 py-0.5 rounded-md text-xs font-mono transition ${!isValMode ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}">
+                %
+              </button>
+              <button type="button" data-movers-mode="val"
+                class="px-2.5 py-0.5 rounded-md text-xs font-mono transition ${isValMode ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}">
+                Valore
+              </button>
             </div>
-            <!-- Losers -->
-            <div class="space-y-2">
-              <span class="text-[11px] font-semibold text-red-600 dark:text-red-400 uppercase font-mono">Losers ▼</span>
-              ${losers.map(l => {
-                const dayVal = (l.dayPnlEur !== undefined && !isNaN(l.dayPnlEur))
-                  ? Number(l.dayPnlEur)
-                  : ((Number(l.changeValue) || 0) * (Number(l.quantity) || 0));
-                return `
-                  <div class="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-mono flex items-center justify-between cursor-pointer hover:opacity-80 transition" data-open-asset="${l.ticker}">
-                    <div class="min-w-0 pr-2">
-                      <span class="font-bold text-gray-900 dark:text-white block truncate">${l.ticker}</span>
-                      <span class="text-[10px] text-gray-400 block">${formatEur(l.marketValue)}</span>
+          </div>
+
+          <!-- Two Columns (Photo 3) -->
+          <div class="grid grid-cols-2 gap-3 sm:gap-4 flex-1 pt-2.5 overflow-hidden">
+            <!-- Gainers (MIGLIORI) -->
+            <div class="space-y-1.5 min-w-0">
+              <div class="flex items-center text-[11px] font-bold font-mono text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1.5 shrink-0"></span>
+                <span>MIGLIORI (1D)</span>
+              </div>
+              <div class="space-y-1">
+                ${gainers.map(g => {
+                  const dayVal = (g.dayPnlEur !== undefined && !isNaN(g.dayPnlEur))
+                    ? Number(g.dayPnlEur)
+                    : ((Number(g.changeValue) || 0) * (Number(g.quantity) || 0));
+
+                  const displayTicker = g.ticker.length > 7 ? g.ticker.slice(0, 4) + '...' : g.ticker;
+                  const valStr = formatEurSignedDec(dayVal, 2);
+                  const pctStr = formatPct(g.changePercent);
+
+                  const contentStr = isValMode
+                    ? `${valStr} (${pctStr})`
+                    : `${pctStr} (${valStr})`;
+
+                  return `
+                    <div class="flex items-center justify-between py-1 px-1 rounded hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer"
+                         data-open-asset="${g.ticker}">
+                      <span class="font-extrabold font-mono text-xs sm:text-sm text-gray-900 dark:text-white truncate pr-1" title="${g.ticker}">
+                        ${displayTicker}
+                      </span>
+                      <span class="text-emerald-600 dark:text-emerald-400 font-extrabold font-mono text-xs sm:text-sm whitespace-nowrap text-right tabular-nums">
+                        ${contentStr}
+                      </span>
                     </div>
-                    <div class="text-right flex-shrink-0">
-                      <span class="badge-loss tabular-nums inline-block">${formatPct(l.changePercent)}</span>
-                      <span class="text-[11px] font-bold block mt-0.5 text-red-600 dark:text-red-400 tabular-nums">${formatEurSignedDec(dayVal)}</span>
+                  `;
+                }).join('') || '<div class="text-xs text-gray-400 font-mono py-2">Nessun rialzo</div>'}
+              </div>
+            </div>
+
+            <!-- Losers (PEGGIORI) -->
+            <div class="space-y-1.5 min-w-0">
+              <div class="flex items-center text-[11px] font-bold font-mono text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+                <span class="w-2 h-2 rounded-full bg-rose-500 inline-block mr-1.5 shrink-0"></span>
+                <span>PEGGIORI (1D)</span>
+              </div>
+              <div class="space-y-1">
+                ${losers.map(l => {
+                  const dayVal = (l.dayPnlEur !== undefined && !isNaN(l.dayPnlEur))
+                    ? Number(l.dayPnlEur)
+                    : ((Number(l.changeValue) || 0) * (Number(l.quantity) || 0));
+
+                  const displayTicker = l.ticker.length > 7 ? l.ticker.slice(0, 4) + '...' : l.ticker;
+                  const valStr = formatEurSignedDec(dayVal, 2);
+                  const pctStr = formatPct(l.changePercent);
+
+                  const contentStr = isValMode
+                    ? `${valStr} (${pctStr})`
+                    : `${pctStr} (${valStr})`;
+
+                  return `
+                    <div class="flex items-center justify-between py-1 px-1 rounded hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer"
+                         data-open-asset="${l.ticker}">
+                      <span class="font-extrabold font-mono text-xs sm:text-sm text-gray-900 dark:text-white truncate pr-1" title="${l.ticker}">
+                        ${displayTicker}
+                      </span>
+                      <span class="text-rose-600 dark:text-rose-400 font-extrabold font-mono text-xs sm:text-sm whitespace-nowrap text-right tabular-nums">
+                        ${contentStr}
+                      </span>
                     </div>
-                  </div>
-                `;
-              }).join('') || '<div class="text-xs text-gray-400 font-mono py-2">Nessun ribasso</div>'}
+                  `;
+                }).join('') || '<div class="text-xs text-gray-400 font-mono py-2">Nessun ribasso</div>'}
+              </div>
             </div>
           </div>
         </div>
@@ -1396,6 +1796,7 @@
 
     // Backward compatibility alias for legacy 'movers' ID
     movers: (data) => WIDGET_RENDERERS.moversDay(data),
+    topWinnersLosers: (data) => WIDGET_RENDERERS.moversDay(data),
 
     // 14. Risk Concentration Index
     concentration: (data) => {
@@ -3089,6 +3490,22 @@
           openAssetDetail(ticker);
         }
       }
+
+      // 7. Category Accordion Toggle (Photos 1 & 2)
+      const catHeader = e.target.closest('[data-toggle-category]');
+      if (catHeader) {
+        const catId = catHeader.getAttribute('data-toggle-category');
+        toggleCategoryAccordion(catId);
+        return;
+      }
+
+      // 8. Movers Mode Toggle (% vs Valore - Photo 3)
+      const moversModeBtn = e.target.closest('[data-movers-mode]');
+      if (moversModeBtn) {
+        const mode = moversModeBtn.getAttribute('data-movers-mode');
+        setMoversMode(mode);
+        return;
+      }
     });
 
     // Checkbox change for widget visibility
@@ -3102,6 +3519,40 @@
       }
     });
   });
+
+  function toggleCategoryAccordion(catId) {
+    if (collapsedCategorySet.has(catId)) {
+      collapsedCategorySet.delete(catId);
+    } else {
+      collapsedCategorySet.add(catId);
+    }
+    localStorage.setItem('foliotrack_collapsed_categories', JSON.stringify([...collapsedCategorySet]));
+
+    const bodyEl = document.getElementById(`cat-body-${catId}`);
+    const chevronEl = document.getElementById(`cat-chevron-${catId}`);
+    if (bodyEl) {
+      if (collapsedCategorySet.has(catId)) {
+        bodyEl.classList.add('hidden');
+        if (chevronEl) chevronEl.classList.add('-rotate-90');
+      } else {
+        bodyEl.classList.remove('hidden');
+        if (chevronEl) chevronEl.classList.remove('-rotate-90');
+      }
+    }
+  }
+
+  function setMoversMode(mode) {
+    if (mode === activeMoversMode) return;
+    activeMoversMode = mode;
+    localStorage.setItem('foliotrack_movers_mode', mode);
+    if (rawPortfolioData) {
+      const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+      const moversEl = document.getElementById('widget-body-moversDay');
+      if (moversEl && WIDGET_RENDERERS.moversDay) {
+        moversEl.innerHTML = WIDGET_RENDERERS.moversDay(activeView);
+      }
+    }
+  }
 
   function openAssetDetail(ticker) {
     if (!ticker) return;
@@ -3131,6 +3582,8 @@
     showAllWidgets,
     resetDefaultWidgets,
     openAssetDetail,
+    toggleCategoryAccordion,
+    setMoversMode,
     WIDGET_DEFINITIONS,
     MOBILE_DEFAULT_LAYOUT,
     isMobileDashboard,

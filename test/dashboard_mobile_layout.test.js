@@ -80,7 +80,7 @@ describe('Dashboard Mobile Responsive Layout (Max 2 Columns) & Desktop Independe
     assert.ok(match, 'MOBILE_DEFAULT_LAYOUT must match array regex');
     const mobileLayout = eval(match[1]);
 
-    assert.equal(mobileLayout.length, 22, 'MOBILE_DEFAULT_LAYOUT must contain all 22 widgets');
+    assert.equal(mobileLayout.length, 23, 'MOBILE_DEFAULT_LAYOUT must contain all 23 widgets');
 
     for (const item of mobileLayout) {
       assert.ok(item.w === 1 || item.w === 2, `Widget ${item.id} width must be either 1 or 2 (found ${item.w})`);
@@ -89,6 +89,11 @@ describe('Dashboard Mobile Responsive Layout (Max 2 Columns) & Desktop Independe
         assert.equal(item.x, 0, `Full-width widget ${item.id} (w=2) must start at x=0`);
       }
     }
+
+    // Verify categoryQuotes widget is 2 columns (full width)
+    const categoryQuotes = mobileLayout.find(i => i.id === 'categoryQuotes');
+    assert.ok(categoryQuotes, 'categoryQuotes must be present in MOBILE_DEFAULT_LAYOUT');
+    assert.equal(categoryQuotes.w, 2, 'categoryQuotes must be 2 columns (full width)');
 
     // Verify paired KPI cards are 1 column each
     const dayChange = mobileLayout.find(i => i.id === 'dayChange');
