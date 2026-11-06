@@ -217,7 +217,7 @@
       totalEur = directAmt > 0 ? directAmt : (comm + tax);
     }
 
-    const fmt = '€ ' + (totalEur || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmt = '€ ' + Math.round(totalEur || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     document.getElementById('calculatedCountervalue').textContent = fmt;
   }
 

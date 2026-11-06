@@ -11,7 +11,7 @@
   let currentAssetData = null;
   let currentPortfolioId = null;
 
-  function fmtNumber(v, decimals = 2) {
+  function fmtNumber(v, decimals = 0) {
     const num = Number(v) || 0;
     return num.toLocaleString('it-IT', {
       minimumFractionDigits: decimals,
@@ -19,25 +19,44 @@
     });
   }
 
-  function fmtCurrency(v, currency = 'EUR', decimals = null) {
-    const num = Number(v) || 0;
+  function fmtCurrency(v, currency = 'EUR', decimals = 0) {
+    const num = Math.round(Number(v) || 0);
     const curr = (currency || 'EUR').toUpperCase();
-    const dec = decimals !== null ? decimals : (Math.abs(num) > 999 ? 2 : (curr === 'EUR' ? 2 : 2));
-    const formatted = fmtNumber(num, dec);
+    const formatted = num.toLocaleString('it-IT', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
     if (curr === 'USD') return `${formatted} USD`;
     if (curr === 'EUR') return `€ ${formatted}`;
     return `${formatted} ${curr}`;
   }
 
-  function fmtCurrencySigned(v, currency = 'EUR', decimals = 2) {
-    const num = Number(v) || 0;
+  function fmtCurrencySigned(v, currency = 'EUR', decimals = 0) {
+    const num = Math.round(Number(v) || 0);
     const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
     const abs = Math.abs(num);
     const curr = (currency || 'EUR').toUpperCase();
-    const formatted = fmtNumber(abs, decimals);
+    const formatted = abs.toLocaleString('it-IT', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
     if (curr === 'USD') return `${sign}${formatted} USD`;
     if (curr === 'EUR') return `${sign}€ ${formatted}`;
     return `${sign}${formatted} ${curr}`;
+  }
+
+  function fmtPrice(v, currency = 'EUR', decimals = 2) {
+    const num = Number(v) || 0;
+    const curr = (currency || 'EUR').toUpperCase();
+    const hasSubCents = (num !== 0) && (Math.abs(num * 100 - Math.round(num * 100)) > 0.001);
+    const maxDec = Math.max(decimals, hasSubCents ? 4 : 2);
+    const formatted = num.toLocaleString('it-IT', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: maxDec
+    });
+    if (curr === 'USD') return `${formatted} USD`;
+    if (curr === 'EUR') return `€ ${formatted}`;
+    return `${formatted} ${curr}`;
   }
 
   function fmtPercent(v, decimals = 2) {
@@ -796,17 +815,17 @@
 
     const mvEurEl = document.getElementById('drawerMarketValueEur');
     if (isNonEur && holding.marketValue) {
-      mvEurEl.textContent = `(≈ € ${fmtNumber(holding.marketValue)})`;
+      mvEurEl.textContent = `(≈ € ${fmtNumber(holding.marketValue, 0)})`;
     } else {
       mvEurEl.textContent = '';
     }
 
     const priceNative = holding.currentPriceNative !== undefined ? holding.currentPriceNative : (holding.rawPrice || holding.currentPrice);
-    document.getElementById('drawerCurrentPrice').textContent = fmtCurrency(priceNative, curr);
+    document.getElementById('drawerCurrentPrice').textContent = fmtPrice(priceNative, curr);
 
     const priceEurEl = document.getElementById('drawerCurrentPriceEur');
     if (isNonEur && holding.currentPrice) {
-      priceEurEl.textContent = `(€ ${fmtNumber(holding.currentPrice)})`;
+      priceEurEl.textContent = `(€ ${fmtPrice(holding.currentPrice, 'EUR')})`;
     } else {
       priceEurEl.textContent = '';
     }
@@ -837,17 +856,17 @@
 
     const bvEurEl = document.getElementById('drawerBookValueEur');
     if (isNonEur && holding.bookValue) {
-      bvEurEl.textContent = `≈ € ${fmtNumber(holding.bookValue)}`;
+      bvEurEl.textContent = `≈ € ${fmtNumber(holding.bookValue, 0)}`;
     } else {
       bvEurEl.textContent = '';
     }
 
     const pmcNative = holding.pmcNative !== undefined ? holding.pmcNative : (holding.costBasisNative || holding.pmc);
-    document.getElementById('drawerAverageCost').textContent = fmtCurrency(pmcNative, curr, 4);
+    document.getElementById('drawerAverageCost').textContent = fmtPrice(pmcNative, curr, 2);
 
     const pmcEurEl = document.getElementById('drawerAverageCostEur');
     if (isNonEur && holding.pmc) {
-      pmcEurEl.textContent = `PMC base: € ${fmtNumber(holding.pmc, 4)}`;
+      pmcEurEl.textContent = `PMC base: € ${fmtPrice(holding.pmc, 'EUR', 2)}`;
     } else {
       pmcEurEl.textContent = '';
     }
@@ -927,11 +946,11 @@
     const lowP = holding.lowPrice !== undefined && holding.lowPrice > 0 ? holding.lowPrice : Math.min(openP, closeP);
     const adjCloseP = holding.previousClose !== undefined && holding.previousClose > 0 ? holding.previousClose : closeP;
 
-    document.getElementById('drawerRangeOpen').textContent = fmtCurrency(openP, curr);
-    document.getElementById('drawerRangeClose').textContent = fmtCurrency(closeP, curr);
-    document.getElementById('drawerRangeHigh').textContent = fmtCurrency(highP, curr);
-    document.getElementById('drawerRangeLow').textContent = fmtCurrency(lowP, curr);
-    document.getElementById('drawerRangeAdjClose').textContent = fmtCurrency(adjCloseP, curr);
+    document.getElementById('drawerRangeOpen').textContent = fmtPrice(openP, curr);
+    document.getElementById('drawerRangeClose').textContent = fmtPrice(closeP, curr);
+    document.getElementById('drawerRangeHigh').textContent = fmtPrice(highP, curr);
+    document.getElementById('drawerRangeLow').textContent = fmtPrice(lowP, curr);
+    document.getElementById('drawerRangeAdjClose').textContent = fmtPrice(adjCloseP, curr);
 
     // 5. Tassonomia & Fondamentali
     document.getElementById('drawerSector').textContent = holding.sector || 'N/D';
@@ -949,11 +968,11 @@
       .then(assetRes => {
         if (assetRes.success && assetRes.asset) {
           const a = assetRes.asset;
-          if (a.openPrice) document.getElementById('drawerRangeOpen').textContent = fmtCurrency(a.openPrice, curr);
-          if (a.currentPrice) document.getElementById('drawerRangeClose').textContent = fmtCurrency(a.currentPrice, curr);
-          if (a.highPrice) document.getElementById('drawerRangeHigh').textContent = fmtCurrency(a.highPrice, curr);
-          if (a.lowPrice) document.getElementById('drawerRangeLow').textContent = fmtCurrency(a.lowPrice, curr);
-          if (a.previousClose) document.getElementById('drawerRangeAdjClose').textContent = fmtCurrency(a.previousClose, curr);
+          if (a.openPrice) document.getElementById('drawerRangeOpen').textContent = fmtPrice(a.openPrice, curr);
+          if (a.currentPrice) document.getElementById('drawerRangeClose').textContent = fmtPrice(a.currentPrice, curr);
+          if (a.highPrice) document.getElementById('drawerRangeHigh').textContent = fmtPrice(a.highPrice, curr);
+          if (a.lowPrice) document.getElementById('drawerRangeLow').textContent = fmtPrice(a.lowPrice, curr);
+          if (a.previousClose) document.getElementById('drawerRangeAdjClose').textContent = fmtPrice(a.previousClose, curr);
           if (a.pe) document.getElementById('drawerPE').textContent = Number(a.pe).toFixed(1);
           if (a.dividendYield) document.getElementById('drawerDivYield').textContent = fmtPercent(a.dividendYield);
           if (a.sector) document.getElementById('drawerSector').textContent = a.sector;

@@ -214,7 +214,7 @@
     let perfChart = null;
     let currentPerfRange = '1Y';
 
-    const fmtEur = (v) => '€ ' + (Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 });
+    const fmtEur = (v) => '€ ' + Math.round(Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     const fmtPct = (v) => (Number(v) || 0).toFixed(2) + '%';
 
     async function loadPortfolios() {

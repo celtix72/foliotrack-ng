@@ -27,14 +27,19 @@
 
   // --- FORMATTERS ---
   const fmtEur = (v) => {
-    const num = Number(v) || 0;
-    return '€ ' + num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const num = Math.round(Number(v) || 0);
+    return '€ ' + num.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   };
 
   const fmtEurSigned = (v) => {
-    const num = Number(v) || 0;
+    const num = Math.round(Number(v) || 0);
     const sign = num > 0 ? '+' : '';
-    return `${sign}€ ` + num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${sign}€ ` + num.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  };
+
+  const fmtPrice = (v) => {
+    const num = Number(v) || 0;
+    return '€ ' + num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const fmtPct = (v) => {
@@ -352,7 +357,7 @@
               <span class="font-bold text-gray-900 dark:text-white">${line.ticker}</span>
               <span class="text-gray-400 text-[11px] font-sans truncate max-w-[150px]" title="${line.name}">${line.name}</span>
             </div>
-            <div class="text-[10px] text-gray-400 font-mono mt-0.5">Prezzo: ${fmtEur(line.currentPrice)}</div>
+            <div class="text-[10px] text-gray-400 font-mono mt-0.5">Prezzo: ${fmtPrice(line.currentPrice)}</div>
           </td>
 
           <!-- 2. Current State (Valore & Peso) -->

@@ -121,7 +121,7 @@
     let mIncomeChart = null;
     let mPerfChart = null;
 
-    const fmtEur = (v) => '€ ' + (Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 });
+    const fmtEur = (v) => '€ ' + Math.round(Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
     async function loadPortfolios() {
       try {

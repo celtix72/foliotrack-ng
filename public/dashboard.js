@@ -141,13 +141,19 @@
     return `${sign}€ ${Math.abs(Math.round(num)).toLocaleString('it-IT')}`;
   }
 
-  function formatEurSignedDec(val, decimals = 2) {
-    const num = Number(val) || 0;
+  function formatEurSignedDec(val, decimals = 0) {
+    const num = Math.round(Number(val) || 0);
     const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
-    return `${sign}€ ${Math.abs(num).toLocaleString('it-IT', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    })}`;
+    return `${sign}€ ${Math.abs(num).toLocaleString('it-IT')}`;
+  }
+
+  function formatPriceEur(val, curr = '€') {
+    const num = Number(val) || 0;
+    const hasSubCents = (num !== 0) && (Math.abs(num * 100 - Math.round(num * 100)) > 0.001);
+    return (curr === '€' ? '€ ' : '') + num.toLocaleString('it-IT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: hasSubCents ? 4 : 2
+    }) + (curr !== '€' ? ' ' + curr : '');
   }
 
   function formatPct(val) {
@@ -1178,19 +1184,17 @@
               const totEur = Number(h.unrealizedPnl || 0);
               const isTotPos = totPct >= 0;
 
-              // Native currency formatters
+              // Native currency formatters (0 decimals for monetary market values and deltas)
               const fmtNative = (v) => {
-                const num = Number(v) || 0;
-                const dec = 2;
-                const s = num.toLocaleString('it-IT', { useGrouping: true, minimumFractionDigits: dec, maximumFractionDigits: dec });
+                const num = Math.round(Number(v) || 0);
+                const s = num.toLocaleString('it-IT');
                 return isUSD ? `${s} USD` : (isNonEur ? `${s} ${curr}` : `€ ${s}`);
               };
 
               const fmtNativeSigned = (v) => {
-                const num = Number(v) || 0;
-                const dec = 2;
+                const num = Math.round(Number(v) || 0);
                 const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
-                const s = Math.abs(num).toLocaleString('it-IT', { useGrouping: true, minimumFractionDigits: dec, maximumFractionDigits: dec });
+                const s = Math.abs(num).toLocaleString('it-IT');
                 return isUSD ? `${sign}${s} USD` : (isNonEur ? `${sign}${s} ${curr}` : `${sign}€ ${s}`);
               };
 
@@ -1445,19 +1449,19 @@
               if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
                 valGiornoHtml = `
                   <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
-                    0,00 ${currSym}
+                    0 ${currSym}
                   </span>
                 `;
               } else if (dayVal > 0) {
                 valGiornoHtml = `
                   <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;">
-                    +${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currSym}
+                    +${Math.abs(Math.round(dayVal)).toLocaleString('it-IT')} ${currSym}
                   </span>
                 `;
               } else {
                 valGiornoHtml = `
                   <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;">
-                    -${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currSym}
+                    -${Math.abs(Math.round(dayVal)).toLocaleString('it-IT')} ${currSym}
                   </span>
                 `;
               }
@@ -1689,7 +1693,7 @@
 
                         let valGiornoHtml = '';
                         if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
-                          const zeroLabel = `0,00 ${cat.currSym}`;
+                          const zeroLabel = `0 ${cat.currSym}`;
                           valGiornoHtml = `
                             <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
                               ${zeroLabel}
@@ -1698,13 +1702,13 @@
                         } else if (dayVal > 0) {
                           valGiornoHtml = `
                             <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;">
-                              +${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cat.currSym}
+                              +${Math.abs(Math.round(dayVal)).toLocaleString('it-IT')} ${cat.currSym}
                             </span>
                           `;
                         } else {
                           valGiornoHtml = `
                             <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;">
-                              -${Math.abs(dayVal).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cat.currSym}
+                              -${Math.abs(Math.round(dayVal)).toLocaleString('it-IT')} ${cat.currSym}
                             </span>
                           `;
                         }
@@ -1790,8 +1794,8 @@
                     <td class="px-4 py-3 text-gray-600 dark:text-gray-300 truncate max-w-[150px]">${h.name}</td>
                     <td class="px-4 py-3 text-gray-400">${h.sector || 'Unclassified'}</td>
                     <td class="px-4 py-3 text-right">${Math.round(h.quantity).toLocaleString('it-IT')}</td>
-                    <td class="px-4 py-3 text-right">${formatEur(h.pmc)}</td>
-                    <td class="px-4 py-3 text-right">${formatEur(h.currentPrice)}</td>
+                    <td class="px-4 py-3 text-right">${formatPriceEur(h.pmc)}</td>
+                    <td class="px-4 py-3 text-right">${formatPriceEur(h.currentPrice)}</td>
                     <td class="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">${formatEur(h.marketValue)}</td>
                     <td class="px-4 py-3 text-right font-semibold ${h.unrealizedPnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">${formatPct(h.unrealizedPnlPercent)}</td>
                     <td class="px-4 py-3 text-right font-bold">${h.weight.toFixed(1)}%</td>

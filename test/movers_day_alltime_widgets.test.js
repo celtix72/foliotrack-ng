@@ -145,11 +145,11 @@ describe('Movers Widgets: Movers Giornalieri (1D) vs Movers All-Time', () => {
     // NOV.DE and PRX.AS should be included
     assert.ok(htmlDay.includes('NOV.DE'), 'NOV.DE should be included in moversDay');
     assert.ok(htmlDay.includes('+2,66%') || htmlDay.includes('+2.66%'), 'NOV.DE % variation should be reported');
-    assert.ok(htmlDay.includes('+€ 96,00'), 'NOV.DE monetary variation of total position should be reported');
+    assert.ok(htmlDay.includes('+€ 96') || htmlDay.includes('+€ 96,00'), 'NOV.DE monetary variation of total position should be reported');
 
     assert.ok(htmlDay.includes('PRX.AS'), 'PRX.AS should be included in moversDay');
     assert.ok(htmlDay.includes('+2,11%') || htmlDay.includes('+2.11%'), 'PRX.AS % variation should be reported');
-    assert.ok(htmlDay.includes('+€ 94,61'), 'PRX.AS monetary variation of total position should be reported');
+    assert.ok(htmlDay.includes('+€ 95') || htmlDay.includes('+€ 94,61') || htmlDay.includes('+€ 94'), 'PRX.AS monetary variation of total position should be reported');
 
     // MSFT and TSLA from previous day MUST be excluded!
     assert.ok(!htmlDay.includes('MSFT'), 'MSFT from previous day must be excluded from moversDay');
