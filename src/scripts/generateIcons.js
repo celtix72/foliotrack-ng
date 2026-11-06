@@ -134,3 +134,4 @@ try {
 } catch (err) {
   console.error('Rasterization error:', err.message);
 }
+

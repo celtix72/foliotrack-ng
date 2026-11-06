@@ -127,3 +127,4 @@ describe('Android PWA Standalone Web App Installation & Criteria', () => {
     assert.ok(csp.includes("worker-src 'self'"), 'CSP must allow worker-src');
   });
 });
+

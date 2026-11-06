@@ -255,3 +255,4 @@
     showHelp: showInstallHelpModal
   };
 })();
+

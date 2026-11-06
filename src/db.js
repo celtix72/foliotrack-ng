@@ -268,6 +268,24 @@ function createSchema(database) {
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS rebalance_targets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      portfolio_id INTEGER,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'ASSET_CLASS' CHECK(type IN ('ASSET_CLASS', 'HOLDING')),
+      toleranceBand REAL NOT NULL DEFAULT 2.0,
+      rebalanceMode TEXT NOT NULL DEFAULT 'CASH_FIRST' CHECK(rebalanceMode IN ('CASH_FIRST', 'FULL_REBALANCE')),
+      allowFractional INTEGER NOT NULL DEFAULT 0,
+      minTradeSize REAL NOT NULL DEFAULT 25.0,
+      cashBuffer REAL NOT NULL DEFAULT 0.0,
+      allocations TEXT NOT NULL,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
@@ -289,6 +307,8 @@ function createSchema(database) {
     CREATE INDEX IF NOT EXISTS idx_dividend_projections_port ON dividend_projections(portfolioId);
     CREATE INDEX IF NOT EXISTS idx_portfolio_history_port_date ON portfolio_history(portfolioId, date);
     CREATE INDEX IF NOT EXISTS idx_portfolio_losses_port_exp ON portfolio_losses(portfolioId, expiryDate);
+    CREATE INDEX IF NOT EXISTS idx_rebalance_targets_user ON rebalance_targets(user_id);
+    CREATE INDEX IF NOT EXISTS idx_rebalance_targets_port ON rebalance_targets(portfolio_id);
   `);
 
   // Safe migration checks for existing databases

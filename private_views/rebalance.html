@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ribilanciamento | FolioTrack</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+  <!-- SIDEBAR_PARTIAL -->
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div id="live-ticker-container" class="no-print"></div>
+
+    <!-- Header Section -->
+    <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full">
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Ribilanciamento Portafoglio</h1>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase">
+            Wealthfolio Engine
+          </span>
+        </div>
+        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">
+          Monitoraggio scostamenti (drift), allocazione nuovi flussi di cassa e foglio ordini interattivo
+        </p>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex items-center space-x-2.5 no-print">
+        <button type="button" id="btnCopyOrders" class="btn-pill px-3.5 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5 shadow-sm">
+          <span>📋</span>
+          <span>Copia Ordini</span>
+        </button>
+        <button type="button" id="btnExportCsv" class="btn-pill px-3.5 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5 shadow-sm">
+          <span>📥</span>
+          <span>Esporta CSV</span>
+        </button>
+        <button type="button" id="btnApplyTrades" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-1.5">
+          <span>⚡</span>
+          <span>Esegui su Portafoglio</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 px-8 pb-16 space-y-6 max-w-7xl mx-auto w-full">
+
+      <!-- ========================================== -->
+      <!-- 1. CONTROL & FILTER BAR                   -->
+      <!-- ========================================== -->
+      <section class="signature-card p-5 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <!-- Portfolio Select -->
+          <div>
+            <label class="block text-[11px] font-mono uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">Portafoglio</label>
+            <select id="rebalancePortfolioSelect" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="all">Tutti i Portafogli (Aggregato)</option>
+            </select>
+          </div>
+
+          <!-- Target Model Select -->
+          <div class="md:col-span-2">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-[11px] font-mono uppercase tracking-wider text-gray-500 dark:text-gray-400">Modello Target di Allocazione</label>
+              <button type="button" id="btnOpenNewTargetModal" class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 hover:underline">
+                ➕ Nuovo Modello
+              </button>
+            </div>
+            <select id="rebalanceTargetSelect" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <!-- New Cash Injection (PAC / Deposito) -->
+          <div>
+            <label class="block text-[11px] font-mono uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">Nuovo Versamento (PAC €)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 text-xs font-mono">€</span>
+              <input type="number" id="rebalanceAddedCash" min="0" step="50" placeholder="0.00" 
+                class="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Pill Selector & Advanced Settings Toggle -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 border-t border-gray-100 dark:border-white/5 gap-3">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs text-gray-500 font-mono">Strategia:</span>
+            <div class="inline-flex rounded-xl p-0.5 bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-xs font-mono">
+              <button type="button" data-strategy-btn="CASH_FIRST" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white shadow-sm font-semibold transition">
+                🟢 Solo Acquisti (Cash-First)
+              </button>
+              <button type="button" data-strategy-btn="FULL_REBALANCE" class="px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">
+                🔄 Compra e Vendi (Totale)
+              </button>
+            </div>
+          </div>
+
+          <button type="button" id="btnToggleAdvancedSettings" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center space-x-1 font-mono">
+            <span>⚙️ Parametri & Tolleranze</span>
+          </button>
+        </div>
+
+        <!-- Advanced Settings Collapsible Panel (Hidden by default) -->
+        <div id="rebalanceAdvancedPanel" class="hidden pt-3 border-t border-gray-100 dark:border-white/5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-1">Banda Tolleranza (±%)</label>
+            <input type="number" id="rebalanceToleranceBand" step="0.5" min="0" value="2.0" class="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-1">Ordine Minimo (€)</label>
+            <input type="number" id="rebalanceMinTradeSize" step="5" min="0" value="25" class="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-1">Riserva Cassa (€)</label>
+            <input type="number" id="rebalanceCashBuffer" step="50" min="0" value="0" class="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          </div>
+          <div class="flex items-center space-x-2 pt-4">
+            <input type="checkbox" id="rebalanceAllowFractional" class="rounded text-emerald-600 focus:ring-emerald-500">
+            <label for="rebalanceAllowFractional" class="text-xs text-gray-700 dark:text-gray-300">Quote Frazionate</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- 2. SUMMARY KPIS BAR (Wealthfolio Style)    -->
+      <!-- ========================================== -->
+      <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- KPI 1: Total Portfolio Value -->
+        <div class="signature-card p-4">
+          <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400 block mb-1">Valore Portafoglio</span>
+          <div id="kpiTotalPortfolioValue" class="text-xl sm:text-2xl font-bold font-mono text-gray-900 dark:text-white">€ 0,00</div>
+          <span class="text-[10px] text-gray-400 font-mono mt-0.5 block">Asset + Liquidità</span>
+        </div>
+
+        <!-- KPI 2: Available Cash -->
+        <div class="signature-card p-4">
+          <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400 block mb-1">Liquidità Disponibile</span>
+          <div id="kpiAvailableCash" class="text-xl sm:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">€ 0,00</div>
+          <span id="kpiAvailableCashSub" class="text-[10px] text-gray-400 font-mono mt-0.5 block">Liquidità netta</span>
+        </div>
+
+        <!-- KPI 3: Planned Orders -->
+        <div class="signature-card p-4">
+          <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400 block mb-1">Ordini Suggeriti</span>
+          <div id="kpiTotalTrades" class="text-xl sm:text-2xl font-bold font-mono text-gray-900 dark:text-white">€ 0,00</div>
+          <span id="kpiTotalTradesSub" class="text-[10px] text-gray-400 font-mono mt-0.5 block">0 ordini previsti</span>
+        </div>
+
+        <!-- KPI 4: Funding Left & Drift -->
+        <div class="signature-card p-4">
+          <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400 block mb-1">Cassa Residua (Funding Left)</span>
+          <div id="kpiFundingLeft" class="text-xl sm:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">€ 0,00</div>
+          <div class="flex items-center justify-between text-[10px] font-mono mt-1 text-gray-400">
+            <span>Drift max:</span>
+            <span id="kpiMaxDrift">0.00% ➔ 0.00%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- 3. DRIFT VISUAL COMPARISON BARS           -->
+      <!-- ========================================== -->
+      <section class="signature-card p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold font-mono uppercase tracking-wider text-gray-500">Distribuzione Pesi vs Target</h3>
+          <span id="kpiCoverage" class="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">In Tolleranza</span>
+        </div>
+        <div id="rebalanceDriftChartContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- 4. INTERACTIVE REBALANCING WORKSHEET       -->
+      <!-- ========================================== -->
+      <section class="signature-card overflow-hidden">
+        <div class="p-5 border-b border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white">Foglio di Lavoro di Ribilanciamento</h3>
+            <p class="text-xs text-gray-500 font-mono mt-0.5">Modifica le quantità suggerite con [-] [+] per simulare l'impatto istantaneo sui pesi finali</p>
+          </div>
+          <div id="rebalanceLoading" class="hidden text-xs font-mono text-emerald-600 flex items-center space-x-1.5">
+            <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+            <span>Calcolo in corso...</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-gray-200/70 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02] text-[10px] font-mono uppercase tracking-wider text-gray-400">
+                <th class="px-4 py-3">Categoria / Ticker</th>
+                <th class="px-4 py-3 text-right">Stato Attuale</th>
+                <th class="px-4 py-3 text-center">Target (%)</th>
+                <th class="px-4 py-3 text-right">Scostamento (Drift)</th>
+                <th class="px-4 py-3 text-center">Azione</th>
+                <th class="px-4 py-3 text-center">Ordine Suggerito</th>
+                <th class="px-4 py-3 text-right">Esito Previsto</th>
+              </tr>
+            </thead>
+            <tbody id="rebalanceWorksheetTbody" class="divide-y divide-gray-100 dark:divide-white/5">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: APPLICA TRANSAZIONI SUL PORTAFOGLIO -->
+  <!-- ========================================== -->
+  <div id="applyTradesModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-lg p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <h3 class="text-base font-bold text-gray-900 dark:text-white">Conferma Esecuzione Ordini</h3>
+        <button type="button" id="btnCancelApplyTrades" class="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1">✕</button>
+      </div>
+
+      <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+        Le seguenti transazioni verranno registrate automaticamente nel portafoglio selezionato con la data odierna.
+      </p>
+
+      <div id="applyTradesList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-3 border-t border-gray-100 dark:border-white/5">
+        <button type="button" onclick="document.getElementById('applyTradesModal').classList.add('hidden')" class="btn-pill px-4 py-2 border border-gray-200 dark:border-white/10 text-xs text-gray-700 dark:text-gray-300">
+          Annulla
+        </button>
+        <button type="button" id="btnConfirmApplyTrades" class="btn-pill px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md">
+          Conferma e Registra
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: CREA / MODIFICA MODELLO TARGET      -->
+  <!-- ========================================== -->
+  <div id="targetModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-lg p-6 shadow-2xl relative space-y-4 font-sans">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+        <h3 id="targetModalTitle" class="text-base font-bold text-gray-900 dark:text-white">Nuovo Modello di Allocazione</h3>
+        <button type="button" id="btnCloseTargetModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Modello</label>
+          <input type="text" id="targetModalName" placeholder="Es. Portafoglio Pigro 70/30" 
+            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-medium">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ambito Portafoglio</label>
+            <select id="targetModalPortfolio" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono">
+              <option value="">Globale (Tutti i Portafogli)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tolleranza (±%)</label>
+            <input type="number" id="targetModalTolerance" step="0.5" min="0.5" value="2.0" 
+              class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Strategia Predefinita</label>
+          <select id="targetModalMode" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono">
+            <option value="CASH_FIRST">Solo Acquisti (Cash-First / PAC)</option>
+            <option value="FULL_REBALANCE">Compra e Vendi (Ribilanciamento Totale)</option>
+          </select>
+        </div>
+
+        <!-- Allocations List -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Quote di Allocazione Target</label>
+            <button type="button" id="btnAddModalAllocation" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
+              ➕ Aggiungi Voce
+            </button>
+          </div>
+
+          <div id="targetModalAllocationsList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- Total Percentage Validation Bar -->
+          <div class="mt-3 p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500 font-mono">Totale Allocazione:</span>
+              <span id="targetModalSum" class="font-mono font-bold text-emerald-500">100.0%</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+              <div id="targetModalSumBar" class="h-full bg-emerald-500 transition-all duration-200" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-3 border-t border-gray-100 dark:border-white/5">
+        <button type="button" onclick="document.getElementById('targetModal').classList.add('hidden')" class="btn-pill px-4 py-2 border border-gray-200 dark:border-white/10 text-xs text-gray-700 dark:text-gray-300">
+          Annulla
+        </button>
+        <button type="button" id="btnSaveTargetModal" class="btn-pill px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md">
+          Salva Modello
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/rebalance.js"></script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Ribilanciamento | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+  <style>
+    .signature-card {
+      padding: 0.75rem 0.65rem !important;
+      border-radius: 0.75rem !important;
+    }
+  </style>
+</head>
+<body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-[#131315]/90 backdrop-blur-md border-b border-gray-200/50 dark:border-white/5 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-2">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-md text-white font-mono font-bold text-sm">
+        ⚖️
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-gray-900 dark:text-white leading-tight">Ribilanciamento</h1>
+        <span class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase">Wealthfolio Engine</span>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex items-center space-x-1.5">
+      <button type="button" id="btnCopyOrders" class="p-2 rounded-xl text-gray-600 dark:text-gray-300 bg-gray-100/70 dark:bg-white/5 active:scale-95 transition" title="Copia lista ordini per il broker">
+        📋
+      </button>
+      <button type="button" id="btnExportCsv" class="p-2 rounded-xl text-gray-600 dark:text-gray-300 bg-gray-100/70 dark:bg-white/5 active:scale-95 transition" title="Esporta CSV">
+        📥
+      </button>
+      <button type="button" id="btnApplyTrades" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition flex items-center space-x-1">
+        <span>⚡</span>
+        <span>Esegui</span>
+      </button>
+    </div>
+  </header>
+
+  <div id="live-ticker-container"></div>
+
+  <main class="flex-1 px-2.5 py-3 space-y-3">
+
+    <!-- ========================================== -->
+    <!-- 1. CONTROLS CARD                           -->
+    <!-- ========================================== -->
+    <section class="signature-card p-3.5 space-y-3">
+      <!-- Portafoglio & Target -->
+      <div class="space-y-2">
+        <div>
+          <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-400 mb-1">Portafoglio</label>
+          <select id="rebalancePortfolioSelect" class="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono font-medium">
+            <option value="all">Tutti i Portafogli (Aggregato)</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-400">Modello Target</label>
+            <button type="button" id="btnOpenNewTargetModal" class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 hover:underline">
+              ➕ Nuovo
+            </button>
+          </div>
+          <select id="rebalanceTargetSelect" class="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono font-medium">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Strategy & PAC Cash -->
+      <div class="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-white/5">
+        <div>
+          <label class="block text-[10px] font-mono text-gray-400 mb-1">Versamento PAC (€)</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-xs font-mono">€</span>
+            <input type="number" id="rebalanceAddedCash" min="0" step="50" placeholder="0" 
+              class="w-full pl-6 pr-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono font-bold">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-mono text-gray-400 mb-1">Strategia</label>
+          <div class="flex rounded-lg p-0.5 bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-mono">
+            <button type="button" data-strategy-btn="CASH_FIRST" class="flex-1 py-1 text-center rounded-md bg-emerald-600 text-white font-bold shadow-sm">
+              Solo Acquisti
+            </button>
+            <button type="button" data-strategy-btn="FULL_REBALANCE" class="flex-1 py-1 text-center rounded-md text-gray-500 hover:text-gray-800 dark:hover:text-white font-medium">
+              Totale
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. SUMMARY KPIS (2x2 Grid)                 -->
+    <!-- ========================================== -->
+    <section class="grid grid-cols-2 gap-2">
+      <div class="signature-card p-3">
+        <span class="text-[9px] font-mono uppercase text-gray-400 block mb-0.5">Valore Totale</span>
+        <div id="kpiTotalPortfolioValue" class="text-base font-bold font-mono text-gray-900 dark:text-white">€ 0,00</div>
+        <span class="text-[9px] text-gray-400 font-mono">Asset + Cassa</span>
+      </div>
+
+      <div class="signature-card p-3">
+        <span class="text-[9px] font-mono uppercase text-gray-400 block mb-0.5">Liquidità Disp.</span>
+        <div id="kpiAvailableCash" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">€ 0,00</div>
+        <span id="kpiAvailableCashSub" class="text-[9px] text-gray-400 font-mono truncate block">Cassa netta</span>
+      </div>
+
+      <div class="signature-card p-3">
+        <span class="text-[9px] font-mono uppercase text-gray-400 block mb-0.5">Ordini Suggeriti</span>
+        <div id="kpiTotalTrades" class="text-base font-bold font-mono text-gray-900 dark:text-white">€ 0,00</div>
+        <span id="kpiTotalTradesSub" class="text-[9px] text-gray-400 font-mono truncate block">0 ordini</span>
+      </div>
+
+      <div class="signature-card p-3">
+        <span class="text-[9px] font-mono uppercase text-gray-400 block mb-0.5">Cassa Residua</span>
+        <div id="kpiFundingLeft" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">€ 0,00</div>
+        <div class="text-[9px] font-mono text-gray-400 flex items-center justify-between mt-0.5">
+          <span>Drift:</span>
+          <span id="kpiMaxDrift">0% ➔ 0%</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. DRIFT BARS COMPARISON                   -->
+    <!-- ========================================== -->
+    <section class="signature-card p-3 space-y-2">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[11px] font-bold font-mono uppercase text-gray-500">Pesi vs Target</h3>
+        <span id="kpiCoverage" class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">In Tolleranza</span>
+      </div>
+      <div id="rebalanceDriftChartContainer"></div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. REBALANCING WORKSHEET TABLE             -->
+    <!-- ========================================== -->
+    <section class="signature-card overflow-hidden">
+      <div class="p-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+        <h3 class="text-xs font-bold text-gray-900 dark:text-white">Foglio di Lavoro</h3>
+        <div id="rebalanceLoading" class="hidden text-[10px] font-mono text-emerald-600">Calcolo...</div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-gray-200/70 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02] text-[9px] font-mono uppercase text-gray-400">
+              <th class="px-2.5 py-2">Categoria</th>
+              <th class="px-2.5 py-2 text-right">Attuale</th>
+              <th class="px-2 py-2 text-center">Target</th>
+              <th class="px-2.5 py-2 text-right">Drift</th>
+              <th class="px-2 py-2 text-center">Azione</th>
+              <th class="px-2.5 py-2 text-center">Quantità</th>
+              <th class="px-2.5 py-2 text-right">Esito</th>
+            </tr>
+          </thead>
+          <tbody id="rebalanceWorksheetTbody" class="divide-y divide-gray-100 dark:divide-white/5 text-[11px]">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODALS                                     -->
+  <!-- ========================================== -->
+  <div id="applyTradesModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-sm p-4 shadow-2xl space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white">Conferma Ordini</h3>
+        <button type="button" id="btnCancelApplyTrades" class="text-gray-400 p-1">✕</button>
+      </div>
+      <div id="applyTradesList" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100 dark:border-white/5">
+        <button type="button" onclick="document.getElementById('applyTradesModal').classList.add('hidden')" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10 text-xs">Annulla</button>
+        <button type="button" id="btnConfirmApplyTrades" class="btn-pill px-4 py-1.5 bg-emerald-600 text-white text-xs font-semibold">Registra</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="targetModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
+    <div class="signature-card bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 w-full max-w-sm p-4 shadow-2xl space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+        <h3 id="targetModalTitle" class="text-sm font-bold text-gray-900 dark:text-white">Nuovo Target</h3>
+        <button type="button" id="btnCloseTargetModal" class="text-gray-400 p-1">✕</button>
+      </div>
+      <div class="space-y-2">
+        <input type="text" id="targetModalName" placeholder="Nome Modello (es. 70/30)" class="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <select id="targetModalPortfolio" class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono">
+            <option value="">Globale</option>
+          </select>
+          <input type="number" id="targetModalTolerance" step="0.5" value="2.0" placeholder="Tolleranza %" class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono">
+        </div>
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-medium text-gray-500">Quote Target</span>
+            <button type="button" id="btnAddModalAllocation" class="text-[11px] text-emerald-600 font-bold">➕ Voce</button>
+          </div>
+          <div id="targetModalAllocationsList" class="space-y-1 max-h-36 overflow-y-auto"></div>
+          <div class="p-2 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-between text-xs">
+            <span>Totale:</span>
+            <span id="targetModalSum" class="font-bold font-mono text-emerald-500">100.0%</span>
+          </div>
+          <div class="w-full h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+            <div id="targetModalSumBar" class="h-full bg-emerald-500" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100 dark:border-white/5">
+        <button type="button" onclick="document.getElementById('targetModal').classList.add('hidden')" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10 text-xs">Annulla</button>
+        <button type="button" id="btnSaveTargetModal" class="btn-pill px-4 py-1.5 bg-emerald-600 text-white text-xs font-semibold">Salva</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Tab Bar -->
+  <nav class="fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-[#131315]/95 backdrop-blur-lg border-t border-gray-200/60 dark:border-white/5 flex justify-around items-center h-16 px-2 safe-area-bottom">
+    <a href="/" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span class="text-[10px] tracking-tight">Dashboard</span>
+    </a>
+
+    <a href="/portfolios" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+      <span class="text-[10px] tracking-tight">Portafogli</span>
+    </a>
+
+    <a href="/rebalance" class="flex flex-col items-center justify-center flex-1 py-1 text-emerald-600 dark:text-emerald-400 font-medium">
+      <div class="text-base mb-0.5">⚖️</div>
+      <span class="text-[10px] tracking-tight font-bold">Ribilancia</span>
+    </a>
+
+    <a href="/transactions" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+      <span class="text-[10px] tracking-tight">Movimenti</span>
+    </a>
+
+    <a href="/settings" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white">
+      <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span class="text-[10px] tracking-tight">Impostazioni</span>
+    </a>
+  </nav>
+
+  <script src="/rebalance.js"></script>
+</body>
+</html>
