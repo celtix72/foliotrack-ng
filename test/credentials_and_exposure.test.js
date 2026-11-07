@@ -319,4 +319,60 @@ describe('Credentials Management & Internet Exposure Security', () => {
     assert.equal(data.success, false);
     assert.ok(data.error.includes('CORS origin not allowed') || data.error.includes('cross-origin non autorizzata'));
   });
+
+  test('Logged-out token is immediately rejected on subsequent requests (session revocation)', async () => {
+    // 1. Login to get a fresh token
+    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'super_investor', password: 'SecureNewPassword2026!' })
+    });
+    assert.equal(loginRes.status, 200);
+    const { token } = await loginRes.json();
+
+    // 2. Verify token works
+    const meRes1 = await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    assert.equal(meRes1.status, 200);
+
+    // 3. Logout
+    const logoutRes = await fetch(`${baseUrl}/api/auth/logout`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    assert.equal(logoutRes.status, 200);
+
+    // 4. Token must be rejected immediately
+    const meRes2 = await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    assert.equal(meRes2.status, 401);
+  });
+
+  test('Non-admin user is rejected with 403 on /api/backups (privilege escalation prevention)', async () => {
+    // Create a regular user
+    const db = getDb();
+    const salt = bcrypt.genSaltSync(8);
+    const passHash = bcrypt.hashSync('RegularUserPass123!', salt);
+    try {
+      db.prepare(`
+        INSERT INTO users (username, email, password_hash, role)
+        VALUES ('limited_viewer', 'viewer@foliotrack.test', ?, 'user')
+      `).run(passHash);
+    } catch {}
+
+    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'limited_viewer', password: 'RegularUserPass123!' })
+    });
+    assert.equal(loginRes.status, 200);
+    const { token: userToken } = await loginRes.json();
+
+    const backupRes = await fetch(`${baseUrl}/api/backups`, {
+      headers: { Authorization: `Bearer ${userToken}` }
+    });
+    assert.equal(backupRes.status, 403, 'Regular user must not be able to list/download full database backups');
+  });
 });

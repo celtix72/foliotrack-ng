@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { db, resetFinancialDatabase } = require('../db');
-const { requireAuth } = require('../middlewares/authMiddleware');
+const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 const { 
   listBackups, 
   createBackup, 
@@ -16,8 +16,8 @@ const {
 
 const router = express.Router();
 
-// All backup routes require authentication (admin or user)
-router.use(requireAuth);
+// All backup routes require authentication and admin privileges
+router.use(requireAuth, requireRole('admin'));
 
 /**
  * GET /api/backups

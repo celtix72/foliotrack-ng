@@ -58,6 +58,21 @@ function requireAuth(req, res, next) {
       });
     }
 
+    // Verify session has not been revoked or logged out
+    try {
+      const { hashToken } = require('../crypto');
+      const tokenHash = hashToken(token);
+      const session = db.prepare('SELECT id FROM user_sessions WHERE user_id = ? AND token_hash = ? AND expires_at > datetime(\'now\')').get(decoded.id, tokenHash);
+      if (!session) {
+        return res.status(401).json({
+          success: false,
+          error: 'Sessione terminata o revocata. Effettua nuovamente il login.'
+        });
+      }
+    } catch (sessionErr) {
+      // Fallback gracefully if session checking encountered an unexpected schema error
+    }
+
     req.user = user;
     req.token = token;
     return next();
