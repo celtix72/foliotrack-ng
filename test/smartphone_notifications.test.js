@@ -19,7 +19,8 @@ const {
   sendTestNotification,
   buildMoversTableText,
   formatPortfolioK,
-  toMonospace
+  toMonospace,
+  applyNotificationFont
 } = require('../src/services/notificationService');
 const pushService = require('../src/services/pushService');
 const { saveSubscription } = pushService;
@@ -144,6 +145,7 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(s.portfolioChangeEnabled, true);
       assert.equal(s.portfolioChangeThreshold, 300.0);
       assert.equal(s.syncOnlyMarketHours, true);
+      assert.equal(s.fontStyle, 'standard');
     });
 
     test('PUT /api/notifications/settings updates toggles and custom thresholds', async () => {
@@ -156,7 +158,8 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
         assetChangeThreshold: 7.5,
         portfolioChangeEnabled: true,
         portfolioChangeThreshold: 500.0,
-        syncOnlyMarketHours: true
+        syncOnlyMarketHours: true,
+        fontStyle: 'sans_bold'
       });
 
       assert.equal(res.status, 200);
@@ -167,6 +170,7 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(updated.assetChangeThreshold, 7.5);
       assert.equal(updated.portfolioChangeEnabled, true);
       assert.equal(updated.portfolioChangeThreshold, 500.0);
+      assert.equal(updated.fontStyle, 'sans_bold');
 
       // Verify persistence with a subsequent GET
       const getRes = await makeRequest(app, 'GET', '/api/notifications/settings', {
@@ -175,6 +179,7 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(getRes.body.settings.assetChangeThreshold, 7.5);
       assert.equal(getRes.body.settings.portfolioChangeThreshold, 500.0);
       assert.equal(getRes.body.settings.marketOpenEnabled, false);
+      assert.equal(getRes.body.settings.fontStyle, 'sans_bold');
     });
   });
 
@@ -258,6 +263,14 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(formatPortfolioK(28500), '28,5K');
       assert.equal(formatPortfolioK(1000), '1,0K');
       assert.equal(formatPortfolioK(300), '0,3K');
+    });
+
+    test('applyNotificationFont correctly transforms text across supported font styles', () => {
+      assert.equal(applyNotificationFont('NVDA 123', 'standard'), 'NVDA 123');
+      assert.equal(applyNotificationFont('NVDA 123', 'sans_bold'), '𝗡𝗩𝗗𝗔 𝟭𝟮𝟯');
+      assert.equal(applyNotificationFont('NVDA 123', 'sans'), '𝖭𝖵𝖣𝖠 𝟣𝟤𝟥');
+      assert.equal(applyNotificationFont('NVDA 123', 'serif'), '𝐍𝐕𝐃𝐀 𝟏𝟐𝟑');
+      assert.equal(applyNotificationFont('NVDA 123', 'monospace'), '𝙽𝚅𝙳𝙰 𝟷𝟸𝟹');
     });
 
     test('toMonospace converts latin letters and digits to Unicode mathematical monospace', () => {
@@ -362,6 +375,8 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.ok(html.includes('btn-test-notif-asset-change'));
       assert.ok(html.includes('btn-test-notif-portfolio-change'));
       assert.ok(html.includes('sync_only_market_hours'));
+      assert.ok(html.includes('notif_font_style'));
+      assert.ok(html.includes('notif-font-preview'));
     });
 
     test('Mobile settings view renders smartphone notification section & controls', async () => {
@@ -380,6 +395,8 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.ok(html.includes('btn-test-notif-asset-change'));
       assert.ok(html.includes('btn-test-notif-portfolio-change'));
       assert.ok(html.includes('sync_only_market_hours'));
+      assert.ok(html.includes('notif_font_style'));
+      assert.ok(html.includes('notif-font-preview'));
     });
   });
 });

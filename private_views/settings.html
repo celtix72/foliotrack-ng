@@ -636,6 +636,31 @@
               Configurazione Tipologie di Notifica Smartphone
             </h4>
 
+            <!-- Scelta Font / Stile Carattere Notifiche -->
+            <div class="p-4 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex-1">
+                <label for="notif_font_style" class="text-sm font-semibold text-gray-900 dark:text-white cursor-pointer flex items-center gap-2">
+                  <span>🔤</span>
+                  <span>Stile Carattere Notifiche (Font)</span>
+                </label>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                  Scegli il font con cui formattare i titoli e i numeri nelle notifiche push smartphone.
+                </p>
+                <div id="notif-font-preview" class="text-xs font-mono text-emerald-600 dark:text-emerald-400 mt-1.5 font-semibold">
+                  Anteprima: 🚀 NVDA     +4,3%  (+€145)
+                </div>
+              </div>
+              <div class="shrink-0">
+                <select id="notif_font_style" class="text-xs font-mono px-3 py-2 bg-white dark:bg-black/30 border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="standard" selected>Predefinito di sistema (Roboto / San Francisco / Arial)</option>
+                  <option value="sans_bold">Sans-Serif Grassetto (Inter Bold / Helvetica)</option>
+                  <option value="sans">Sans-Serif Moderno (Inter / Open Sans)</option>
+                  <option value="serif">Serif Classico (Times New Roman / Georgia)</option>
+                  <option value="monospace">Monospazio (Courier / Consolas)</option>
+                </select>
+              </div>
+            </div>
+
             <!-- Tipo 1: Notifica dopo apertura dei mercati -->
             <div class="p-4 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div class="flex items-start space-x-3">

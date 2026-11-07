@@ -70,7 +70,11 @@ function getNotificationSettings(userId) {
   const portfolioChangeSetting = getSetting(userId, 'notif_portfolio_change_enabled', false);
   const portfolioThresholdSetting = getSetting(userId, 'notif_portfolio_change_threshold', false);
   const syncOnlyMarketHoursSetting = getSetting(userId, 'sync_only_market_hours', false);
+  const fontStyleSetting = getSetting(userId, 'notif_font_style', false);
   const lastPortfolioTotal = getSetting(userId, 'notif_last_notified_portfolio_total', false);
+
+  const validStyles = ['standard', 'sans_bold', 'sans', 'serif', 'monospace'];
+  const fontStyle = validStyles.includes(fontStyleSetting) ? fontStyleSetting : 'standard';
 
   return {
     marketOpenEnabled: marketOpenSetting !== 'false', // default true
@@ -79,6 +83,7 @@ function getNotificationSettings(userId) {
     portfolioChangeEnabled: portfolioChangeSetting !== 'false', // default true
     portfolioChangeThreshold: portfolioThresholdSetting ? parseFloat(portfolioThresholdSetting) : 300.0, // default 300 EUR
     syncOnlyMarketHours: syncOnlyMarketHoursSetting !== 'false', // default true
+    fontStyle, // default 'standard'
     lastNotifiedPortfolioTotal: lastPortfolioTotal !== null && !isNaN(parseFloat(lastPortfolioTotal)) ? parseFloat(lastPortfolioTotal) : null
   };
 }
@@ -121,6 +126,12 @@ function saveNotificationSettings(userId, settings = {}) {
     setSetting(userId, 'sync_only_market_hours', settings.syncOnlyMarketHours ? 'true' : 'false', false);
   }
 
+  if (settings.fontStyle !== undefined) {
+    const validStyles = ['standard', 'sans_bold', 'sans', 'serif', 'monospace'];
+    const style = validStyles.includes(settings.fontStyle) ? settings.fontStyle : 'standard';
+    setSetting(userId, 'notif_font_style', style, false);
+  }
+
   return getNotificationSettings(userId);
 }
 
@@ -157,23 +168,43 @@ function formatPortfolioK(value) {
 }
 
 /**
- * Converts Latin letters and digits to Unicode Mathematical Monospace characters (U+1D670..U+1D6A3, U+1D7F6..U+1D7FF).
- * This ensures tabular columns remain vertically aligned in push notifications rendered with variable system fonts.
+ * Applies the selected font style transformation to Latin letters and digits.
+ * Supported styles:
+ * - 'standard': clean, native system font (Roboto on Android, San Francisco on iOS, Segoe UI on Windows)
+ * - 'sans_bold': modern Sans-Serif bold (Inter Bold / Helvetica Bold)
+ * - 'sans': clean modern Sans-Serif (Inter / Open Sans)
+ * - 'serif': classic Serif (Times New Roman / Georgia)
+ * - 'monospace': typewriter monospace (Courier / Consolas)
  *
  * @param {string} str
+ * @param {'standard'|'sans_bold'|'sans'|'serif'|'monospace'} [style='standard']
  * @returns {string}
  */
-function toMonospace(str) {
-  if (!str) return '';
+function applyNotificationFont(str, style = 'standard') {
+  if (!str || style === 'standard') return str;
   let out = '';
   for (const ch of str) {
     const code = ch.codePointAt(0);
-    if (code >= 65 && code <= 90) { // A-Z
-      out += String.fromCodePoint(0x1D670 + code - 65);
-    } else if (code >= 97 && code <= 122) { // a-z
-      out += String.fromCodePoint(0x1D68A + code - 97);
-    } else if (code >= 48 && code <= 57) { // 0-9
-      out += String.fromCodePoint(0x1D7F6 + code - 48);
+    if (style === 'sans_bold') {
+      if (code >= 65 && code <= 90) out += String.fromCodePoint(0x1D5D4 + code - 65);
+      else if (code >= 97 && code <= 122) out += String.fromCodePoint(0x1D5EE + code - 97);
+      else if (code >= 48 && code <= 57) out += String.fromCodePoint(0x1D7EC + code - 48);
+      else out += ch;
+    } else if (style === 'sans') {
+      if (code >= 65 && code <= 90) out += String.fromCodePoint(0x1D5A0 + code - 65);
+      else if (code >= 97 && code <= 122) out += String.fromCodePoint(0x1D5BA + code - 97);
+      else if (code >= 48 && code <= 57) out += String.fromCodePoint(0x1D7E2 + code - 48);
+      else out += ch;
+    } else if (style === 'serif') {
+      if (code >= 65 && code <= 90) out += String.fromCodePoint(0x1D400 + code - 65);
+      else if (code >= 97 && code <= 122) out += String.fromCodePoint(0x1D41A + code - 97);
+      else if (code >= 48 && code <= 57) out += String.fromCodePoint(0x1D7CE + code - 48);
+      else out += ch;
+    } else if (style === 'monospace') {
+      if (code >= 65 && code <= 90) out += String.fromCodePoint(0x1D670 + code - 65);
+      else if (code >= 97 && code <= 122) out += String.fromCodePoint(0x1D68A + code - 97);
+      else if (code >= 48 && code <= 57) out += String.fromCodePoint(0x1D7F6 + code - 48);
+      else out += ch;
     } else {
       out += ch;
     }
@@ -182,15 +213,26 @@ function toMonospace(str) {
 }
 
 /**
- * Formats a single mover row with emoticon, ticker symbol, percentage change and monetary value created.
- * Uses monospace characters for the row content to guarantee tabular alignment across all mobile screens.
- * All percentages with 1 decimal digit, all variation monetary values with 0 decimals.
- * Format: 🚀 𝙽𝚅𝙳𝙰     +𝟺,𝟹%  (+€𝟷𝟺𝟻)
+ * Backward compatibility helper for monospace conversion.
  *
- * @param {object} item - { ticker, changePercent, valueCreatedEur }
+ * @param {string} str
  * @returns {string}
  */
-function formatMoverRow(item) {
+function toMonospace(str) {
+  return applyNotificationFont(str, 'monospace');
+}
+
+/**
+ * Formats a single mover row with emoticon, ticker symbol, percentage change and monetary value created.
+ * Applies the user-configured notification font style.
+ * All percentages with 1 decimal digit, all variation monetary values with 0 decimals.
+ * Format: 🚀 NVDA     +4,3%  (+€145)
+ *
+ * @param {object} item - { ticker, changePercent, valueCreatedEur }
+ * @param {string} [fontStyle='standard']
+ * @returns {string}
+ */
+function formatMoverRow(item, fontStyle = 'standard') {
   const icon = getMoversEmoticon(item.changePercent);
   const sign = item.changePercent >= 0 ? '+' : '';
   const pctStr = `${sign}${item.changePercent.toFixed(1).replace('.', ',')}%`;
@@ -201,7 +243,7 @@ function formatMoverRow(item) {
   const tickerPad = item.ticker.padEnd(7);
   const pctPad = pctStr.padStart(6);
   const rowContent = `${tickerPad} ${pctPad}  (${valStr})`;
-  return `${icon} ${toMonospace(rowContent)}`;
+  return `${icon} ${applyNotificationFont(rowContent, fontStyle)}`;
 }
 
 /**
@@ -304,16 +346,18 @@ function getUserTopAndBottomMovers(userId, isTest = false) {
 
 /**
  * Builds formatted tabular text representation of top 3 and bottom 3 tickers with emoticons and value creation.
- * Omits "TOP" and "FLOP" labels and uses clean monospace formatting.
+ * Omits "TOP" and "FLOP" labels and applies user-selected font style.
  *
  * @param {number} userId
  * @param {boolean} [isTest=false]
+ * @param {string} [fontStyleOverride=null]
  * @returns {string}
  */
-function buildMoversTableText(userId, isTest = false) {
+function buildMoversTableText(userId, isTest = false, fontStyleOverride = null) {
+  const fontStyle = fontStyleOverride || getNotificationSettings(userId).fontStyle || 'standard';
   const { top3, flop3 } = getUserTopAndBottomMovers(userId, isTest);
-  const topLines = top3.map(formatMoverRow).join('\n');
-  const flopLines = flop3.map(formatMoverRow).join('\n');
+  const topLines = top3.map(item => formatMoverRow(item, fontStyle)).join('\n');
+  const flopLines = flop3.map(item => formatMoverRow(item, fontStyle)).join('\n');
   const sections = [];
   if (topLines) sections.push(topLines);
   if (flopLines) sections.push(flopLines);
@@ -669,5 +713,6 @@ module.exports = {
   getUserTopAndBottomMovers,
   buildMoversTableText,
   formatPortfolioK,
-  toMonospace
+  toMonospace,
+  applyNotificationFont
 };

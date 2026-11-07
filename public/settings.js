@@ -2232,6 +2232,13 @@ async function initPushControls() {
   const btnSave = document.getElementById('btn-save-notification-settings');
   btnSave?.addEventListener('click', saveNotificationSettings);
 
+  // Attach font style preview and auto-persistence
+  const fontStyleSelect = document.getElementById('notif_font_style');
+  fontStyleSelect?.addEventListener('change', async (e) => {
+    updateFontPreview(e.target.value);
+    await saveNotificationSettings();
+  });
+
   // Attach individual test buttons
   document.getElementById('btn-test-notif-market-open')?.addEventListener('click', function() {
     handleSendTestNotification('market_open', this);
@@ -2299,6 +2306,23 @@ async function initPushControls() {
   });
 }
 
+function updateFontPreview(style) {
+  const previewEl = document.getElementById('notif-font-preview');
+  if (!previewEl) return;
+  const sample = 'NVDA     +4,3%  (+€145)';
+  let transformed = sample;
+  if (style === 'sans_bold') {
+    transformed = '𝗡𝗩𝗗𝗔     +𝟰,𝟯%  (+€𝟭𝟰𝟱)';
+  } else if (style === 'sans') {
+    transformed = '𝖭𝖵𝖣𝖠     +𝟦,𝟥%  (+€𝟣𝟦𝟧)';
+  } else if (style === 'serif') {
+    transformed = '𝐍𝐕𝐃𝐀     +𝟒,𝟑%  (+€𝟏𝟒𝟓)';
+  } else if (style === 'monospace') {
+    transformed = '𝙽𝚅𝙳𝙰     +𝟺,𝟹%  (+€𝟷𝟺𝟻)';
+  }
+  previewEl.textContent = `Anteprima: 🚀 ${transformed}`;
+}
+
 async function loadNotificationSettings() {
   try {
     const res = await fetch('/api/notifications/settings');
@@ -2312,6 +2336,7 @@ async function loadNotificationSettings() {
     const portfolioChangeCb = document.getElementById('notif_portfolio_change_enabled');
     const portfolioThresholdInp = document.getElementById('notif_portfolio_change_threshold');
     const syncOnlyMarketHoursCb = document.getElementById('sync_only_market_hours');
+    const fontStyleSelect = document.getElementById('notif_font_style');
 
     if (marketOpenCb) marketOpenCb.checked = s.marketOpenEnabled;
     if (assetChangeCb) assetChangeCb.checked = s.assetChangeEnabled;
@@ -2319,6 +2344,10 @@ async function loadNotificationSettings() {
     if (portfolioChangeCb) portfolioChangeCb.checked = s.portfolioChangeEnabled;
     if (portfolioThresholdInp) portfolioThresholdInp.value = s.portfolioChangeThreshold ?? 300;
     if (syncOnlyMarketHoursCb) syncOnlyMarketHoursCb.checked = s.syncOnlyMarketHours;
+    if (fontStyleSelect && s.fontStyle) {
+      fontStyleSelect.value = s.fontStyle;
+      updateFontPreview(s.fontStyle);
+    }
   } catch (err) {
     console.warn('[Settings] Impossibile caricare le impostazioni notifiche:', err);
   }
@@ -2334,7 +2363,8 @@ async function saveNotificationSettings() {
     assetChangeThreshold: parseFloat(document.getElementById('notif_asset_change_threshold')?.value) || 5.0,
     portfolioChangeEnabled: document.getElementById('notif_portfolio_change_enabled')?.checked ?? true,
     portfolioChangeThreshold: parseFloat(document.getElementById('notif_portfolio_change_threshold')?.value) || 300.0,
-    syncOnlyMarketHours: document.getElementById('sync_only_market_hours')?.checked ?? true
+    syncOnlyMarketHours: document.getElementById('sync_only_market_hours')?.checked ?? true,
+    fontStyle: document.getElementById('notif_font_style')?.value || 'standard'
   };
 
   if (saveBtn) saveBtn.disabled = true;
@@ -2368,6 +2398,8 @@ async function saveNotificationSettings() {
 async function handleSendTestNotification(type, btnEl) {
   if (btnEl) btnEl.disabled = true;
   try {
+    // Ensure latest settings including font selection are persisted
+    await saveNotificationSettings();
     const res = await fetch(`/api/notifications/test/${type}`, { method: 'POST' });
     const data = await res.json();
     if (data.success) {

@@ -388,6 +388,29 @@
         </button>
 
         <div class="space-y-3 pt-1">
+          <!-- Scelta Font Notifiche Mobile -->
+          <div class="p-3 rounded-lg bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/10 space-y-2">
+            <div>
+              <label for="notif_font_style" class="text-xs font-bold text-gray-900 dark:text-white cursor-pointer flex items-center gap-1.5">
+                <span>🔤</span>
+                <span>Stile Carattere Notifiche (Font)</span>
+              </label>
+              <p class="text-[10px] text-gray-400 font-mono leading-tight mt-0.5">
+                Formato font per notifiche push smartphone.
+              </p>
+            </div>
+            <select id="notif_font_style" class="w-full text-xs font-mono px-2.5 py-1.5 bg-white dark:bg-black/30 border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
+              <option value="standard" selected>Predefinito di sistema (Roboto / San Francisco)</option>
+              <option value="sans_bold">Sans-Serif Grassetto (Inter / Helvetica Bold)</option>
+              <option value="sans">Sans-Serif Moderno (Inter / Open Sans)</option>
+              <option value="serif">Serif Classico (Times / Georgia)</option>
+              <option value="monospace">Monospazio (Courier / Consolas)</option>
+            </select>
+            <div id="notif-font-preview" class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+              Anteprima: 🚀 NVDA     +4,3%  (+€145)
+            </div>
+          </div>
+
           <!-- Tipo 1: Apertura Mercati -->
           <div class="p-3 rounded-lg bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/10 space-y-2">
             <div class="flex items-start space-x-2.5">
