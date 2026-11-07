@@ -766,7 +766,7 @@
 
       for (const h of cat.holdings) {
         const isToday = isHoldingQuotedToday(h);
-        const isClosed = isAssetMarketClosed(h);
+        const isClosed = !isToday;
 
         const mv = Number(isNonEur && h.marketValueNative !== undefined ? h.marketValueNative : h.marketValue) || 0;
         const cost = (Number(isNonEur && h.pmcNative !== undefined ? h.pmcNative : (h.pmc || h.costBasis)) || 0) * (Number(h.quantity) || 0);
@@ -796,8 +796,8 @@
       cat.currSym = currSym;
 
       cat.holdings.sort((a, b) => {
-        const aClosed = isAssetMarketClosed(a);
-        const bClosed = isAssetMarketClosed(b);
+        const aClosed = !isHoldingQuotedToday(a);
+        const bClosed = !isHoldingQuotedToday(b);
         if (!aClosed && bClosed) return -1;
         if (aClosed && !bClosed) return 1;
 
@@ -1306,11 +1306,11 @@
 
       const totalNav = data.totals?.totalValue || 1;
       const sortedHoldings = [...holdings];
-      const closedCount = sortedHoldings.filter(h => isAssetMarketClosed(h)).length;
+      const closedCount = sortedHoldings.filter(h => !isHoldingQuotedToday(h)).length;
 
       sortedHoldings.sort((a, b) => {
-        const aClosed = isAssetMarketClosed(a);
-        const bClosed = isAssetMarketClosed(b);
+        const aClosed = !isHoldingQuotedToday(a);
+        const bClosed = !isHoldingQuotedToday(b);
         const aIsToday = isHoldingQuotedToday(a);
         const bIsToday = isHoldingQuotedToday(b);
 
@@ -1397,8 +1397,9 @@
           <!-- Lista Titoli in Singola Riga -->
           <div class="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-white/5 no-scrollbar">
             ${sortedHoldings.map(h => {
-              const isClosed = isAssetMarketClosed(h);
               const isToday = isHoldingQuotedToday(h);
+              const isClosed = !isToday;
+              const isMarketClosed = isAssetMarketClosed(h);
               const isNonEur = h.currency && h.currency !== 'EUR';
               const currSym = h.currency === 'USD' ? '$' : (h.currency === 'EUR' ? '€' : (h.currency || '€'));
 
@@ -1644,8 +1645,9 @@
                     <!-- Table Rows -->
                     <div class="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-[#141416]">
                       ${cat.holdings.map(h => {
-                        const isClosed = isAssetMarketClosed(h);
                         const isToday = isHoldingQuotedToday(h);
+                        const isClosed = !isToday;
+                        const isMarketClosed = isAssetMarketClosed(h);
                         const isNonEur = cat.currency !== 'EUR';
 
                         const rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;

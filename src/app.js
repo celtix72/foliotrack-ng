@@ -99,6 +99,9 @@ function requireViewAuth(req, res, next) {
   const token = req.cookies?.foliotrack_token || req.cookies?.token;
 
   if (!token) {
+    if (req.query?.source === 'pwa') {
+      return res.status(200).sendFile(path.join(__dirname, '../public/login.html'));
+    }
     return res.redirect(`/login.html?redirect=${encodeURIComponent(req.originalUrl)}`);
   }
 
@@ -110,6 +113,9 @@ function requireViewAuth(req, res, next) {
   } catch (err) {
     res.clearCookie('foliotrack_token', { path: '/' });
     res.clearCookie('token', { path: '/' });
+    if (req.query?.source === 'pwa') {
+      return res.status(200).sendFile(path.join(__dirname, '../public/login.html'));
+    }
     return res.redirect(`/login.html?redirect=${encodeURIComponent(req.originalUrl)}`);
   }
 }

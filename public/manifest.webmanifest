@@ -3,7 +3,7 @@
   "short_name": "FolioTrack",
   "description": "Monitoraggio e analisi professionale del patrimonio e investimenti multi-asset.",
   "id": "/?source=pwa",
-  "start_url": "/dashboard",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],

@@ -3,11 +3,13 @@
  * Handles offline caching, PWA installability criteria, and native Web Push Notifications.
  */
 
-const CACHE_NAME = 'foliotrack-pwa-v1';
+const CACHE_NAME = 'foliotrack-pwa-v2';
 
 // Core static assets to pre-cache on install
 const PRECACHE_ASSETS = [
   '/',
+  '/?source=pwa',
+  '/login.html',
   '/manifest.webmanifest',
   '/manifest.json',
   '/dist/style.css',
@@ -86,7 +88,17 @@ self.addEventListener('fetch', (event) => {
         .catch(async () => {
           const cached = await caches.match(req);
           if (cached) return cached;
-          return caches.match('/') || caches.match('/dashboard');
+          const pwaCached = await caches.match('/?source=pwa');
+          if (pwaCached) return pwaCached;
+          const rootCached = await caches.match('/');
+          if (rootCached) return rootCached;
+          const loginCached = await caches.match('/login.html');
+          if (loginCached) return loginCached;
+          return new Response('Offline - FolioTrack non raggiungibile al momento.', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+          });
         })
     );
     return;

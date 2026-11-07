@@ -169,6 +169,10 @@
     });
   }
 
+  function isOriginSecure() {
+    return window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  }
+
   /**
    * Modal with illustrated instructions for Android Chrome / Samsung Internet
    */
@@ -176,11 +180,14 @@
     const existing = document.getElementById('pwa-help-modal');
     if (existing) existing.remove();
 
+    const isSecure = isOriginSecure();
+    const origin = window.location.origin;
+
     const modal = document.createElement('div');
     modal.id = 'pwa-help-modal';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in font-sans';
     modal.innerHTML = `
-      <div class="bg-white dark:bg-[#18181b] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100">
+      <div class="bg-white dark:bg-[#18181b] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center space-x-3 mb-4">
           <img src="/icons/icon-192.png" alt="FolioTrack" class="w-10 h-10 rounded-xl">
           <div>
@@ -189,17 +196,38 @@
           </div>
         </div>
 
-        <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
-          Una volta installata, FolioTrack diventa un'applicazione indipendente sul tuo smartphone Android:
-          comparirà nella schermata Home e nel drawer applicazioni, avviandosi a tutto schermo senza barre degli indirizzi o controlli del browser.
+        ${!isSecure ? `
+        <div class="mb-4 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs">
+          <div class="flex items-center space-x-2 font-bold mb-1.5">
+            <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span>Risoluzione: "App non installabile" su Chrome</span>
+          </div>
+          <p class="leading-relaxed mb-2">
+            Chrome su Android (ColorOS / Realme UI) blocca l'installazione su IP locali HTTP (es. <code>${origin}</code>) perché richiede una connessione sicura.
+          </p>
+          <div class="p-2.5 bg-black/5 dark:bg-black/30 rounded-lg space-y-1.5 font-sans text-[11px] leading-snug">
+            <div><strong>1.</strong> In una nuova scheda di Chrome vai a:<br><code class="text-emerald-700 dark:text-emerald-300 font-mono text-[10px] break-all select-all">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></div>
+            <div><strong>2.</strong> Imposta su <strong>Enabled</strong> e nel riquadro incolla:<br><code class="text-emerald-700 dark:text-emerald-300 font-mono text-[11px] select-all">${origin}</code></div>
+            <div><strong>3.</strong> Premi <strong>Relaunch</strong> in basso su Chrome.</div>
+          </div>
+          <button type="button" id="pwa-copy-origin-btn" class="mt-2.5 w-full py-1.5 px-3 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-900 dark:text-amber-100 font-medium text-xs transition flex items-center justify-center space-x-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+            <span>Copia ${origin}</span>
+          </button>
+        </div>
+        ` : ''}
+
+        <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-3">
+          Una volta installata, FolioTrack diventa un'applicazione indipendente:
+          comparirà nella Home e nel drawer applicazioni, avviandosi a schermo intero senza barre del browser.
         </p>
 
         <div class="space-y-3 bg-gray-50 dark:bg-black/30 p-3.5 rounded-xl border border-gray-100 dark:border-white/5 text-xs">
           <div class="flex items-start space-x-2.5">
             <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center text-[11px]">1</span>
             <div>
-              <span class="font-semibold text-gray-900 dark:text-white">Apri il menu del browser:</span>
-              <p class="text-gray-500 dark:text-gray-400">In Google Chrome o Samsung Internet, tocca l'icona con i tre puntini <strong class="text-gray-800 dark:text-gray-200">(⋮)</strong> in alto a destra.</p>
+              <span class="font-semibold text-gray-900 dark:text-white">Apri il menu di Chrome:</span>
+              <p class="text-gray-500 dark:text-gray-400">Tocca l'icona con i tre puntini <strong class="text-gray-800 dark:text-gray-200">(⋮)</strong> in alto a destra.</p>
             </div>
           </div>
           <div class="flex items-start space-x-2.5">
@@ -213,9 +241,13 @@
             <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center text-[11px]">3</span>
             <div>
               <span class="font-semibold text-gray-900 dark:text-white">Conferma l'installazione:</span>
-              <p class="text-gray-500 dark:text-gray-400">Android registrerà la Web App con la propria icona nativa. Potrai chiudere il browser e usarla come una normale app!</p>
+              <p class="text-gray-500 dark:text-gray-400">Android compilerà l'applicazione con la propria icona nativa. Potrai chiudere Chrome e usarla direttamente!</p>
             </div>
           </div>
+        </div>
+
+        <div class="mt-3 p-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-[11px] leading-relaxed">
+          <strong class="text-gray-800 dark:text-gray-200">Suggerimento ColorOS (Realme GT8 Pro):</strong> Se l'icona non compare sulla Home, controlla nelle <em>Impostazioni &gt; Schermata iniziale e Schermata di blocco</em> che l'opzione <em>"Blocca layout schermata iniziale"</em> non sia attiva.
         </div>
 
         <div class="mt-5 flex justify-end space-x-2">
@@ -230,6 +262,18 @@
     document.getElementById('pwa-help-close-btn')?.addEventListener('click', () => {
       modal.remove();
     });
+
+    document.getElementById('pwa-copy-origin-btn')?.addEventListener('click', () => {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(origin).then(() => {
+          showToast('Indirizzo copiato negli appunti: ' + origin);
+        }).catch(() => {
+          prompt('Copia questo indirizzo:', origin);
+        });
+      } else {
+        prompt('Copia questo indirizzo:', origin);
+      }
+    });
   }
 
   function showToast(msg) {
@@ -241,10 +285,17 @@
   }
 
   // Initialize on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateStandaloneClass);
-  } else {
+  function init() {
     updateStandaloneClass();
+    if (isMobileAndroid() && !isStandalone()) {
+      setTimeout(checkAndShowInstallBanner, 1500);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 
   // Global API
