@@ -144,8 +144,22 @@ function getMoversEmoticon(changePercent) {
 }
 
 /**
+ * Formats portfolio value in thousands (K) with exactly 1 decimal digit and Italian comma.
+ * E.g. 418200 -> '418,2K', 45350 -> '45,4K', 28500 -> '28,5K'.
+ *
+ * @param {number} value
+ * @returns {string}
+ */
+function formatPortfolioK(value) {
+  const val = Number(value) || 0;
+  const inK = val / 1000;
+  return `${inK.toFixed(1).replace('.', ',')}K`;
+}
+
+/**
  * Formats a single mover row with emoticon, ticker symbol, percentage change and monetary value created.
- * Format: 🚀 NVDA     +4.25%  (+€145,20)
+ * All percentages with 1 decimal digit, all variation monetary values with 0 decimals.
+ * Format: 🚀 NVDA     +4,3%  (+€145)
  *
  * @param {object} item - { ticker, changePercent, valueCreatedEur }
  * @returns {string}
@@ -153,13 +167,13 @@ function getMoversEmoticon(changePercent) {
 function formatMoverRow(item) {
   const icon = getMoversEmoticon(item.changePercent);
   const sign = item.changePercent >= 0 ? '+' : '';
-  const pctStr = `${sign}${item.changePercent.toFixed(2)}%`;
+  const pctStr = `${sign}${item.changePercent.toFixed(1).replace('.', ',')}%`;
   const valSign = item.valueCreatedEur >= 0 ? '+' : '-';
-  const absVal = Math.abs(item.valueCreatedEur);
-  const valStr = `${valSign}€${absVal.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const absVal = Math.round(Math.abs(item.valueCreatedEur));
+  const valStr = `${valSign}€${absVal.toLocaleString('it-IT')}`;
 
   const tickerPad = item.ticker.padEnd(7);
-  const pctPad = pctStr.padStart(7);
+  const pctPad = pctStr.padStart(6);
   return `${icon} ${tickerPad} ${pctPad}  (${valStr})`;
 }
 
@@ -406,7 +420,7 @@ async function checkAssetChangeNotifications(userId, now = new Date()) {
     const isPos = asset.changePercent >= 0;
     const sign = isPos ? '+' : '';
     const icon = isPos ? '📈' : '📉';
-    const pctStr = `${sign}${asset.changePercent.toFixed(2)}%`;
+    const pctStr = `${sign}${asset.changePercent.toFixed(1).replace('.', ',')}%`;
     const priceStr = `${asset.currentPrice.toFixed(2)} ${asset.currency || 'EUR'}`;
 
     const payload = {
@@ -504,8 +518,8 @@ async function checkPortfolioChangeNotification(userId) {
     const isUp = diff >= 0;
     const sign = isUp ? '+' : '-';
     const icon = isUp ? '🟢' : '🔴';
-    const diffFormatted = `${sign}€${absDiff.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const totalFormatted = `€${currentTotal.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const diffFormatted = `${sign}€${Math.round(absDiff).toLocaleString('it-IT')}`;
+    const totalFormatted = `€${formatPortfolioK(currentTotal)}`;
     const moversTable = buildMoversTableText(userId, false);
 
     const payload = {
@@ -538,7 +552,7 @@ async function checkPortfolioChangeNotification(userId) {
     currentTotal,
     previousTotal: lastTotal,
     threshold,
-    reason: `Variazione (€${absDiff.toFixed(2)}) inferiore alla soglia impostata (€${threshold.toFixed(2)})`
+    reason: `Variazione (€${Math.round(absDiff).toLocaleString('it-IT')}) inferiore alla soglia impostata (€${Math.round(threshold).toLocaleString('it-IT')})`
   };
 }
 
@@ -569,8 +583,8 @@ async function sendTestNotification(userId, type) {
 
     case 'asset_change':
       payload = {
-        title: '📈 [TEST] Allerta Titolo: ENEL.MI (+5.40%)',
-        body: 'Enel S.p.A. registra una forte variazione odierna di +5.40% (superata soglia del 5%). Prezzo: 6.84 EUR.',
+        title: '📈 [TEST] Allerta Titolo: ENEL.MI (+5,4%)',
+        body: 'Enel S.p.A. registra una forte variazione odierna di +5,4% (superata soglia del 5%). Prezzo: 6.84 EUR.',
         icon: '/icons/icon-192.png',
         badge: '/favicon.svg',
         url: '/dashboard',
@@ -582,8 +596,8 @@ async function sendTestNotification(userId, type) {
       const simulatedTotal = currentTotal > 0 ? currentTotal : 28500.0;
       const moversTable = buildMoversTableText(userId, true);
       payload = {
-        title: '💼 [TEST] Variazione Portafoglio: +€300,00',
-        body: `Patrimonio simulato: €${simulatedTotal.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (+€300,00)\n\n${moversTable}`,
+        title: '💼 [TEST] Variazione Portafoglio: +€300',
+        body: `Patrimonio simulato: €${formatPortfolioK(simulatedTotal)} (+€300)\n\n${moversTable}`,
         icon: '/icons/icon-192.png',
         badge: '/favicon.svg',
         url: '/portfolios',
@@ -622,5 +636,6 @@ module.exports = {
   sendTestNotification,
   getTotalPortfolioValue,
   getUserTopAndBottomMovers,
-  buildMoversTableText
+  buildMoversTableText,
+  formatPortfolioK
 };

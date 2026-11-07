@@ -17,7 +17,8 @@ const {
   checkAssetChangeNotifications,
   checkPortfolioChangeNotification,
   sendTestNotification,
-  buildMoversTableText
+  buildMoversTableText,
+  formatPortfolioK
 } = require('../src/services/notificationService');
 const pushService = require('../src/services/pushService');
 const { saveSubscription } = pushService;
@@ -241,6 +242,21 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       // Verify line counts: 3 top items and 3 bottom items
       const lines = tableText.split('\n').filter(l => l.trim().length > 0 && !l.includes('TOP') && !l.includes('FLOP'));
       assert.equal(lines.length, 6, 'Should have exactly 3 top movers and 3 flop movers');
+
+      // Verify percentages have 1 decimal digit and variation values have 0 decimal digits
+      for (const line of lines) {
+        // e.g. "🚀 NVDA     +4,3%  (+€145)"
+        assert.match(line, /[+-]\d+,\d%/, 'Percentages must have exactly 1 decimal digit');
+        assert.match(line, /\([+-]€\d+\)/, 'Variation values must have 0 decimal digits');
+      }
+    });
+
+    test('formatPortfolioK abbreviates portfolio values in K with 1 decimal digit', () => {
+      assert.equal(formatPortfolioK(418200), '418,2K');
+      assert.equal(formatPortfolioK(45350), '45,4K');
+      assert.equal(formatPortfolioK(28500), '28,5K');
+      assert.equal(formatPortfolioK(1000), '1,0K');
+      assert.equal(formatPortfolioK(300), '0,3K');
     });
   });
 
@@ -286,6 +302,9 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(res.status, 200);
       assert.equal(res.body.success, true);
       assert.ok(res.body.message.includes('inviata con successo'));
+      assert.ok(lastCapturedPayload);
+      assert.ok(lastCapturedPayload.title.includes('+5,4%'));
+      assert.ok(lastCapturedPayload.body.includes('+5,4%'));
     });
 
     test('POST /api/notifications/test/portfolio_change includes top 3 and flop 3 table with value creation and emoticons', async () => {
@@ -297,6 +316,10 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(res.body.success, true);
       assert.ok(res.body.message.includes('inviata con successo'));
       assert.ok(lastCapturedPayload);
+      assert.ok(lastCapturedPayload.title.includes('+€300'));
+      assert.ok(!lastCapturedPayload.title.includes('€300,00'));
+      assert.ok(lastCapturedPayload.body.includes('K'));
+      assert.ok(lastCapturedPayload.body.includes('(+€300)'));
       assert.ok(lastCapturedPayload.body.includes('TOP 3:'));
       assert.ok(lastCapturedPayload.body.includes('FLOP 3:'));
       assert.ok(lastCapturedPayload.body.includes('€'));
