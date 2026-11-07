@@ -170,11 +170,11 @@ app.get('/settings', requireViewAuth, (req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('[App Error]', err);
+  console.error('[App Error]', err.message || err);
   const statusCode = err.status || 500;
   res.status(statusCode).json({
     success: false,
-    error: process.env.NODE_ENV === 'production' ? 'Errore interno del server' : err.message
+    error: (process.env.NODE_ENV === 'production' && statusCode >= 500) ? 'Errore interno del server' : err.message
   });
 });
 

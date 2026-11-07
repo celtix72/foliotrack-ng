@@ -288,6 +288,21 @@ describe('Credentials Management & Internet Exposure Security', () => {
     assert.ok(robotsTag && robotsTag.includes('noindex'));
   });
 
+  test('Local network (LAN IP) and same-host Origin is accepted by CORS and CSRF', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/security-status`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        Origin: 'http://192.168.1.50:3000',
+        Host: '192.168.1.50:3000'
+      }
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+  });
+
   test('CSRF protection blocks mutating requests with unauthorized cross-origin Origin header', async () => {
     const res = await fetch(`${baseUrl}/api/auth/change-password`, {
       method: 'POST',

@@ -58,6 +58,7 @@ function helmetSecurity() {
         }
       },
       crossOriginEmbedderPolicy: false,
+      crossOriginOpenerPolicy: isHttps ? { policy: 'same-origin' } : false,
       hsts: isHttps ? {
         maxAge: 31536000,
         includeSubDomains: true,
@@ -131,6 +132,85 @@ function apiNoCacheMiddleware(req, res, next) {
 }
 
 /**
+ * Determines whether an incoming Origin is same-origin, a trusted local/LAN network,
+ * or explicitly allowed via ALLOWED_ORIGINS.
+ *
+ * @param {string|undefined} origin
+ * @param {import('express').Request} req
+ * @returns {boolean}
+ */
+function isSameOriginOrAllowed(origin, req) {
+  // Requests without an Origin header (e.g. mobile apps, curl, postman, same-host navigation) are allowed
+  if (!origin) {
+    return true;
+  }
+
+  try {
+    const originUrl = new URL(origin);
+    const originHost = originUrl.host.toLowerCase();
+    const originHostname = originUrl.hostname.toLowerCase();
+
+    // 1. Same-Host matching: compares with server's own Host and X-Forwarded-Host
+    const hostHeader = (req?.headers ? (req.headers['x-forwarded-host'] || req.headers.host || '') : '').toLowerCase();
+    if (hostHeader) {
+      const hostOnly = hostHeader.split(':')[0];
+      if (originHost === hostHeader || originHostname === hostOnly || originHostname === hostHeader) {
+        return true;
+      }
+    }
+
+    // 2. Localhost & Loopback (IPv4 & IPv6)
+    if (originHostname === 'localhost' || originHostname === '127.0.0.1' || originHostname === '::1') {
+      return true;
+    }
+
+    // 3. Private / Local LAN Networks (RFC 1918 & mDNS .local)
+    // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, *.local
+    if (
+      originHostname.endsWith('.local') ||
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(originHostname) ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(originHostname) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(originHostname)
+    ) {
+      return true;
+    }
+
+    // 4. Configured ALLOWED_ORIGINS environment variable
+    const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+    if (allowedOriginsEnv) {
+      const allowedList = allowedOriginsEnv
+        .split(',')
+        .map(o => o.trim().toLowerCase())
+        .filter(Boolean);
+
+      if (allowedList.includes('*') || allowedList.includes(origin.toLowerCase())) {
+        return true;
+      }
+
+      for (const allowed of allowedList) {
+        try {
+          const allowedUrl = new URL(allowed);
+          if (allowedUrl.host === originHost || allowedUrl.hostname === originHostname) {
+            return true;
+          }
+        } catch {
+          // not a full URL
+        }
+      }
+    }
+
+    // 5. In non-production without configured ALLOWED_ORIGINS, allow for development ease
+    if (process.env.NODE_ENV !== 'production' && !allowedOriginsEnv) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * State-changing request origin verification (CSRF protection for exposed environments).
  */
 function verifyOriginMiddleware(req, res, next) {
@@ -141,103 +221,39 @@ function verifyOriginMiddleware(req, res, next) {
 
   const origin = req.headers.origin;
   if (!origin) {
-    // Same-origin or non-browser client without Origin header
     return next();
   }
 
-  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
-  let allowedList = [];
-  if (allowedOriginsEnv) {
-    allowedList = allowedOriginsEnv
-      .split(',')
-      .map(o => o.trim())
-      .filter(Boolean);
+  if (isSameOriginOrAllowed(origin, req)) {
+    return next();
   }
 
-  try {
-    const originUrl = new URL(origin);
-    const hostHeader = req.headers.host;
-
-    // Check matching Host header
-    if (hostHeader) {
-      const hostOnly = hostHeader.split(':')[0];
-      if (originUrl.host === hostHeader || originUrl.hostname === hostOnly) {
-        return next();
-      }
-    }
-
-    // Check localhost
-    if (originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1') {
-      return next();
-    }
-
-    // Check configured allowedList
-    if (allowedList.includes(origin) || allowedList.includes('*')) {
-      return next();
-    }
-
-    return res.status(403).json({
-      success: false,
-      error: 'Richiesta cross-origin non autorizzata (CSRF protection).'
-    });
-  } catch {
-    return res.status(400).json({
-      success: false,
-      error: 'Formato header Origin non valido.'
-    });
-  }
+  return res.status(403).json({
+    success: false,
+    error: 'Richiesta cross-origin non autorizzata (CSRF protection).'
+  });
 }
 
 /**
- * CORS Middleware configuration with credentials and allowed origins from ENV.
+ * CORS Middleware configuration with credentials, dynamic same-origin support,
+ * and allowed origins from ENV.
  */
 function corsSecurity() {
-  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
-  let allowedList = [];
+  return cors((req, callback) => {
+    const origin = req.headers.origin;
 
-  if (allowedOriginsEnv) {
-    allowedList = allowedOriginsEnv
-      .split(',')
-      .map(origin => origin.trim())
-      .filter(Boolean);
-  }
+    if (isSameOriginOrAllowed(origin, req)) {
+      return callback(null, {
+        origin: true,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+      });
+    }
 
-  return cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, postman, same-host server-to-server)
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      // Check configured allowed list
-      if (allowedList.length > 0) {
-        if (allowedList.includes(origin) || allowedList.includes('*')) {
-          return callback(null, true);
-        }
-      }
-
-      // Check localhost origins for development ease
-      try {
-        const url = new URL(origin);
-        if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-          return callback(null, true);
-        }
-      } catch (err) {
-        // Invalid origin format
-      }
-
-      // In non-production without configured allowedList, allow for ease of testing
-      if (process.env.NODE_ENV !== 'production' && allowedList.length === 0) {
-        return callback(null, true);
-      }
-
-      const corsErr = new Error(`CORS origin not allowed: ${origin}`);
-      corsErr.status = 403;
-      return callback(corsErr);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    const corsErr = new Error(`CORS origin not allowed: ${origin}`);
+    corsErr.status = 403;
+    return callback(corsErr);
   });
 }
 
