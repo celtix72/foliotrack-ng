@@ -10,6 +10,7 @@ const {
   checkAssetChangeNotifications,
   checkPortfolioChangeNotification
 } = require('./notificationService');
+const { scrapePortfolioNews } = require('./newsService');
 
 let schedulerInterval = null;
 let lastResetDate = null;
@@ -17,6 +18,7 @@ let lastSnapshotDate = null;
 let lastBackupDate = null;
 let lastDigestDate = null;
 let lastQuotesSyncTime = null;
+let lastNewsSyncTime = null;
 let cachedFrequencyMinutes = null;
 
 /**
@@ -227,6 +229,21 @@ async function runScheduledTick() {
       console.log(`[Scheduler] Backup automatico creato: ${backup.filename} (${backup.sizeFormatted})`);
     } catch (err) {
       console.warn('[Scheduler] Errore creazione backup automatico:', err.message);
+    }
+  }
+
+  // 5. Periodic News Scraper for portfolio assets (runs every 2 hours)
+  const newsIntervalMs = 2 * 60 * 60 * 1000;
+  if (lastNewsSyncTime === null || (nowMs - lastNewsSyncTime) >= newsIntervalMs) {
+    lastNewsSyncTime = nowMs;
+    try {
+      const db = getDb();
+      const users = db.prepare('SELECT id FROM users').all();
+      for (const user of users) {
+        scrapePortfolioNews(user.id, 10).catch(() => {});
+      }
+    } catch (err) {
+      // Non-blocking
     }
   }
 }

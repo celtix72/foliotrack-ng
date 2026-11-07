@@ -19,6 +19,7 @@ const notificationsRouter = require('./routes/notifications');
 const backupsRouter = require('./routes/backups');
 const currenciesRouter = require('./routes/currencies');
 const rebalancingRouter = require('./routes/rebalancing');
+const newsRouter = require('./routes/news');
 const { db } = require('./db');
 const { serveWithSidebar, isMobile } = require('./utils/viewRenderer');
 
@@ -97,6 +98,7 @@ app.use('/api/push', notificationsRouter);
 app.use('/api/backups', backupsRouter);
 app.use('/api/currencies', currenciesRouter);
 app.use('/api/rebalancing', rebalancingRouter);
+app.use('/api/news', newsRouter);
 
 // 404 handler for unmatched API routes
 app.use('/api', (req, res) => {

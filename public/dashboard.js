@@ -11,8 +11,10 @@
   let activeCharts = {};
   let rawPortfolioData = null;
   let selectedPortfolioId = 'all';
+  let cachedPortfolioNews = null;
+  let isNewsLoading = false;
 
-  // 22 Official FolioTrack & Wealthfolio Widgets default grid definition
+  // 23 Official FolioTrack & Wealthfolio Widgets default grid definition
   const WIDGET_DEFINITIONS = [
     { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 4, h: 2, minW: 3, minH: 2 },
     { id: 'dayChange', name: 'Variazione Giornaliera (Oggi)', category: 'Performance', w: 3, h: 2, minW: 2, minH: 2 },
@@ -37,7 +39,8 @@
     { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 12, h: 5, minW: 8, minH: 4 },
     { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4 },
     { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4 },
-    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 6, h: 6, minW: 4, minH: 4 }
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 6, h: 6, minW: 4, minH: 4 },
+    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 6, h: 6, minW: 4, minH: 4 }
   ];
 
   // Dedicated 1 or 2-column layout definition for mobile devices
@@ -80,20 +83,23 @@
     // Multi-Period Return Matrix (full width)
     { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 48 },
 
+    // Ultime Notizie Portafoglio (full width)
+    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 2, h: 6, x: 0, y: 52 },
+
     // Allocation Donut Charts (full width)
-    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 52 },
-    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 57 },
-    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 62 },
-    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 67 },
+    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 58 },
+    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 63 },
+    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 68 },
+    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 73 },
 
     // Strategy & Targets (full width)
-    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 72 },
+    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 78 },
 
     // Portfolio Concentration (full width)
-    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 78 },
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 84 },
 
     // Holdings Breakdown Table (full width)
-    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 83 }
+    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 89 }
   ];
 
   function isMobileDashboard() {
@@ -595,6 +601,38 @@
       console.warn('[Dashboard Warning] Error fetching performance metrics:', err);
     }
     return null;
+  }
+
+  /**
+   * Fetches latest scraped portfolio news from backend API and updates news widget.
+   */
+  async function loadPortfolioNews(forceRefresh = false) {
+    if (isNewsLoading) return;
+    isNewsLoading = true;
+    const iconEl = document.getElementById('news-refresh-icon');
+    if (iconEl) iconEl.classList.add('animate-spin');
+
+    try {
+      const endpoint = forceRefresh ? '/api/news/refresh' : '/api/news?limit=5';
+      const method = forceRefresh ? 'POST' : 'GET';
+      const res = await fetch(endpoint, { method });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.news)) {
+          cachedPortfolioNews = data.news;
+        }
+      }
+    } catch (err) {
+      console.warn('[Dashboard Warning] Error fetching news:', err);
+    } finally {
+      isNewsLoading = false;
+      if (iconEl) iconEl.classList.remove('animate-spin');
+      const bodyEl = document.getElementById('widget-body-news');
+      if (bodyEl && WIDGET_RENDERERS.news) {
+        const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+        bodyEl.innerHTML = WIDGET_RENDERERS.news(activeView);
+      }
+    }
   }
 
   /**
@@ -2077,6 +2115,95 @@
           <div class="text-[10px] text-gray-400 font-mono flex items-center justify-between">
             <span>Asset tracciati: ${holdings.length}</span>
             <span>Max peso: ${holdings[0] ? holdings[0].weight.toFixed(1) + '%' : '0%'}</span>
+          </div>
+        </div>
+      `;
+    },
+
+    // 14b. Ultime Notizie Portafoglio (News Scraper Widget - Top 5)
+    news: (data) => {
+      if (cachedPortfolioNews === null) {
+        setTimeout(() => loadPortfolioNews(false), 20);
+        return `
+          <div class="h-full flex flex-col justify-between">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5 shrink-0">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-sm">📰</span>
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ultime Notizie Portafoglio</span>
+              </div>
+              <span class="text-[10px] font-mono text-gray-400">Caricamento...</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center justify-center p-6 space-y-2">
+              <div class="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <span class="text-xs font-mono text-gray-400">Scansione notizie per i titoli in portafoglio...</span>
+            </div>
+          </div>
+        `;
+      }
+
+      const newsItems = cachedPortfolioNews || [];
+      if (newsItems.length === 0) {
+        return `
+          <div class="h-full flex flex-col justify-between">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5 shrink-0">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-sm">📰</span>
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ultime Notizie Portafoglio</span>
+              </div>
+              <button type="button" onclick="FolioTrackDashboard.refreshNews()" class="p-1 rounded text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-white/5 transition cursor-pointer" title="Ricarica notizie">
+                <svg id="news-refresh-icon" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
+            <div class="flex-1 flex flex-col items-center justify-center p-4 text-center">
+              <span class="text-xs font-mono text-gray-400">Nessuna notizia recente per i titoli in portafoglio</span>
+              <button type="button" onclick="FolioTrackDashboard.refreshNews()" class="mt-2 text-xs font-mono text-emerald-600 dark:text-emerald-400 underline cursor-pointer">
+                Cerca news adesso
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      const rowsHtml = newsItems.slice(0, 5).map(item => `
+        <div class="pt-2 first:pt-0 group">
+          <div class="flex items-center justify-between text-[10px] font-mono mb-1">
+            <div class="flex items-center space-x-1.5 overflow-hidden">
+              <span class="px-1.5 py-0.5 rounded font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">${item.ticker}</span>
+              <span class="text-gray-400 truncate max-w-[130px] sm:max-w-[160px]">${item.publisher || 'News'}</span>
+            </div>
+            <span class="text-gray-400 shrink-0 text-[9px]">${item.timeAgo || ''}</span>
+          </div>
+          <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-gray-900 dark:text-gray-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 line-clamp-2 leading-snug transition-colors flex items-start gap-1">
+            <span class="flex-1">${item.title}</span>
+            <svg class="w-3 h-3 text-gray-400 group-hover:text-emerald-500 shrink-0 mt-0.5 opacity-60 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        </div>
+      `).join('');
+
+      return `
+        <div class="h-full flex flex-col justify-between overflow-hidden">
+          <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5 shrink-0">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-sm">📰</span>
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ultime Notizie Portafoglio</span>
+              <span class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1 rounded font-bold">5 news</span>
+            </div>
+            <button type="button" onclick="FolioTrackDashboard.refreshNews()" class="p-1 rounded text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-white/5 transition cursor-pointer" title="Rileggi le ultime news dal web">
+              <svg id="news-refresh-icon" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+          <div class="flex-1 overflow-y-auto no-scrollbar py-2 space-y-2 divide-y divide-gray-100 dark:divide-white/5">
+            ${rowsHtml}
+          </div>
+          <div class="pt-1.5 border-t border-gray-100 dark:border-white/5 text-[10px] font-mono text-gray-400 flex items-center justify-between shrink-0">
+            <span>Fonti: Google News & Yahoo Finance</span>
+            <span>Titoli: ${data.activeHoldings ? data.activeHoldings.length : 0}</span>
           </div>
         </div>
       `;
@@ -3823,6 +3950,8 @@
   window.FolioTrackDashboard = {
     refresh: refreshDashboard,
     refreshMarket: handleManualMarketRefresh,
+    refreshNews: () => loadPortfolioNews(true),
+    loadNews: () => loadPortfolioNews(false),
     isAssetMarketClosed,
     getAssetMarketStatusInfo,
     toggleCustomization,

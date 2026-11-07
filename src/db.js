@@ -286,6 +286,21 @@ function createSchema(database) {
       FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS portfolio_news (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticker TEXT NOT NULL COLLATE NOCASE,
+      title TEXT NOT NULL,
+      link TEXT NOT NULL UNIQUE,
+      publisher TEXT,
+      pubDate TEXT NOT NULL,
+      summary TEXT,
+      source TEXT DEFAULT 'GOOGLE_NEWS',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_portfolio_news_ticker ON portfolio_news(ticker);
+    CREATE INDEX IF NOT EXISTS idx_portfolio_news_pubDate ON portfolio_news(pubDate DESC);
+
     CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
