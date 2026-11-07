@@ -4,6 +4,12 @@ const { createBackup } = require('../backup_manager');
 const { sendDailyDigest, checkAndSendAssetAlerts } = require('./telegramService');
 const { sendPushNotification } = require('./pushService');
 const { updateAllAssetPrices, resetDailyAssetDeltas } = require('./marketService');
+const {
+  isFinancialMarketOpen,
+  checkMarketOpenNotification,
+  checkAssetChangeNotifications,
+  checkPortfolioChangeNotification
+} = require('./notificationService');
 
 let schedulerInterval = null;
 let lastResetDate = null;
@@ -138,13 +144,39 @@ async function runScheduledTick() {
 
   if (lastQuotesSyncTime === null || isNaN(lastQuotesSyncTime) || (nowMs - lastQuotesSyncTime) >= freqMs) {
     lastQuotesSyncTime = nowMs;
-    try {
-      console.log(`[Scheduler] Esecuzione aggiornamento periodico quotazioni realtime (frequenza: ${freqMinutes}m)...`);
-      const res = await updateAllAssetPrices({ delayMs: 150 });
-      console.log(`[Scheduler] Aggiornamento quotazioni completato: ${res.updated}/${res.total} (errori: ${res.failed})`);
-    } catch (err) {
-      console.warn('[Scheduler] Errore aggiornamento automatico quotazioni:', err.message);
+    const marketStatus = isFinancialMarketOpen(now);
+    const syncOnlyMarketHours = getSetting(1, 'sync_only_market_hours', false) !== 'false';
+
+    if (syncOnlyMarketHours && !marketStatus.isOpen) {
+      console.log(`[Scheduler] Mercati finanziari chiusi (${marketStatus.reason}). Aggiornamento periodico quotazioni sospeso.`);
+    } else {
+      try {
+        console.log(`[Scheduler] Esecuzione aggiornamento periodico quotazioni realtime (frequenza: ${freqMinutes}m)...`);
+        const res = await updateAllAssetPrices({ delayMs: 150 });
+        console.log(`[Scheduler] Aggiornamento quotazioni completato: ${res.updated}/${res.total} (errori: ${res.failed})`);
+
+        // Check asset percentage change and portfolio value change notifications
+        const db = getDb();
+        const users = db.prepare('SELECT id FROM users').all();
+        for (const u of users) {
+          await checkAssetChangeNotifications(u.id, now);
+          await checkPortfolioChangeNotification(u.id);
+        }
+      } catch (err) {
+        console.warn('[Scheduler] Errore aggiornamento automatico quotazioni:', err.message);
+      }
     }
+  }
+
+  // 0.1 Check Market Open Notification (weekdays at/after 09:00 CET)
+  try {
+    const db = getDb();
+    const users = db.prepare('SELECT id FROM users').all();
+    for (const u of users) {
+      await checkMarketOpenNotification(u.id, now);
+    }
+  } catch (err) {
+    console.warn('[Scheduler] Errore verifica notifica apertura mercati:', err.message);
   }
 
   // 1. Asset Price Alerts check

@@ -2225,6 +2225,24 @@ async function initPushControls() {
   const btnToggle = document.getElementById('btn-toggle-push');
   const btnTest = document.getElementById('btn-test-push');
 
+  // Load existing notification preferences
+  loadNotificationSettings();
+
+  // Attach save button
+  const btnSave = document.getElementById('btn-save-notification-settings');
+  btnSave?.addEventListener('click', saveNotificationSettings);
+
+  // Attach individual test buttons
+  document.getElementById('btn-test-notif-market-open')?.addEventListener('click', function() {
+    handleSendTestNotification('market_open', this);
+  });
+  document.getElementById('btn-test-notif-asset-change')?.addEventListener('click', function() {
+    handleSendTestNotification('asset_change', this);
+  });
+  document.getElementById('btn-test-notif-portfolio-change')?.addEventListener('click', function() {
+    handleSendTestNotification('portfolio_change', this);
+  });
+
   if (!window.FolioTrackPush) return;
 
   const status = await window.FolioTrackPush.checkPushSubscriptionStatus();
@@ -2240,7 +2258,7 @@ async function initPushControls() {
     if (btnTest) btnTest.classList.remove('hidden');
   } else {
     if (statusEl) statusEl.innerHTML = '<span class="text-gray-400 font-bold">Non attivo</span>';
-    if (btnToggle) btnToggle.textContent = 'Attiva Notifiche Push nel Browser';
+    if (btnToggle) btnToggle.textContent = 'Attiva Notifiche su questo Smartphone';
     if (btnTest) btnTest.classList.add('hidden');
   }
 
@@ -2279,6 +2297,89 @@ async function initPushControls() {
       btnTest.disabled = false;
     }
   });
+}
+
+async function loadNotificationSettings() {
+  try {
+    const res = await fetch('/api/notifications/settings');
+    const data = await res.json();
+    if (!data.success || !data.settings) return;
+
+    const s = data.settings;
+    const marketOpenCb = document.getElementById('notif_market_open_enabled');
+    const assetChangeCb = document.getElementById('notif_asset_change_enabled');
+    const assetThresholdInp = document.getElementById('notif_asset_change_threshold');
+    const portfolioChangeCb = document.getElementById('notif_portfolio_change_enabled');
+    const portfolioThresholdInp = document.getElementById('notif_portfolio_change_threshold');
+    const syncOnlyMarketHoursCb = document.getElementById('sync_only_market_hours');
+
+    if (marketOpenCb) marketOpenCb.checked = s.marketOpenEnabled;
+    if (assetChangeCb) assetChangeCb.checked = s.assetChangeEnabled;
+    if (assetThresholdInp) assetThresholdInp.value = s.assetChangeThreshold ?? 5;
+    if (portfolioChangeCb) portfolioChangeCb.checked = s.portfolioChangeEnabled;
+    if (portfolioThresholdInp) portfolioThresholdInp.value = s.portfolioChangeThreshold ?? 300;
+    if (syncOnlyMarketHoursCb) syncOnlyMarketHoursCb.checked = s.syncOnlyMarketHours;
+  } catch (err) {
+    console.warn('[Settings] Impossibile caricare le impostazioni notifiche:', err);
+  }
+}
+
+async function saveNotificationSettings() {
+  const saveBtn = document.getElementById('btn-save-notification-settings');
+  const statusEl = document.getElementById('notif-save-status');
+
+  const payload = {
+    marketOpenEnabled: document.getElementById('notif_market_open_enabled')?.checked ?? true,
+    assetChangeEnabled: document.getElementById('notif_asset_change_enabled')?.checked ?? true,
+    assetChangeThreshold: parseFloat(document.getElementById('notif_asset_change_threshold')?.value) || 5.0,
+    portfolioChangeEnabled: document.getElementById('notif_portfolio_change_enabled')?.checked ?? true,
+    portfolioChangeThreshold: parseFloat(document.getElementById('notif_portfolio_change_threshold')?.value) || 300.0,
+    syncOnlyMarketHours: document.getElementById('sync_only_market_hours')?.checked ?? true
+  };
+
+  if (saveBtn) saveBtn.disabled = true;
+  if (statusEl) statusEl.textContent = 'Salvataggio in corso...';
+
+  try {
+    const res = await fetch('/api/notifications/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✓ Impostazioni notifiche salvate!');
+      if (statusEl) {
+        statusEl.textContent = '✓ Salvato con successo';
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      }
+    } else {
+      showToast(data.error || 'Errore salvataggio impostazioni notifiche', true);
+      if (statusEl) statusEl.textContent = 'Errore salvataggio';
+    }
+  } catch (err) {
+    showToast('Errore di connessione', true);
+    if (statusEl) statusEl.textContent = 'Errore di connessione';
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+  }
+}
+
+async function handleSendTestNotification(type, btnEl) {
+  if (btnEl) btnEl.disabled = true;
+  try {
+    const res = await fetch(`/api/notifications/test/${type}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`✓ ${data.message}`);
+    } else {
+      showToast(data.message || data.error || 'Errore invio notifica test', true);
+    }
+  } catch (err) {
+    showToast('Errore di connessione al server', true);
+  } finally {
+    if (btnEl) btnEl.disabled = false;
+  }
 }
 
 // ==========================================

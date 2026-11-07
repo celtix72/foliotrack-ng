@@ -6,6 +6,11 @@ const {
   removeSubscription, 
   sendPushNotification 
 } = require('../services/pushService');
+const {
+  getNotificationSettings,
+  saveNotificationSettings,
+  sendTestNotification
+} = require('../services/notificationService');
 const { 
   sendTelegramMessage, 
   sendDailyDigest, 
@@ -111,6 +116,65 @@ router.post('/send-test', async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * GET /api/notifications/settings
+ * Retrieves user's smartphone push notification preferences.
+ */
+router.get('/settings', (req, res) => {
+  try {
+    const settings = getNotificationSettings(req.user.id);
+    return res.json({
+      success: true,
+      settings
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * PUT /api/notifications/settings
+ * Saves user's smartphone push notification preferences.
+ */
+router.put('/settings', (req, res) => {
+  try {
+    const updated = saveNotificationSettings(req.user.id, req.body || {});
+    return res.json({
+      success: true,
+      message: 'Impostazioni notifiche smartphone salvate con successo.',
+      settings: updated
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+/**
+ * POST /api/notifications/test/:type
+ * Sends an individual test push notification for a specific notification type:
+ * - 'market_open'
+ * - 'asset_change'
+ * - 'portfolio_change'
+ */
+router.post('/test/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    const testRes = await sendTestNotification(req.user.id, type);
+    return res.json(testRes);
+  } catch (err) {
+    return res.status(400).json({
       success: false,
       error: err.message
     });

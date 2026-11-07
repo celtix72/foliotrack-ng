@@ -608,30 +608,143 @@
           </div>
         </div>
 
-        <!-- 2. Notifiche Web Push -->
-        <div class="signature-card p-6">
-          <div class="flex items-center justify-between mb-4">
+        <!-- 2. Notifiche tramite App Installata su Smartphone & Web Push PWA -->
+        <div class="signature-card p-6 space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-gray-100 dark:border-white/5">
             <div>
               <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
-                <span>🔔</span>
-                <span>Web Push Notifications (Desktop & Mobile)</span>
+                <span>📱</span>
+                <span>Notifiche App Smartphone & PWA</span>
               </h3>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
-                Notifiche native del sistema operativo tramite Service Worker e crittografia VAPID.
+                Ricevi notifiche native istantanee sul tuo smartphone tramite l'app installata (Service Worker + Web Push crittografato).
               </p>
             </div>
-            <div id="push-status-text" class="text-xs font-mono">
-              Verifica in corso...
+            <div class="flex items-center gap-3">
+              <span id="push-status-text" class="text-xs font-mono px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-500">
+                Verifica dispositivo...
+              </span>
+              <button type="button" id="btn-toggle-push" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs">
+                Attiva Notifiche su questo Smartphone
+              </button>
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-3">
-            <button type="button" id="btn-toggle-push" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">
-              Attiva Notifiche Push nel Browser
-            </button>
-            <button type="button" id="btn-test-push" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5 hidden">
-              Invia Push di Prova
-            </button>
+          <!-- Notification Types Configuration Table / List -->
+          <div class="space-y-4">
+            <h4 class="text-xs font-mono font-bold uppercase tracking-wider text-gray-400">
+              Configurazione Tipologie di Notifica Smartphone
+            </h4>
+
+            <!-- Tipo 1: Notifica dopo apertura dei mercati -->
+            <div class="p-4 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-start space-x-3">
+                <input type="checkbox" id="notif_market_open_enabled" class="mt-1 w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" checked>
+                <div>
+                  <label for="notif_market_open_enabled" class="text-sm font-semibold text-gray-900 dark:text-white cursor-pointer">
+                    1. Notifica dopo apertura dei mercati
+                  </label>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                    Invia un alert ogni giorno di contrattazione (Lun-Ven) alle 09:00 CET all'avvio della sessione europea.
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2 self-end md:self-center shrink-0">
+                <button type="button" id="btn-test-notif-market-open" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-mono font-medium flex items-center space-x-1.5">
+                  <span>🧪</span>
+                  <span>Invia Test Apertura</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tipo 2: Notifica superamento variazione % singolo titolo -->
+            <div class="p-4 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-start space-x-3">
+                <input type="checkbox" id="notif_asset_change_enabled" class="mt-1 w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" checked>
+                <div>
+                  <label for="notif_asset_change_enabled" class="text-sm font-semibold text-gray-900 dark:text-white cursor-pointer">
+                    2. Notifica variazione % singolo titolo
+                  </label>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                    Notifica quando uno strumento nei tuoi portafogli registra un'oscillazione giornaliera pari o superiore alla soglia preimpostata.
+                  </p>
+                  <div class="flex items-center space-x-2 mt-2">
+                    <span class="text-xs font-mono text-gray-500">Soglia variazione:</span>
+                    <div class="relative inline-flex items-center">
+                      <input type="number" id="notif_asset_change_threshold" step="0.5" min="0.1" value="5" class="w-20 text-xs font-mono px-2.5 py-1 bg-white dark:bg-black/30 border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-right pr-6">
+                      <span class="absolute right-2 text-xs font-mono text-gray-400">%</span>
+                    </div>
+                    <span class="text-[10px] text-gray-400 font-mono">(default: 5.0%)</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2 self-end md:self-center shrink-0">
+                <button type="button" id="btn-test-notif-asset-change" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-mono font-medium flex items-center space-x-1.5">
+                  <span>🧪</span>
+                  <span>Invia Test Variazione Titolo</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tipo 3: Notifica variazione del portafoglio complessivo -->
+            <div class="p-4 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-start space-x-3">
+                <input type="checkbox" id="notif_portfolio_change_enabled" class="mt-1 w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" checked>
+                <div>
+                  <label for="notif_portfolio_change_enabled" class="text-sm font-semibold text-gray-900 dark:text-white cursor-pointer">
+                    3. Notifica variazione portafoglio complessivo
+                  </label>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                    Notifica se il patrimonio complessivo varia, rispetto alla precedente notifica dello stesso tipo, più del valore preimpostato.
+                  </p>
+                  <div class="flex items-center space-x-2 mt-2">
+                    <span class="text-xs font-mono text-gray-500">Soglia variazione:</span>
+                    <div class="relative inline-flex items-center">
+                      <span class="absolute left-2.5 text-xs font-mono text-gray-400">€</span>
+                      <input type="number" id="notif_portfolio_change_threshold" step="50" min="10" value="300" class="w-24 text-xs font-mono pl-6 pr-2.5 py-1 bg-white dark:bg-black/30 border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-right">
+                    </div>
+                    <span class="text-[10px] text-gray-400 font-mono">(default: 300 €)</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2 self-end md:self-center shrink-0">
+                <button type="button" id="btn-test-notif-portfolio-change" class="btn-pill px-3 py-1.5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-mono font-medium flex items-center space-x-1.5">
+                  <span>🧪</span>
+                  <span>Invia Test Portafoglio</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Controllo Orari Mercati Chiusi -->
+            <div class="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-start space-x-3">
+                <input type="checkbox" id="sync_only_market_hours" class="mt-1 w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" checked>
+                <div>
+                  <label for="sync_only_market_hours" class="text-sm font-semibold text-gray-900 dark:text-white cursor-pointer">
+                    🌐 Sospendi aggiornamenti automatici a mercati chiusi
+                  </label>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                    Evita chiamate scraping e refresh automatici durante il fine settimana (Sab-Dom) e fuori orario (22:00 - 09:00 CET). L'aggiornamento manuale rimane sempre disponibile.
+                  </p>
+                </div>
+              </div>
+              <div class="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
+                Consigliato attivo
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Action: Salva Impostazioni Notifiche -->
+          <div class="pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
+            <span id="notif-save-status" class="text-xs font-mono text-gray-400"></span>
+            <div class="flex items-center space-x-3">
+              <button type="button" id="btn-test-push" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5 hidden">
+                Test Generico Push
+              </button>
+              <button type="button" id="btn-save-notification-settings" class="btn-pill px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs">
+                💾 Salva Impostazioni Notifiche
+              </button>
+            </div>
           </div>
         </div>
       </div>
