@@ -16,7 +16,8 @@ const {
   checkMarketOpenNotification,
   checkAssetChangeNotifications,
   checkPortfolioChangeNotification,
-  sendTestNotification
+  sendTestNotification,
+  buildMoversTableText
 } = require('../src/services/notificationService');
 const pushService = require('../src/services/pushService');
 const { saveSubscription } = pushService;
@@ -227,15 +228,31 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       // Clean up test portfolio
       db.prepare('DELETE FROM portfolios WHERE id = ?').run(portfolioId);
     });
+
+    test('buildMoversTableText outputs top 3 and flop 3 with value creation and specific emoticons', () => {
+      const tableText = buildMoversTableText(1, true);
+      assert.ok(tableText.includes('🟢 TOP 3:'));
+      assert.ok(tableText.includes('🔴 FLOP 3:'));
+      assert.ok(tableText.includes('€'));
+      assert.ok(tableText.includes('%'));
+      assert.ok(tableText.includes('🚀') || tableText.includes('🟢'));
+      assert.ok(tableText.includes('💥') || tableText.includes('🔴'));
+
+      // Verify line counts: 3 top items and 3 bottom items
+      const lines = tableText.split('\n').filter(l => l.trim().length > 0 && !l.includes('TOP') && !l.includes('FLOP'));
+      assert.equal(lines.length, 6, 'Should have exactly 3 top movers and 3 flop movers');
+    });
   });
 
   describe('4. Individual Test Push Notifications (POST /api/notifications/test/:type)', () => {
     let originalSendPush;
+    let lastCapturedPayload = null;
 
     before(() => {
       originalSendPush = pushService.sendPushNotification;
-      // Stub pushService.sendPushNotification to simulate successful delivery
+      // Stub pushService.sendPushNotification to capture payloads and simulate delivery
       pushService.sendPushNotification = async (userId, payload) => {
+        lastCapturedPayload = payload;
         return { sent: 1, failed: 0, pruned: 0 };
       };
     });
@@ -244,7 +261,7 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       pushService.sendPushNotification = originalSendPush;
     });
 
-    test('POST /api/notifications/test/market_open sends test opening notification', async () => {
+    test('POST /api/notifications/test/market_open includes top 3 and flop 3 table with value creation and emoticons', async () => {
       const res = await makeRequest(app, 'POST', '/api/notifications/test/market_open', {
         Cookie: authCookie
       });
@@ -252,6 +269,13 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(res.status, 200);
       assert.equal(res.body.success, true);
       assert.ok(res.body.message.includes('inviata con successo'));
+      assert.ok(lastCapturedPayload);
+      assert.ok(lastCapturedPayload.body.includes('TOP 3:'));
+      assert.ok(lastCapturedPayload.body.includes('FLOP 3:'));
+      assert.ok(lastCapturedPayload.body.includes('€'));
+      assert.ok(lastCapturedPayload.body.includes('%'));
+      assert.ok(lastCapturedPayload.body.includes('🚀') || lastCapturedPayload.body.includes('🟢'));
+      assert.ok(lastCapturedPayload.body.includes('💥') || lastCapturedPayload.body.includes('🔴'));
     });
 
     test('POST /api/notifications/test/asset_change sends test asset variation notification', async () => {
@@ -264,7 +288,7 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.ok(res.body.message.includes('inviata con successo'));
     });
 
-    test('POST /api/notifications/test/portfolio_change sends test portfolio delta notification', async () => {
+    test('POST /api/notifications/test/portfolio_change includes top 3 and flop 3 table with value creation and emoticons', async () => {
       const res = await makeRequest(app, 'POST', '/api/notifications/test/portfolio_change', {
         Cookie: authCookie
       });
@@ -272,6 +296,13 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(res.status, 200);
       assert.equal(res.body.success, true);
       assert.ok(res.body.message.includes('inviata con successo'));
+      assert.ok(lastCapturedPayload);
+      assert.ok(lastCapturedPayload.body.includes('TOP 3:'));
+      assert.ok(lastCapturedPayload.body.includes('FLOP 3:'));
+      assert.ok(lastCapturedPayload.body.includes('€'));
+      assert.ok(lastCapturedPayload.body.includes('%'));
+      assert.ok(lastCapturedPayload.body.includes('🚀') || lastCapturedPayload.body.includes('🟢'));
+      assert.ok(lastCapturedPayload.body.includes('💥') || lastCapturedPayload.body.includes('🔴'));
     });
 
     test('POST /api/notifications/test/invalid_type returns 400 error', async () => {
