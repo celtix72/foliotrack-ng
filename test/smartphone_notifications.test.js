@@ -18,7 +18,8 @@ const {
   checkPortfolioChangeNotification,
   sendTestNotification,
   buildMoversTableText,
-  formatPortfolioK
+  formatPortfolioK,
+  toMonospace
 } = require('../src/services/notificationService');
 const pushService = require('../src/services/pushService');
 const { saveSubscription } = pushService;
@@ -230,24 +231,24 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       db.prepare('DELETE FROM portfolios WHERE id = ?').run(portfolioId);
     });
 
-    test('buildMoversTableText outputs top 3 and flop 3 with value creation and specific emoticons', () => {
+    test('buildMoversTableText outputs top 3 and flop 3 with value creation, monospace characters and no TOP/FLOP labels', () => {
       const tableText = buildMoversTableText(1, true);
-      assert.ok(tableText.includes('🟢 TOP 3:'));
-      assert.ok(tableText.includes('🔴 FLOP 3:'));
+      assert.ok(!tableText.includes('TOP'), 'Must not include TOP label');
+      assert.ok(!tableText.includes('FLOP'), 'Must not include FLOP label');
       assert.ok(tableText.includes('€'));
       assert.ok(tableText.includes('%'));
       assert.ok(tableText.includes('🚀') || tableText.includes('🟢'));
       assert.ok(tableText.includes('💥') || tableText.includes('🔴'));
 
       // Verify line counts: 3 top items and 3 bottom items
-      const lines = tableText.split('\n').filter(l => l.trim().length > 0 && !l.includes('TOP') && !l.includes('FLOP'));
+      const lines = tableText.split('\n').filter(l => l.trim().length > 0);
       assert.equal(lines.length, 6, 'Should have exactly 3 top movers and 3 flop movers');
 
-      // Verify percentages have 1 decimal digit and variation values have 0 decimal digits
+      // Verify percentages have 1 decimal digit and variation values have 0 decimal digits in monospace
       for (const line of lines) {
-        // e.g. "🚀 NVDA     +4,3%  (+€145)"
-        assert.match(line, /[+-]\d+,\d%/, 'Percentages must have exactly 1 decimal digit');
-        assert.match(line, /\([+-]€\d+\)/, 'Variation values must have 0 decimal digits');
+        // e.g. "🚀 𝙽𝚅𝙳𝙰     +𝟺,𝟹%  (+€𝟷𝟺𝟻)"
+        assert.match(line, /[+-]\p{Nd}+,\p{Nd}+%/u, 'Percentages must have exactly 1 decimal digit');
+        assert.match(line, /\([+-]€\p{Nd}+\)/u, 'Variation values must have 0 decimal digits');
       }
     });
 
@@ -257,6 +258,11 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(formatPortfolioK(28500), '28,5K');
       assert.equal(formatPortfolioK(1000), '1,0K');
       assert.equal(formatPortfolioK(300), '0,3K');
+    });
+
+    test('toMonospace converts latin letters and digits to Unicode mathematical monospace', () => {
+      assert.equal(toMonospace('NVDA 123'), '𝙽𝚅𝙳𝙰 𝟷𝟸𝟹');
+      assert.equal(toMonospace('+4,3% (+€145)'), '+𝟺,𝟹% (+€𝟷𝟺𝟻)');
     });
   });
 
@@ -277,7 +283,7 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       pushService.sendPushNotification = originalSendPush;
     });
 
-    test('POST /api/notifications/test/market_open includes top 3 and flop 3 table with value creation and emoticons', async () => {
+    test('POST /api/notifications/test/market_open includes top 3 and flop 3 table with value creation and emoticons without TOP/FLOP labels', async () => {
       const res = await makeRequest(app, 'POST', '/api/notifications/test/market_open', {
         Cookie: authCookie
       });
@@ -286,8 +292,8 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(res.body.success, true);
       assert.ok(res.body.message.includes('inviata con successo'));
       assert.ok(lastCapturedPayload);
-      assert.ok(lastCapturedPayload.body.includes('TOP 3:'));
-      assert.ok(lastCapturedPayload.body.includes('FLOP 3:'));
+      assert.ok(!lastCapturedPayload.body.includes('TOP'));
+      assert.ok(!lastCapturedPayload.body.includes('FLOP'));
       assert.ok(lastCapturedPayload.body.includes('€'));
       assert.ok(lastCapturedPayload.body.includes('%'));
       assert.ok(lastCapturedPayload.body.includes('🚀') || lastCapturedPayload.body.includes('🟢'));
@@ -307,7 +313,7 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.ok(lastCapturedPayload.body.includes('+5,4%'));
     });
 
-    test('POST /api/notifications/test/portfolio_change includes top 3 and flop 3 table with value creation and emoticons', async () => {
+    test('POST /api/notifications/test/portfolio_change includes top 3 and flop 3 table with value creation and emoticons without TOP/FLOP labels', async () => {
       const res = await makeRequest(app, 'POST', '/api/notifications/test/portfolio_change', {
         Cookie: authCookie
       });
@@ -320,8 +326,8 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.ok(!lastCapturedPayload.title.includes('€300,00'));
       assert.ok(lastCapturedPayload.body.includes('K'));
       assert.ok(lastCapturedPayload.body.includes('(+€300)'));
-      assert.ok(lastCapturedPayload.body.includes('TOP 3:'));
-      assert.ok(lastCapturedPayload.body.includes('FLOP 3:'));
+      assert.ok(!lastCapturedPayload.body.includes('TOP'));
+      assert.ok(!lastCapturedPayload.body.includes('FLOP'));
       assert.ok(lastCapturedPayload.body.includes('€'));
       assert.ok(lastCapturedPayload.body.includes('%'));
       assert.ok(lastCapturedPayload.body.includes('🚀') || lastCapturedPayload.body.includes('🟢'));

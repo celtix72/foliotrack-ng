@@ -157,9 +157,35 @@ function formatPortfolioK(value) {
 }
 
 /**
+ * Converts Latin letters and digits to Unicode Mathematical Monospace characters (U+1D670..U+1D6A3, U+1D7F6..U+1D7FF).
+ * This ensures tabular columns remain vertically aligned in push notifications rendered with variable system fonts.
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+function toMonospace(str) {
+  if (!str) return '';
+  let out = '';
+  for (const ch of str) {
+    const code = ch.codePointAt(0);
+    if (code >= 65 && code <= 90) { // A-Z
+      out += String.fromCodePoint(0x1D670 + code - 65);
+    } else if (code >= 97 && code <= 122) { // a-z
+      out += String.fromCodePoint(0x1D68A + code - 97);
+    } else if (code >= 48 && code <= 57) { // 0-9
+      out += String.fromCodePoint(0x1D7F6 + code - 48);
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/**
  * Formats a single mover row with emoticon, ticker symbol, percentage change and monetary value created.
+ * Uses monospace characters for the row content to guarantee tabular alignment across all mobile screens.
  * All percentages with 1 decimal digit, all variation monetary values with 0 decimals.
- * Format: 🚀 NVDA     +4,3%  (+€145)
+ * Format: 🚀 𝙽𝚅𝙳𝙰     +𝟺,𝟹%  (+€𝟷𝟺𝟻)
  *
  * @param {object} item - { ticker, changePercent, valueCreatedEur }
  * @returns {string}
@@ -174,7 +200,8 @@ function formatMoverRow(item) {
 
   const tickerPad = item.ticker.padEnd(7);
   const pctPad = pctStr.padStart(6);
-  return `${icon} ${tickerPad} ${pctPad}  (${valStr})`;
+  const rowContent = `${tickerPad} ${pctPad}  (${valStr})`;
+  return `${icon} ${toMonospace(rowContent)}`;
 }
 
 /**
@@ -277,6 +304,7 @@ function getUserTopAndBottomMovers(userId, isTest = false) {
 
 /**
  * Builds formatted tabular text representation of top 3 and bottom 3 tickers with emoticons and value creation.
+ * Omits "TOP" and "FLOP" labels and uses clean monospace formatting.
  *
  * @param {number} userId
  * @param {boolean} [isTest=false]
@@ -286,7 +314,10 @@ function buildMoversTableText(userId, isTest = false) {
   const { top3, flop3 } = getUserTopAndBottomMovers(userId, isTest);
   const topLines = top3.map(formatMoverRow).join('\n');
   const flopLines = flop3.map(formatMoverRow).join('\n');
-  return `🟢 TOP 3:\n${topLines}\n\n🔴 FLOP 3:\n${flopLines}`;
+  const sections = [];
+  if (topLines) sections.push(topLines);
+  if (flopLines) sections.push(flopLines);
+  return sections.join('\n\n');
 }
 
 /**
@@ -637,5 +668,6 @@ module.exports = {
   getTotalPortfolioValue,
   getUserTopAndBottomMovers,
   buildMoversTableText,
-  formatPortfolioK
+  formatPortfolioK,
+  toMonospace
 };
