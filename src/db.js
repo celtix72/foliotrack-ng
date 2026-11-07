@@ -424,7 +424,15 @@ function getSetting(userId, key, shouldDecrypt = true) {
   if (!row || row.value === null) {
     return null;
   }
-  return shouldDecrypt ? decrypt(row.value) : row.value;
+  if (!shouldDecrypt) {
+    return row.value;
+  }
+  try {
+    return decrypt(row.value);
+  } catch (err) {
+    console.warn(`[DB getSetting] Impossibile decifrare "${key}" per l'utente ${userId} (chiave modificata o dato non valido): ${err.message}`);
+    return null;
+  }
 }
 
 /**

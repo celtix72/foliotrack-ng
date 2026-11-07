@@ -14,42 +14,63 @@ function getOrInitVapidKeys() {
     return currentVapidKeys;
   }
 
-  const db = getDb();
   let publicKey = process.env.VAPID_PUBLIC_KEY;
   let privateKey = process.env.VAPID_PRIVATE_KEY;
   let subject = process.env.VAPID_SUBJECT || 'mailto:admin@foliotrack.local';
 
   // Check in database settings (system user id 1) if not in process.env
   if (!publicKey || !privateKey) {
-    const pubSetting = getSetting(1, 'vapid_public_key');
-    const privSetting = getSetting(1, 'vapid_private_key');
-    if (pubSetting && privSetting) {
-      publicKey = pubSetting;
-      privateKey = privSetting;
+    try {
+      const pubSetting = getSetting(1, 'vapid_public_key', false);
+      const privSetting = getSetting(1, 'vapid_private_key', true);
+      if (pubSetting && privSetting) {
+        publicKey = pubSetting;
+        privateKey = privSetting;
+      }
+    } catch (err) {
+      console.warn('[Push Service] Warning reading existing VAPID keys:', err.message);
+      publicKey = null;
+      privateKey = null;
     }
   }
 
-  // If still not found, generate new VAPID keys and persist them
-  if (!publicKey || !privateKey) {
+  // Attempt to configure webPush with existing or loaded keys
+  let configuredSuccessfully = false;
+  if (publicKey && privateKey) {
+    try {
+      webPush.setVapidDetails(subject, publicKey, privateKey);
+      configuredSuccessfully = true;
+    } catch (err) {
+      console.warn('[Push Service] Chiavi VAPID esistenti non valide o non compatibili. Verranno rigenerate:', err.message);
+      configuredSuccessfully = false;
+      publicKey = null;
+      privateKey = null;
+    }
+  }
+
+  // If still not configured, generate fresh valid VAPID keys and persist them
+  if (!configuredSuccessfully || !publicKey || !privateKey) {
     const generated = webPush.generateVAPIDKeys();
     publicKey = generated.publicKey;
     privateKey = generated.privateKey;
     try {
       setSetting(1, 'vapid_public_key', publicKey, false);
       setSetting(1, 'vapid_private_key', privateKey, true);
+      console.log('[Push Service] Nuova coppia di chiavi VAPID generata e salvata con successo.');
     } catch (err) {
-      console.warn('[Push Service] Could not persist generated VAPID keys in DB:', err.message);
+      console.warn('[Push Service] Impossibile salvare le chiavi VAPID nel database:', err.message);
+    }
+
+    try {
+      webPush.setVapidDetails(subject, publicKey, privateKey);
+      configuredSuccessfully = true;
+    } catch (err) {
+      console.error('[Push Service] Errore critico configurazione VAPID con le nuove chiavi:', err.message);
     }
   }
 
   currentVapidKeys = { publicKey, privateKey, subject };
-
-  try {
-    webPush.setVapidDetails(subject, publicKey, privateKey);
-    vapidConfigured = true;
-  } catch (err) {
-    console.error('[Push Service] Error configuring VAPID details:', err.message);
-  }
+  vapidConfigured = configuredSuccessfully;
 
   return currentVapidKeys;
 }
