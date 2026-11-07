@@ -57,8 +57,20 @@ function helmetSecurity() {
           upgradeInsecureRequests: isHttps ? [] : null
         }
       },
-      crossOriginEmbedderPolicy: false
+      crossOriginEmbedderPolicy: false,
+      hsts: isHttps ? {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+      } : false,
+      referrerPolicy: {
+        policy: 'strict-origin-when-cross-origin'
+      }
     });
+
+    // Set additional hardened headers for Internet exposure
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
 
     return helmetHandler(req, res, next);
   };
@@ -93,6 +105,90 @@ const strictLoginLimiter = rateLimit({
 });
 
 /**
+ * Credential Change Rate Limiter (Max 10 attempts per 15 minutes).
+ * Protects against brute-forcing existing passwords via credential change.
+ */
+const credentialChangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'Troppi tentativi di modifica credenziali. Riprova tra 15 minuti.'
+  }
+});
+
+/**
+ * Cache-Control middleware for sensitive API responses.
+ * Prevents intermediate proxies and shared browsers from storing private financial data.
+ */
+function apiNoCacheMiddleware(req, res, next) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+}
+
+/**
+ * State-changing request origin verification (CSRF protection for exposed environments).
+ */
+function verifyOriginMiddleware(req, res, next) {
+  const mutatingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+  if (!mutatingMethods.includes(req.method)) {
+    return next();
+  }
+
+  const origin = req.headers.origin;
+  if (!origin) {
+    // Same-origin or non-browser client without Origin header
+    return next();
+  }
+
+  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+  let allowedList = [];
+  if (allowedOriginsEnv) {
+    allowedList = allowedOriginsEnv
+      .split(',')
+      .map(o => o.trim())
+      .filter(Boolean);
+  }
+
+  try {
+    const originUrl = new URL(origin);
+    const hostHeader = req.headers.host;
+
+    // Check matching Host header
+    if (hostHeader) {
+      const hostOnly = hostHeader.split(':')[0];
+      if (originUrl.host === hostHeader || originUrl.hostname === hostOnly) {
+        return next();
+      }
+    }
+
+    // Check localhost
+    if (originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1') {
+      return next();
+    }
+
+    // Check configured allowedList
+    if (allowedList.includes(origin) || allowedList.includes('*')) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: 'Richiesta cross-origin non autorizzata (CSRF protection).'
+    });
+  } catch {
+    return res.status(400).json({
+      success: false,
+      error: 'Formato header Origin non valido.'
+    });
+  }
+}
+
+/**
  * CORS Middleware configuration with credentials and allowed origins from ENV.
  */
 function corsSecurity() {
@@ -113,8 +209,11 @@ function corsSecurity() {
         return callback(null, true);
       }
 
-      if (allowedList.length === 0 || allowedList.includes('*') || allowedList.includes(origin)) {
-        return callback(null, true);
+      // Check configured allowed list
+      if (allowedList.length > 0) {
+        if (allowedList.includes(origin) || allowedList.includes('*')) {
+          return callback(null, true);
+        }
       }
 
       // Check localhost origins for development ease
@@ -127,7 +226,14 @@ function corsSecurity() {
         // Invalid origin format
       }
 
-      return callback(new Error(`CORS origin not allowed: ${origin}`));
+      // In non-production without configured allowedList, allow for ease of testing
+      if (process.env.NODE_ENV !== 'production' && allowedList.length === 0) {
+        return callback(null, true);
+      }
+
+      const corsErr = new Error(`CORS origin not allowed: ${origin}`);
+      corsErr.status = 403;
+      return callback(corsErr);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -139,6 +245,9 @@ module.exports = {
   helmetSecurity,
   generalApiLimiter,
   strictLoginLimiter,
+  credentialChangeLimiter,
+  apiNoCacheMiddleware,
+  verifyOriginMiddleware,
   corsSecurity,
   isRequestHttps
 };

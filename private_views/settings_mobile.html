@@ -62,6 +62,10 @@
       <span>🤖</span>
       <span>AI Keys</span>
     </button>
+    <button type="button" data-settings-tab="security" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+      <span>🛡️</span>
+      <span>Sicurezza</span>
+    </button>
     <button type="button" data-settings-tab="theme" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
       <span>🎨</span>
       <span>Aspetto</span>
@@ -480,6 +484,112 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 9: SICUREZZA & ACCOUNT                -->
+    <!-- ========================================== -->
+    <div id="panel-security" class="tab-panel hidden space-y-3">
+
+      <!-- Default Password Alert -->
+      <div id="security-default-pwd-alert-m" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs space-y-1">
+        <div class="font-bold flex items-center space-x-1.5">
+          <span>⚠️</span>
+          <span>Password predefinita attiva!</span>
+        </div>
+        <p class="text-[11px] leading-relaxed">
+          Stai usando la password di default "admin123". Modificala subito per proteggere l'accesso remoto.
+        </p>
+      </div>
+
+      <!-- Security Status Card -->
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Stato Sicurezza & Web</h3>
+          <span id="security-score-badge-m" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            Audit...
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+          <div class="p-2 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5">
+            <span class="text-gray-400 block text-[10px]">HTTPS / SSL</span>
+            <span id="diag-https-status-m" class="font-bold">Verifica...</span>
+          </div>
+          <div class="p-2 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5">
+            <span class="text-gray-400 block text-[10px]">Chiave JWT</span>
+            <span id="diag-jwt-status-m" class="font-bold">Verifica...</span>
+          </div>
+        </div>
+
+        <div id="security-recommendations-box-m" class="hidden p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300">
+          <ul id="security-recommendations-list-m" class="list-disc list-inside space-y-0.5 font-mono"></ul>
+        </div>
+      </div>
+
+      <!-- Form Modifica Username -->
+      <div class="signature-card p-4 space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Cambio Username</h3>
+        <form id="form-change-username-m" class="space-y-2.5 text-xs font-mono">
+          <div>
+            <label class="block text-gray-400 text-[11px] mb-1">Username Attuale</label>
+            <input type="text" id="sec-current-username-display-m" readonly disabled value="admin"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-black/40 border border-gray-200 dark:border-white/5 text-gray-500 font-bold">
+          </div>
+          <div>
+            <label for="sec-new-username-m" class="block text-gray-700 dark:text-gray-300 text-[11px] mb-1">Nuovo Username *</label>
+            <input type="text" id="sec-new-username-m" required minlength="3" maxlength="30" placeholder="es. mauro_inv"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          </div>
+          <div>
+            <label for="sec-username-confirm-pwd-m" class="block text-gray-700 dark:text-gray-300 text-[11px] mb-1">Password Attuale *</label>
+            <input type="password" id="sec-username-confirm-pwd-m" required placeholder="••••••••••••"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          </div>
+          <button type="submit" id="btn-save-username-m" class="w-full btn-pill py-2 bg-emerald-600 text-white font-bold text-xs mt-1 shadow-sm">
+            Salva Username
+          </button>
+        </form>
+      </div>
+
+      <!-- Form Modifica Password -->
+      <div class="signature-card p-4 space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Cambio Password</h3>
+        <form id="form-change-password-m" class="space-y-2.5 text-xs font-mono">
+          <div>
+            <label for="sec-current-pwd-m" class="block text-gray-700 dark:text-gray-300 text-[11px] mb-1">Password Attuale *</label>
+            <input type="password" id="sec-current-pwd-m" required placeholder="••••••••••••"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          </div>
+          <div>
+            <label for="sec-new-pwd-m" class="block text-gray-700 dark:text-gray-300 text-[11px] mb-1">Nuova Password (min 8 car.) *</label>
+            <input type="password" id="sec-new-pwd-m" required minlength="8" placeholder="••••••••••••"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          </div>
+          <div>
+            <label for="sec-confirm-pwd-m" class="block text-gray-700 dark:text-gray-300 text-[11px] mb-1">Conferma Password *</label>
+            <input type="password" id="sec-confirm-pwd-m" required minlength="8" placeholder="••••••••••••"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10">
+          </div>
+          <button type="submit" id="btn-save-password-m" class="w-full btn-pill py-2 bg-emerald-600 text-white font-bold text-xs mt-1 shadow-sm">
+            Aggiorna Password
+          </button>
+        </form>
+      </div>
+
+      <!-- Sessioni Attive & Revoca -->
+      <div class="signature-card p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Sessioni Attive</h3>
+          <button type="button" id="btn-revoke-other-sessions-m" class="text-[10px] text-rose-500 font-bold hover:underline">
+            Disconnetti Altri
+          </button>
+        </div>
+        <div id="sessions-list-m" class="space-y-2 text-xs font-mono">
+          <div class="text-gray-400 text-center py-2">Caricamento sessioni...</div>
+        </div>
+      </div>
+
     </div>
 
   </main>

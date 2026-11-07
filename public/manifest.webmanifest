@@ -6,13 +6,21 @@
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "window-controls-overlay",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#0B0F19",
   "theme_color": "#059669",
   "lang": "it-IT",
   "dir": "ltr",
-  "categories": ["finance", "productivity", "utilities"],
+  "categories": [
+    "finance",
+    "productivity",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -51,30 +59,49 @@
       "short_name": "Dashboard",
       "description": "Visualizza la panoramica del patrimonio",
       "url": "/dashboard",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Portafogli",
       "short_name": "Portafogli",
       "description": "Gestisci e analizza i tuoi portafogli",
       "url": "/portfolios",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Transazioni",
       "short_name": "Transazioni",
       "description": "Cronologia e inserimento ordini",
       "url": "/transactions",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Dividendi & Storico",
       "short_name": "Dividendi",
       "description": "Rendimenti e cedole",
       "url": "/dividends",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "prefer_related_applications": false
 }
-

@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   initPushControls();
   loadBackups();
+  loadSecurityDiagnostics();
+  initSecurityModule();
 });
 
 // ==========================================
@@ -106,6 +108,7 @@ function switchTab(tabId) {
   }
   if (tabId === 'classifications') loadClassifications();
   if (tabId === 'market') loadMarketStatus();
+  if (tabId === 'security') loadSecurityDiagnostics();
 }
 
 // ==========================================
@@ -2405,4 +2408,396 @@ async function handleSaveSettings(e) {
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+// ==========================================
+// 8. SECURITY & CREDENTIALS CONTROLLER
+// ==========================================
+
+async function loadSecurityDiagnostics() {
+  try {
+    // 1. Fetch current user to display current username in forms
+    const meRes = await fetch('/api/auth/me');
+    const meData = await meRes.json();
+    if (meData.success && meData.user) {
+      const uDisplay = document.getElementById('sec-current-username-display');
+      if (uDisplay) uDisplay.value = meData.user.username;
+      const uDisplayM = document.getElementById('sec-current-username-display-m');
+      if (uDisplayM) uDisplayM.value = meData.user.username;
+    }
+
+    // 2. Fetch security diagnostic status
+    const secRes = await fetch('/api/auth/security-status');
+    const secData = await secRes.json();
+    if (!secData.success || !secData.status) return;
+
+    const s = secData.status;
+
+    // Default password alert banner
+    const alertBox = document.getElementById('security-default-pwd-alert');
+    if (alertBox) {
+      if (s.isDefaultPassword) alertBox.classList.remove('hidden');
+      else alertBox.classList.add('hidden');
+    }
+    const alertBoxM = document.getElementById('security-default-pwd-alert-m');
+    if (alertBoxM) {
+      if (s.isDefaultPassword) alertBoxM.classList.remove('hidden');
+      else alertBoxM.classList.add('hidden');
+    }
+
+    // Score badge
+    const badge = document.getElementById('security-score-badge');
+    const badgeM = document.getElementById('security-score-badge-m');
+    const badgeText = s.score >= 80 ? `● Punteggio: ${s.score}/100 (Ottimale)` : `⚠️ Punteggio: ${s.score}/100 (Attenzione)`;
+    const badgeClass = s.score >= 80 
+      ? 'inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+      : 'inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+
+    if (badge) {
+      badge.textContent = badgeText;
+      badge.className = badgeClass;
+    }
+    if (badgeM) {
+      badgeM.textContent = `${s.score}/100`;
+      badgeM.className = `px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${s.score >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`;
+    }
+
+    // HTTPS Status
+    const httpsEl = document.getElementById('diag-https-status');
+    const httpsElM = document.getElementById('diag-https-status-m');
+    const httpsHtml = s.isHttps 
+      ? '<span class="text-emerald-500">✓ Crittografato (HTTPS)</span>' 
+      : '<span class="text-amber-500">⚠️ HTTP plain (Non crittografato)</span>';
+    if (httpsEl) httpsEl.innerHTML = httpsHtml;
+    if (httpsElM) httpsElM.innerHTML = s.isHttps ? '<span class="text-emerald-500">✓ HTTPS</span>' : '<span class="text-amber-500">⚠️ HTTP</span>';
+
+    // JWT Secret Status
+    const jwtEl = document.getElementById('diag-jwt-status');
+    const jwtElM = document.getElementById('diag-jwt-status-m');
+    const jwtHtml = s.isDefaultJwtSecret 
+      ? '<span class="text-rose-500">⚠️ Chiave default</span>' 
+      : '<span class="text-emerald-500">✓ Chiave custom (32+ car.)</span>';
+    if (jwtEl) jwtEl.innerHTML = jwtHtml;
+    if (jwtElM) jwtElM.innerHTML = s.isDefaultJwtSecret ? '<span class="text-rose-500">⚠️ Default</span>' : '<span class="text-emerald-500">✓ Sicura</span>';
+
+    // Crypto Status
+    const cryptoEl = document.getElementById('diag-crypto-status');
+    if (cryptoEl) {
+      cryptoEl.innerHTML = s.isDefaultEncryptionKey 
+        ? '<span class="text-rose-500">⚠️ Chiave default</span>' 
+        : '<span class="text-emerald-500">✓ AES-256-GCM custom</span>';
+    }
+
+    // Recommendations
+    const recBox = document.getElementById('security-recommendations-box');
+    const recList = document.getElementById('security-recommendations-list');
+    const recBoxM = document.getElementById('security-recommendations-box-m');
+    const recListM = document.getElementById('security-recommendations-list-m');
+
+    if (s.recommendations && s.recommendations.length > 0) {
+      const itemsHtml = s.recommendations.map(r => `<li><strong>${escapeHtml(r.title)}</strong>: ${escapeHtml(r.message)}</li>`).join('');
+      if (recList) recList.innerHTML = itemsHtml;
+      if (recBox) recBox.classList.remove('hidden');
+
+      const itemsHtmlM = s.recommendations.map(r => `<li>${escapeHtml(r.title)}</li>`).join('');
+      if (recListM) recListM.innerHTML = itemsHtmlM;
+      if (recBoxM) recBoxM.classList.remove('hidden');
+    } else {
+      if (recBox) recBox.classList.add('hidden');
+      if (recBoxM) recBoxM.classList.add('hidden');
+    }
+
+    // Load active sessions & audit logs
+    loadActiveSessions();
+    loadAuditLogs();
+  } catch (err) {
+    console.error('[Security Diagnostics Error]', err);
+  }
+}
+
+async function loadActiveSessions() {
+  try {
+    const res = await fetch('/api/auth/sessions');
+    const data = await res.json();
+    if (!data.success || !data.sessions) return;
+
+    const tbody = document.getElementById('sessions-table-body');
+    const containerM = document.getElementById('sessions-list-m');
+
+    if (tbody) {
+      if (data.sessions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-3 text-center text-gray-400">Nessuna sessione attiva trovata</td></tr>';
+      } else {
+        tbody.innerHTML = data.sessions.map(s => `
+          <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
+            <td class="py-2.5 font-bold">${escapeHtml(s.ipAddress)}</td>
+            <td class="py-2.5 text-gray-500 dark:text-gray-400 truncate max-w-xs" title="${escapeHtml(s.userAgent)}">${escapeHtml(s.userAgent.substring(0, 40))}...</td>
+            <td class="py-2.5 text-gray-400">${new Date(s.createdAt).toLocaleString('it-IT')}</td>
+            <td class="py-2.5 text-right">
+              ${s.isCurrent 
+                ? '<span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-500 font-bold border border-emerald-500/20">Sessione Attuale</span>' 
+                : '<span class="px-2 py-0.5 rounded-full text-[10px] bg-gray-100 dark:bg-white/5 text-gray-400">Remota</span>'}
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    if (containerM) {
+      if (data.sessions.length === 0) {
+        containerM.innerHTML = '<div class="text-gray-400 text-center py-2">Nessuna sessione attiva</div>';
+      } else {
+        containerM.innerHTML = data.sessions.map(s => `
+          <div class="p-2.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5 flex items-center justify-between text-[11px]">
+            <div>
+              <div class="font-bold">${escapeHtml(s.ipAddress)}</div>
+              <div class="text-[10px] text-gray-400">${new Date(s.createdAt).toLocaleDateString('it-IT')}</div>
+            </div>
+            ${s.isCurrent 
+              ? '<span class="px-2 py-0.5 rounded text-[9px] bg-emerald-500/10 text-emerald-500 font-bold">Attuale</span>' 
+              : '<span class="px-2 py-0.5 rounded text-[9px] bg-gray-100 dark:bg-white/5 text-gray-400">Remota</span>'}
+          </div>
+        `).join('');
+      }
+    }
+  } catch (err) {
+    console.error('[Load Sessions Error]', err);
+  }
+}
+
+async function loadAuditLogs() {
+  try {
+    const res = await fetch('/api/auth/audit-logs');
+    const data = await res.json();
+    if (!data.success || !data.logs) return;
+
+    const tbody = document.getElementById('audit-table-body');
+    if (!tbody) return;
+
+    if (data.logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="py-3 text-center text-gray-400">Nessun evento registrato</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.logs.map(l => `
+      <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
+        <td class="py-2.5 font-bold text-gray-900 dark:text-white">${escapeHtml(l.action)}</td>
+        <td class="py-2.5 text-gray-600 dark:text-gray-300">${escapeHtml(l.details || '-')}</td>
+        <td class="py-2.5 text-gray-400">${escapeHtml(l.ip_address || '-')}</td>
+        <td class="py-2.5 text-right text-gray-400">${new Date(l.created_at).toLocaleString('it-IT')}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('[Load Audit Logs Error]', err);
+  }
+}
+
+function initSecurityModule() {
+  // 1. Desktop: Change Username Form
+  const uForm = document.getElementById('form-change-username');
+  if (uForm) {
+    uForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-username');
+      const newUsername = document.getElementById('sec-new-username')?.value.trim();
+      const currentPassword = document.getElementById('sec-username-confirm-pwd')?.value;
+
+      if (!newUsername || !currentPassword) {
+        showToast('Tutti i campi sono obbligatori', true);
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/change-credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newUsername, currentPassword })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✓ Username aggiornato con successo a "${data.user.username}"`);
+          const disp = document.getElementById('sec-current-username-display');
+          if (disp) disp.value = data.user.username;
+          document.getElementById('sec-new-username').value = '';
+          document.getElementById('sec-username-confirm-pwd').value = '';
+
+          // Update sidebar username display if present
+          const sbUser = document.getElementById('sidebar-username');
+          if (sbUser) sbUser.textContent = data.user.username;
+
+          loadSecurityDiagnostics();
+        } else {
+          showToast(data.error || 'Errore durante la modifica dello username', true);
+        }
+      } catch (err) {
+        showToast('Errore di connessione', true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  // 2. Mobile: Change Username Form
+  const uFormM = document.getElementById('form-change-username-m');
+  if (uFormM) {
+    uFormM.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-username-m');
+      const newUsername = document.getElementById('sec-new-username-m')?.value.trim();
+      const currentPassword = document.getElementById('sec-username-confirm-pwd-m')?.value;
+
+      if (!newUsername || !currentPassword) {
+        showToast('Tutti i campi sono obbligatori', true);
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/change-credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newUsername, currentPassword })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✓ Username aggiornato: "${data.user.username}"`);
+          const disp = document.getElementById('sec-current-username-display-m');
+          if (disp) disp.value = data.user.username;
+          document.getElementById('sec-new-username-m').value = '';
+          document.getElementById('sec-username-confirm-pwd-m').value = '';
+          loadSecurityDiagnostics();
+        } else {
+          showToast(data.error || 'Errore modifica username', true);
+        }
+      } catch (err) {
+        showToast('Errore di connessione', true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  // 3. Desktop: Change Password Form
+  const pForm = document.getElementById('form-change-password');
+  if (pForm) {
+    pForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-password');
+      const currentPassword = document.getElementById('sec-current-pwd')?.value;
+      const newPassword = document.getElementById('sec-new-pwd')?.value;
+      const confirmPassword = document.getElementById('sec-confirm-pwd')?.value;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        showToast('Compila tutti i campi della password', true);
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        showToast('La nuova password e la conferma non coincidono', true);
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        showToast('La nuova password deve contenere almeno 8 caratteri', true);
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✓ Password modificata con successo!');
+          document.getElementById('sec-current-pwd').value = '';
+          document.getElementById('sec-new-pwd').value = '';
+          document.getElementById('sec-confirm-pwd').value = '';
+          loadSecurityDiagnostics();
+        } else {
+          showToast(data.error || 'Errore modifica password', true);
+        }
+      } catch (err) {
+        showToast('Errore di connessione', true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  // 4. Mobile: Change Password Form
+  const pFormM = document.getElementById('form-change-password-m');
+  if (pFormM) {
+    pFormM.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-password-m');
+      const currentPassword = document.getElementById('sec-current-pwd-m')?.value;
+      const newPassword = document.getElementById('sec-new-pwd-m')?.value;
+      const confirmPassword = document.getElementById('sec-confirm-pwd-m')?.value;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        showToast('Compila tutti i campi', true);
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        showToast('Le password non coincidono', true);
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        showToast('La password deve avere almeno 8 caratteri', true);
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✓ Password aggiornata!');
+          document.getElementById('sec-current-pwd-m').value = '';
+          document.getElementById('sec-new-pwd-m').value = '';
+          document.getElementById('sec-confirm-pwd-m').value = '';
+          loadSecurityDiagnostics();
+        } else {
+          showToast(data.error || 'Errore modifica password', true);
+        }
+      } catch (err) {
+        showToast('Errore di connessione', true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  // 5. Revoke Other Sessions
+  const revokeBtn = document.getElementById('btn-revoke-other-sessions');
+  const revokeBtnM = document.getElementById('btn-revoke-other-sessions-m');
+  const handleRevoke = async () => {
+    if (!confirm('Sei sicuro di voler disconnettere tutte le altre sessioni attive?')) return;
+    try {
+      const res = await fetch('/api/auth/sessions', { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✓ Altre sessioni revocate con successo');
+        loadActiveSessions();
+        loadAuditLogs();
+      } else {
+        showToast(data.error || 'Errore revoca sessioni', true);
+      }
+    } catch {
+      showToast('Errore di connessione', true);
+    }
+  };
+
+  if (revokeBtn) revokeBtn.addEventListener('click', handleRevoke);
+  if (revokeBtnM) revokeBtnM.addEventListener('click', handleRevoke);
 }

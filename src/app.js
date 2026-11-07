@@ -3,7 +3,7 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
-const { helmetSecurity, corsSecurity, generalApiLimiter } = require('./middlewares/securityMiddleware');
+const { helmetSecurity, corsSecurity, generalApiLimiter, apiNoCacheMiddleware, verifyOriginMiddleware } = require('./middlewares/securityMiddleware');
 const authRouter = require('./routes/auth');
 const settingsRouter = require('./routes/settings');
 const { router: portfoliosRouter } = require('./routes/portfolios');
@@ -24,12 +24,21 @@ const { serveWithSidebar, isMobile } = require('./utils/viewRenderer');
 
 const app = express();
 
-// Trust proxy for Docker / reverse proxies (NGINX, Caddy, Cloudflare, UGOS)
+// Harden Express against fingerprinting
+app.disable('x-powered-by');
+
+// Trust proxy for Docker / reverse proxies (NGINX, Caddy, Cloudflare, Traefik, UGOS)
 app.set('trust proxy', 1);
 
 // Security & Headers
 app.use(helmetSecurity());
 app.use(corsSecurity());
+
+// Robots.txt to prevent indexing of personal finance portal
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.send('User-agent: *\nDisallow: /\n');
+});
 
 // Body & Cookie parsing
 app.use(express.json({ limit: '10mb' }));
@@ -44,6 +53,12 @@ app.get(['/manifest.webmanifest', '/manifest.json'], (req, res) => {
   res.type('application/manifest+json');
   res.sendFile(path.join(__dirname, '..', 'public', 'manifest.webmanifest'));
 });
+
+// Anti-CSRF Origin verification on state-changing API requests
+app.use('/api', verifyOriginMiddleware);
+
+// Cache-Control: no-cache/no-store on API responses for data confidentiality
+app.use('/api', apiNoCacheMiddleware);
 
 // General Rate Limiter for all API routes
 app.use('/api/', generalApiLimiter);

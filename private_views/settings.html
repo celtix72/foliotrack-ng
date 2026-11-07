@@ -68,6 +68,10 @@
           <span>🤖</span>
           <span>AI & API Keys</span>
         </button>
+        <button type="button" data-settings-tab="security" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
+          <span>🛡️</span>
+          <span>Sicurezza & Account</span>
+        </button>
         <button type="button" data-settings-tab="theme" class="btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition">
           <span>🎨</span>
           <span>Aspetto</span>
@@ -815,6 +819,241 @@
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 9: SICUREZZA, ACCOUNT & ESPOSIZIONE   -->
+      <!-- ========================================== -->
+      <div id="panel-security" class="tab-panel hidden space-y-6">
+
+        <!-- Banner Allerta Password di Default (nascosto se non default) -->
+        <div id="security-default-pwd-alert" class="hidden p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400">
+          <div class="flex items-start space-x-3">
+            <span class="text-2xl">⚠️</span>
+            <div class="flex-1">
+              <h4 class="text-sm font-bold tracking-tight">Attenzione: Password predefinita "admin123" ancora in uso!</h4>
+              <p class="text-xs mt-1 leading-relaxed text-rose-600 dark:text-rose-300">
+                L'applicazione è configurata con la password di installazione iniziale. Prima di esporre FolioTrack su Internet o sulla rete locale, modifica subito la password utilizzando il modulo sottostante per proteggere i tuoi dati finanziari.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Status & Internet Exposure Diagnostic Overview -->
+        <div class="signature-card p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-gray-100 dark:border-white/5">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>🛡️</span>
+                <span>Diagnostica Sicurezza & Esposizione Web</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                Stato dei parametri critici di sicurezza per l'esposizione pubblica su Internet o Reverse Proxy
+              </p>
+            </div>
+            <div id="security-score-badge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Controllo in corso...
+            </div>
+          </div>
+
+          <!-- Diagnostic Grid Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
+            <div class="p-3.5 rounded-xl border border-gray-200/60 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 space-y-1">
+              <div class="text-gray-400 text-[11px]">Protocollo HTTPS / SSL</div>
+              <div id="diag-https-status" class="font-bold flex items-center space-x-1.5 text-gray-700 dark:text-gray-200">
+                <span>Verifica...</span>
+              </div>
+            </div>
+            <div class="p-3.5 rounded-xl border border-gray-200/60 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 space-y-1">
+              <div class="text-gray-400 text-[11px]">Protezione Token JWT</div>
+              <div id="diag-jwt-status" class="font-bold flex items-center space-x-1.5 text-gray-700 dark:text-gray-200">
+                <span>Verifica...</span>
+              </div>
+            </div>
+            <div class="p-3.5 rounded-xl border border-gray-200/60 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 space-y-1">
+              <div class="text-gray-400 text-[11px]">Crittografia Database</div>
+              <div id="diag-crypto-status" class="font-bold flex items-center space-x-1.5 text-gray-700 dark:text-gray-200">
+                <span>Verifica...</span>
+              </div>
+            </div>
+            <div class="p-3.5 rounded-xl border border-gray-200/60 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 space-y-1">
+              <div class="text-gray-400 text-[11px]">Rate Limiting & Anti-Brute</div>
+              <div id="diag-ratelimit-status" class="font-bold flex items-center space-x-1.5 text-emerald-600 dark:text-emerald-400">
+                <span>✓ Attivo (15 tentativi)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommendations Checklist Box -->
+          <div id="security-recommendations-box" class="hidden p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 space-y-2">
+            <div class="font-bold flex items-center space-x-2">
+              <span>💡</span>
+              <span>Raccomandazioni per l'esposizione sicura:</span>
+            </div>
+            <ul id="security-recommendations-list" class="list-disc list-inside space-y-1 text-[11px] font-mono"></ul>
+          </div>
+        </div>
+
+        <!-- 2 Column Forms: Modifica Username e Modifica Password -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <!-- Card 1: Modifica Username -->
+          <div class="signature-card p-6 space-y-4">
+            <div class="pb-3 border-b border-gray-100 dark:border-white/5">
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>👤</span>
+                <span>Modifica Nome Utente (Username)</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                Cambia lo username di accesso per non utilizzare l'account predefinito "admin"
+              </p>
+            </div>
+
+            <form id="form-change-username" class="space-y-4 text-xs font-mono">
+              <div>
+                <label class="block text-gray-500 dark:text-gray-400 mb-1">Username Attuale</label>
+                <input type="text" id="sec-current-username-display" readonly disabled
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-gray-100 dark:bg-black/40 border border-gray-200 dark:border-white/5 text-gray-500 font-bold"
+                  value="admin">
+              </div>
+
+              <div>
+                <label for="sec-new-username" class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Nuovo Username *</label>
+                <input type="text" id="sec-new-username" required minlength="3" maxlength="30" placeholder="es. mauro_fintech"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                <span class="text-[10px] text-gray-400 mt-1 block">3-30 caratteri alfanumerici, trattini o trattini bassi</span>
+              </div>
+
+              <div>
+                <label for="sec-username-confirm-pwd" class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Password Attuale (per autorizzare) *</label>
+                <input type="password" id="sec-username-confirm-pwd" required placeholder="••••••••••••"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+              </div>
+
+              <div class="pt-2">
+                <button type="submit" id="btn-save-username" class="w-full btn-pill px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-2 transition shadow-sm">
+                  <span>💾</span>
+                  <span>Salva Nuovo Username</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Card 2: Modifica Password -->
+          <div class="signature-card p-6 space-y-4">
+            <div class="pb-3 border-b border-gray-100 dark:border-white/5">
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>🔑</span>
+                <span>Modifica Password di Accesso</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                Aggiorna la password con una chiave complessa per prevenire intrusioni
+              </p>
+            </div>
+
+            <form id="form-change-password" class="space-y-4 text-xs font-mono">
+              <div>
+                <label for="sec-current-pwd" class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Password Attuale *</label>
+                <input type="password" id="sec-current-pwd" required placeholder="••••••••••••"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+              </div>
+
+              <div>
+                <label for="sec-new-pwd" class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Nuova Password *</label>
+                <input type="password" id="sec-new-pwd" required minlength="8" placeholder="••••••••••••"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                <span class="text-[10px] text-gray-400 mt-1 block">Minimo 8 caratteri (consigliato mix di lettere, numeri e simboli)</span>
+              </div>
+
+              <div>
+                <label for="sec-confirm-pwd" class="block text-gray-700 dark:text-gray-300 font-medium mb-1">Conferma Nuova Password *</label>
+                <input type="password" id="sec-confirm-pwd" required minlength="8" placeholder="••••••••••••"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+              </div>
+
+              <div class="pt-2">
+                <button type="submit" id="btn-save-password" class="w-full btn-pill px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-2 transition shadow-sm">
+                  <span>🔒</span>
+                  <span>Aggiorna Password</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+
+        <!-- Card 3: Sessioni Attive & Audit Log Recente -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          <!-- Sessioni Attive -->
+          <div class="signature-card p-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+              <div>
+                <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                  <span>📱</span>
+                  <span>Sessioni Attive</span>
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                  Dispositivi e token attualmente autorizzati all'accesso
+                </p>
+              </div>
+              <button type="button" id="btn-revoke-other-sessions" class="btn-pill px-3 py-1.5 border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 text-xs font-mono font-bold transition">
+                Disconnetti Altri
+              </button>
+            </div>
+
+            <div class="overflow-x-auto text-xs font-mono">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="text-gray-400 border-b border-gray-100 dark:border-white/5 pb-2 text-[11px]">
+                    <th class="py-2">Indirizzo IP</th>
+                    <th class="py-2">Dispositivo / Browser</th>
+                    <th class="py-2">Avvio</th>
+                    <th class="py-2 text-right">Stato</th>
+                  </tr>
+                </thead>
+                <tbody id="sessions-table-body" class="divide-y divide-gray-100 dark:divide-white/5">
+                  <tr>
+                    <td colspan="4" class="py-4 text-center text-gray-400">Caricamento sessioni...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Registro Audit Sicurezza Recente -->
+          <div class="signature-card p-6 space-y-4">
+            <div class="pb-3 border-b border-gray-100 dark:border-white/5">
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>📋</span>
+                <span>Registro Eventi di Sicurezza (Audit)</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                Ultimi tentativi di accesso, modifiche credenziali e azioni di sistema
+              </p>
+            </div>
+
+            <div class="overflow-y-auto max-h-64 text-xs font-mono">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="text-gray-400 border-b border-gray-100 dark:border-white/5 pb-2 text-[11px]">
+                    <th class="py-2">Evento</th>
+                    <th class="py-2">Dettagli</th>
+                    <th class="py-2">IP</th>
+                    <th class="py-2 text-right">Data</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-table-body" class="divide-y divide-gray-100 dark:divide-white/5">
+                  <tr>
+                    <td colspan="4" class="py-4 text-center text-gray-400">Caricamento eventi...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
       </div>
 
     </main>

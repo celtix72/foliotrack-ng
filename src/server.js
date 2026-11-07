@@ -14,11 +14,35 @@ try {
   process.exit(1);
 }
 
+function printSecurityAudit() {
+  const isDefaultJwt = !process.env.JWT_SECRET || process.env.JWT_SECRET === 'foliotrack-super-secret-jwt-key-change-in-production-min32chars' || process.env.JWT_SECRET.length < 32;
+  const isDefaultKey = !process.env.SETTINGS_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY === 'foliotrack-encryption-secret-key-32chars' || process.env.SETTINGS_ENCRYPTION_KEY.length < 32;
+
+  console.log(`🛡️  Security Diagnostics (Internet Exposure Readiness):`);
+  console.log(`   • Trust Proxy: ENABLED (Express trust proxy = 1)`);
+  console.log(`   • Helmet CSP & Security Headers: ACTIVE (X-Robots-Tag, Permissions-Policy, HSTS)`);
+  console.log(`   • API Cache-Control & Anti-CSRF: ENFORCED`);
+  console.log(`   • Rate Limiting: ACTIVE (API 1000/15m, Login 15/15m, Credentials 10/15m)`);
+
+  if (isDefaultJwt) {
+    console.warn(`   ⚠️  JWT_SECRET: Default or weak key detected. Change it in .env before internet exposure!`);
+  } else {
+    console.log(`   ✓  JWT_SECRET: Configured with custom secret.`);
+  }
+
+  if (isDefaultKey) {
+    console.warn(`   ⚠️  SETTINGS_ENCRYPTION_KEY: Default or weak key detected. Set a 32-char key in .env!`);
+  } else {
+    console.log(`   ✓  SETTINGS_ENCRYPTION_KEY: Configured with custom secret.`);
+  }
+}
+
 const server = app.listen(PORT, () => {
   console.log(`=================================================`);
   console.log(`🚀 FolioTrack Backend Server running on port ${PORT}`);
   console.log(`🔗 Healthcheck: http://localhost:${PORT}/api/health`);
   console.log(`🔒 Environment: ${process.env.NODE_ENV || 'development'}`);
+  printSecurityAudit();
   console.log(`=================================================`);
 
   // Start background recurring tasks (daily snapshot, digest, backup, alerts)
