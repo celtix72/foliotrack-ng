@@ -575,7 +575,7 @@ async function loadAssets() {
     if (currentAssetsList.length === 0) {
       tableBody.innerHTML = `
         <tr>
-          <td colspan="8" class="px-4 py-10 text-center text-gray-400 font-mono">
+          <td colspan="7" class="px-4 py-10 text-center text-gray-400 font-mono">
             Nessun titolo trovato con i filtri correnti.
           </td>
         </tr>
@@ -648,27 +648,27 @@ async function loadAssets() {
 
       return `
         <tr class="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
-          <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">
-            <div class="flex items-center">
-              <span class="font-mono text-xs px-2 py-0.5 rounded bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+          <td class="px-4 py-2.5 max-w-[260px]">
+            <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
+              <span class="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white">
                 ${a.ticker}
               </span>
               ${customBadgeHtml}
               ${alertBadgeHtml}
             </div>
+            <div class="text-[11px] text-gray-500 dark:text-gray-400 truncate leading-tight" title="${escapeHtml(a.name)}">
+              ${escapeHtml(a.name)}
+            </div>
           </td>
-          <td class="px-4 py-3 text-xs text-gray-800 dark:text-gray-200 max-w-[200px] truncate" title="${a.name}">
-            ${a.name}
-          </td>
-          <td class="px-3 py-3 text-xs text-gray-500">
+          <td class="px-3 py-2.5 text-xs text-gray-500">
             <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-gray-100 dark:bg-white/10">
               ${a.type || 'EQUITY'}
             </span>
           </td>
-          <td class="px-3 py-3 text-xs text-gray-400 font-mono">
+          <td class="px-3 py-2.5 text-xs text-gray-400 font-mono">
             ${a.currency || 'EUR'} ${a.exchange ? '• ' + a.exchange : ''}
           </td>
-          <td class="px-4 py-3">
+          <td class="px-3 py-2.5">
             <select data-action="change-source" data-ticker="${a.ticker}" onchange="handleAssetSourceChange('${a.ticker}', this.value)" 
               class="px-2 py-1 rounded-lg text-xs font-mono font-semibold border ${
                 sourceVal === 'YAHOO' ? 'border-blue-500/30 text-blue-600 bg-blue-500/5 dark:text-blue-400' :
@@ -677,17 +677,17 @@ async function loadAssets() {
                 sourceVal === 'DELISTED' ? 'border-purple-500/30 text-purple-600 bg-purple-500/5 dark:text-purple-400' :
                 'border-gray-500/30 text-gray-600 bg-gray-500/5 dark:text-gray-400'
               }">
-              <option value="YAHOO" ${sourceVal === 'YAHOO' ? 'selected' : ''}>Yahoo Finance</option>
-              <option value="BORSA_ITALIANA" ${sourceVal === 'BORSA_ITALIANA' ? 'selected' : ''}>Borsa Italiana</option>
-              <option value="GOOGLE" ${sourceVal === 'GOOGLE' ? 'selected' : ''}>Google Finance</option>
+              <option value="YAHOO" ${sourceVal === 'YAHOO' ? 'selected' : ''}>Yahoo</option>
+              <option value="BORSA_ITALIANA" ${sourceVal === 'BORSA_ITALIANA' ? 'selected' : ''}>Borsa IT</option>
+              <option value="GOOGLE" ${sourceVal === 'GOOGLE' ? 'selected' : ''}>Google</option>
               <option value="MANUAL" ${sourceVal === 'MANUAL' ? 'selected' : ''}>Manuale</option>
-              <option value="DELISTED" ${sourceVal === 'DELISTED' ? 'selected' : ''}>DELISTED (Non aggiornare)</option>
+              <option value="DELISTED" ${sourceVal === 'DELISTED' ? 'selected' : ''}>Delisted</option>
             </select>
           </td>
-          <td class="px-4 py-3 text-right font-mono font-bold tabular-nums text-gray-900 dark:text-white">
+          <td class="px-4 py-2.5 text-right font-mono font-bold tabular-nums text-gray-900 dark:text-white">
             ${formattedPrice}
           </td>
-          <td class="px-4 py-3 text-center">
+          <td class="px-4 py-2.5 text-center">
             <button type="button" data-action="view-history" data-ticker="${a.ticker}" 
               class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-mono ${quotesBadgeClass} hover:ring-2 hover:ring-blue-500/40 transition cursor-pointer" 
               title="${quotesTitle} - Clicca per visualizzare grafico e quote scaricate">
@@ -695,7 +695,7 @@ async function loadAssets() {
               <span>${quotesCount} quote</span>
             </button>
           </td>
-          <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+          <td class="px-4 py-2.5 text-right space-x-1 whitespace-nowrap">
             <button type="button" data-action="sync-quote" data-ticker="${a.ticker}" class="btn-pill px-2 py-1 text-xs ${liveBtnClass}" title="${escapeHtml(liveBtnTitle)}">
               ${liveBtnLabel}
             </button>
