@@ -66,6 +66,13 @@ function initTabs() {
     });
   });
 
+  const mobileSelect = document.getElementById('mobileSettingsSectionSelect');
+  if (mobileSelect) {
+    mobileSelect.addEventListener('change', (e) => {
+      switchTab(e.target.value);
+    });
+  }
+
   // Activate initial tab
   switchTab(savedTab);
 }
@@ -92,11 +99,19 @@ function switchTab(tabId) {
   tabButtons.forEach(btn => {
     const isTarget = btn.getAttribute('data-settings-tab') === tabId;
     if (isTarget) {
-      btn.className = 'btn-pill px-4 py-2 text-xs font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center space-x-1.5 transition';
+      btn.className = 'btn-pill shrink-0 whitespace-nowrap px-3.5 py-1.5 text-xs font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center space-x-1.5 transition';
+      try {
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      } catch {}
     } else {
-      btn.className = 'btn-pill px-4 py-2 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition';
+      btn.className = 'btn-pill shrink-0 whitespace-nowrap px-3.5 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1.5 transition';
     }
   });
+
+  const mobileSelect = document.getElementById('mobileSettingsSectionSelect');
+  if (mobileSelect && mobileSelect.value !== tabId) {
+    mobileSelect.value = tabId;
+  }
 
   localStorage.setItem('foliotrack_settings_tab', tabId);
 

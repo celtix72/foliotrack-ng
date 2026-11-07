@@ -84,11 +84,23 @@ function serveWithSidebar(req, res, viewName) {
   const mobileFile = path.join(viewsPath, `${viewName}_mobile.html`);
   const desktopFile = path.join(viewsPath, `${viewName}.html`);
   const sidebarFile = path.join(viewsPath, 'partials', 'sidebar_partial.html');
+  const mobileNavFile = path.join(viewsPath, 'partials', 'mobile_nav_partial.html');
 
   try {
     // 1. Mobile Client
     if (isMobileClient && fs.existsSync(mobileFile)) {
-      const mobileHtml = readFileCached(mobileFile);
+      let mobileHtml = readFileCached(mobileFile);
+
+      // Inject mobile bottom nav partial if present
+      if (fs.existsSync(mobileNavFile)) {
+        const mobileNavHtml = readFileCached(mobileNavFile);
+        if (mobileHtml.includes('<!-- MOBILE_NAV_PARTIAL -->')) {
+          mobileHtml = mobileHtml.replace('<!-- MOBILE_NAV_PARTIAL -->', mobileNavHtml);
+        } else if (mobileHtml.includes('<!-- {{MOBILE_NAV}} -->')) {
+          mobileHtml = mobileHtml.replace('<!-- {{MOBILE_NAV}} -->', mobileNavHtml);
+        }
+      }
+
       return res.type('html').send(injectPwaTags(mobileHtml));
     }
 

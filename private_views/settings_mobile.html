@@ -17,60 +17,74 @@
     }
   </style>
 </head>
-<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+<body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
 
-  <!-- Mobile Top Header Bar -->
-  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
-    <div>
-      <h1 class="text-base font-bold text-gray-900 dark:text-white">Impostazioni & Dati</h1>
-      <span class="text-[10px] font-mono text-gray-400">FX, Titoli, Mercato 5Y, Notifiche & Backup</span>
+  <!-- Mobile Top Sticky Header Bar & Tabs Container -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-[#121214]/95 backdrop-blur-md border-b border-gray-200/50 dark:border-white/5 shadow-xs">
+    <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+      <div class="overflow-hidden">
+        <h1 class="text-sm font-bold text-gray-900 dark:text-white leading-tight">Impostazioni & Dati</h1>
+        <span class="text-[10px] font-mono text-gray-400">Configurazione Sistema</span>
+      </div>
+
+      <!-- Quick Section Dropdown Selector -->
+      <div class="shrink-0">
+        <select id="mobileSettingsSectionSelect" class="px-2 py-1 rounded-lg text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+          <option value="fx">💱 1. Valute FX</option>
+          <option value="assets">📈 2. Titoli & Asset</option>
+          <option value="classifications">🏷️ 3. Tassonomia</option>
+          <option value="market">🌐 4. Mercato & 5Y</option>
+          <option value="notifications">🔔 5. Notifiche</option>
+          <option value="backups">☁️ 6. Backup & DR</option>
+          <option value="ai">🤖 7. AI Keys</option>
+          <option value="security">🛡️ 8. Sicurezza</option>
+          <option value="theme">🎨 9. Aspetto</option>
+        </select>
+      </div>
     </div>
-    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-      CORE
-    </span>
+
+    <div id="live-ticker-container"></div>
+
+    <!-- Horizontal Scrollable Tab Bar Chips -->
+    <nav id="settings-tabs" class="flex overflow-x-auto gap-1.5 px-3 py-2 border-t border-gray-100 dark:border-white/5 bg-gray-50/70 dark:bg-white/[0.02]">
+      <button type="button" data-settings-tab="fx" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center space-x-1">
+        <span>💱</span>
+        <span>Valute FX</span>
+      </button>
+      <button type="button" data-settings-tab="assets" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+        <span>📈</span>
+        <span>Titoli & Asset</span>
+      </button>
+      <button type="button" data-settings-tab="classifications" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+        <span>🏷️</span>
+        <span>Tassonomia</span>
+      </button>
+      <button type="button" data-settings-tab="market" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+        <span>🌐</span>
+        <span>Mercato 5Y</span>
+      </button>
+      <button type="button" data-settings-tab="notifications" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+        <span>🔔</span>
+        <span>Notifiche</span>
+      </button>
+      <button type="button" data-settings-tab="backups" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+        <span>☁️</span>
+        <span>Backup</span>
+      </button>
+      <button type="button" data-settings-tab="ai" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+        <span>🤖</span>
+        <span>AI Keys</span>
+      </button>
+      <button type="button" data-settings-tab="security" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+        <span>🛡️</span>
+        <span>Sicurezza</span>
+      </button>
+      <button type="button" data-settings-tab="theme" class="btn-pill shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
+        <span>🎨</span>
+        <span>Aspetto</span>
+      </button>
+    </nav>
   </header>
-
-  <div id="live-ticker-container"></div>
-
-  <!-- Horizontal Scrollable Tab Bar -->
-  <nav id="settings-tabs" class="flex overflow-x-auto no-scrollbar gap-1.5 px-2 py-1.5 border-b border-gray-200/50 dark:border-white/5 bg-white/50 dark:bg-[#121214]/50 sticky top-[53px] z-20 backdrop-blur-md">
-    <button type="button" data-settings-tab="fx" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-bold bg-emerald-600 text-white shadow-sm flex items-center space-x-1">
-      <span>💱</span>
-      <span>FX</span>
-    </button>
-    <button type="button" data-settings-tab="assets" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
-      <span>📈</span>
-      <span>Titoli</span>
-    </button>
-    <button type="button" data-settings-tab="classifications" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
-      <span>🏷️</span>
-      <span>Tassonomia</span>
-    </button>
-    <button type="button" data-settings-tab="market" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
-      <span>🌐</span>
-      <span>Mercato 5Y</span>
-    </button>
-    <button type="button" data-settings-tab="notifications" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
-      <span>🔔</span>
-      <span>Notifiche</span>
-    </button>
-    <button type="button" data-settings-tab="backups" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
-      <span>☁️</span>
-      <span>Backup</span>
-    </button>
-    <button type="button" data-settings-tab="ai" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
-      <span>🤖</span>
-      <span>AI Keys</span>
-    </button>
-    <button type="button" data-settings-tab="security" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
-      <span>🛡️</span>
-      <span>Sicurezza</span>
-    </button>
-    <button type="button" data-settings-tab="theme" class="btn-pill shrink-0 px-3 py-1.5 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-1">
-      <span>🎨</span>
-      <span>Aspetto</span>
-    </button>
-  </nav>
 
   <!-- Mobile Main Content -->
   <main class="flex-1 px-1.5 py-2 space-y-2.5">
@@ -721,32 +735,7 @@
   </div>
 
   <!-- Mobile Bottom Nav -->
-  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-[#121214]/90 backdrop-blur-md border-t border-gray-200/50 dark:border-white/5 py-2 px-6 flex items-center justify-around text-[10px] font-mono">
-    <a href="/dashboard" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
-      <span class="text-base">📊</span>
-      <span>Dashboard</span>
-    </a>
-    <a href="/portfolios" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
-      <span class="text-base">📁</span>
-      <span>Portafogli</span>
-    </a>
-    <a href="/transactions" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
-      <span class="text-base">📜</span>
-      <span>Movimenti</span>
-    </a>
-    <a href="/history" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
-      <span class="text-base">💰</span>
-      <span>Flussi</span>
-    </a>
-    <a href="/ai-advisor" class="flex flex-col items-center text-gray-400 hover:text-blue-500">
-      <span class="text-base">🧠</span>
-      <span>AI Advisor</span>
-    </a>
-    <a href="/settings" class="flex flex-col items-center text-blue-500 font-bold">
-      <span class="text-base">⚙️</span>
-      <span>Impostazioni</span>
-    </a>
-  </nav>
+  <!-- MOBILE_NAV_PARTIAL -->
 
   <script src="/push_client.js"></script>
   <script src="/settings.js"></script>

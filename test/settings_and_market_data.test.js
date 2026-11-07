@@ -533,5 +533,7 @@ describe('Settings, FX, Assets Market Sources & 5Y History Reconstruction', () =
     assert.ok(html.includes('FolioTrack Mobile'));
     assert.ok(html.includes('data-settings-tab="market"'));
     assert.ok(html.includes('btn-sync-all-quotes'));
+    assert.ok(html.includes('mobile-bottom-nav'));
+    assert.ok(html.includes('mobileSettingsSectionSelect'));
   });
 });
