@@ -518,6 +518,40 @@ window.handleDeleteFx = handleDeleteFx;
 // ==========================================
 // 2. TITOLI, FONTI DATI & STORICO 5Y
 // ==========================================
+function formatCompactSyncTime(syncDateStr) {
+  if (!syncDateStr) return null;
+  const dateObj = (syncDateStr.includes('T') || syncDateStr.endsWith('Z'))
+    ? new Date(syncDateStr)
+    : new Date(syncDateStr.replace(' ', 'T') + 'Z');
+
+  if (isNaN(dateObj.getTime())) return null;
+
+  const now = new Date();
+  const isToday = (
+    dateObj.getDate() === now.getDate() &&
+    dateObj.getMonth() === now.getMonth() &&
+    dateObj.getFullYear() === now.getFullYear()
+  );
+
+  const hours = String(dateObj.getHours()).padStart(2, '0');
+  const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+  const timePart = `${hours}:${minutes}`;
+
+  if (isToday) {
+    return {
+      compact: timePart,
+      full: dateObj.toLocaleString('it-IT')
+    };
+  } else {
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    return {
+      compact: `${day}/${month} ${timePart}`,
+      full: dateObj.toLocaleString('it-IT')
+    };
+  }
+}
+
 async function loadAssets() {
   const tableBody = document.getElementById('assets-table-body');
   if (!tableBody) return;
@@ -568,24 +602,39 @@ async function loadAssets() {
       const isManual = sourceVal === 'MANUAL';
       const isCustomManaged = isDelisted || isManual;
 
-      // Check sync errors for alert display (suppressed for DELISTED and MANUAL assets)
-      const isRealtimeError = a.lastSyncStatus === 'ERROR';
-      const isHistoricalError = a.historicalSyncStatus === 'ERROR';
-      const hasSyncError = !isCustomManaged && (isRealtimeError || isHistoricalError);
+      // Check sync errors (suppressed for DELISTED and MANUAL assets)
+      const isRealtimeError = !isCustomManaged && a.lastSyncStatus === 'ERROR';
+      const isHistoricalError = !isCustomManaged && a.historicalSyncStatus === 'ERROR';
 
-      let errorTooltip = '';
-      if (isRealtimeError && isHistoricalError) {
-        errorTooltip = `Errore Realtime: ${a.lastSyncError || 'Fallito'} | Errore Storico: ${a.historicalSyncError || 'Fallito'}`;
-      } else if (isRealtimeError) {
-        errorTooltip = `Errore Realtime: ${a.lastSyncError || 'Fallito'}${a.lastSyncAt ? ' (' + new Date(a.lastSyncAt).toLocaleString('it-IT') + ')' : ''}`;
-      } else if (isHistoricalError) {
-        errorTooltip = `Errore Storico: ${a.historicalSyncError || 'Fallito'}${a.historicalSyncAt ? ' (' + new Date(a.historicalSyncAt).toLocaleString('it-IT') + ')' : ''}`;
+      // Live Tag state & compact time formatting
+      const syncTimeInfo = (!isRealtimeError && a.lastSyncAt) ? formatCompactSyncTime(a.lastSyncAt) : null;
+
+      let liveBtnLabel = '⚡ Live';
+      let liveBtnClass = 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-600/20';
+      let liveBtnTitle = 'Scarica Prezzo Realtime - Clicca per aggiornare';
+
+      if (isRealtimeError) {
+        liveBtnLabel = '⚡ Errore';
+        liveBtnClass = 'bg-rose-600 text-white font-semibold border border-rose-700 hover:bg-rose-700 shadow-2xs cursor-pointer';
+        liveBtnTitle = `${a.lastSyncError || 'Errore durante la lettura della quotazione'}\nClicca per riprovare l'aggiornamento`;
+      } else if (isDelisted) {
+        liveBtnLabel = '⚡ Delisted';
+        liveBtnClass = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20';
+        liveBtnTitle = 'Titolo Delistato (aggiornamenti live disattivati) - Clicca per sincronizzare manualmente';
+      } else if (isManual) {
+        liveBtnLabel = '⚡ Manuale';
+        liveBtnClass = 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20 hover:bg-gray-500/20';
+        liveBtnTitle = 'Prezzo Manuale (aggiornamenti automatici disattivati) - Clicca per sincronizzare';
+      } else if (syncTimeInfo) {
+        liveBtnLabel = `⚡ ${syncTimeInfo.compact}`;
+        liveBtnClass = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 font-mono';
+        liveBtnTitle = `Ultimo aggiornamento riuscito: ${syncTimeInfo.full}\nClicca per forzare aggiornamento live`;
       }
 
-      const alertBadgeHtml = hasSyncError
-        ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 ml-2 shadow-2xs cursor-help" title="${escapeHtml(errorTooltip)}">
-            <span class="text-rose-500 animate-pulse">⚠️</span>
-            <span>Errore Sync</span>
+      const alertBadgeHtml = isHistoricalError
+        ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 ml-2 shadow-2xs cursor-help" title="Errore download serie storica 5Y: ${escapeHtml(a.historicalSyncError || 'Fallito')}">
+            <span>⚠️</span>
+            <span>Errore 5Y</span>
           </span>`
         : '';
 
@@ -647,8 +696,8 @@ async function loadAssets() {
             </button>
           </td>
           <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap">
-            <button type="button" data-action="sync-quote" data-ticker="${a.ticker}" class="btn-pill px-2 py-1 text-xs bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-600/20" title="Scarica Prezzo Realtime">
-              ⚡ Live
+            <button type="button" data-action="sync-quote" data-ticker="${a.ticker}" class="btn-pill px-2 py-1 text-xs ${liveBtnClass}" title="${escapeHtml(liveBtnTitle)}">
+              ${liveBtnLabel}
             </button>
             <button type="button" data-action="view-history" data-ticker="${a.ticker}" class="btn-pill px-2 py-1 text-xs bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600/20" title="Consulta Storico Quotazioni Scaricate">
               📊 Storico
@@ -691,6 +740,12 @@ async function handleAssetSourceChange(ticker, newSource) {
 }
 
 async function syncSingleQuote(ticker) {
+  const btn = document.querySelector(`button[data-action="sync-quote"][data-ticker="${ticker}"]`);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⚡ ...';
+  }
+
   try {
     showToast(`⚡ Aggiornamento prezzo live per ${ticker}...`);
     const res = await fetch(`/api/assets/${encodeURIComponent(ticker)}/sync-quote`, { method: 'POST' });
@@ -699,12 +754,13 @@ async function syncSingleQuote(ticker) {
       const p = data.quote?.currentPrice || data.quote?.price || data.asset?.currentPrice;
       const priceStr = (p !== undefined && p !== null) ? Number(p).toFixed(2) : '-';
       showToast(`✓ Prezzo aggiornato per ${ticker}: ${priceStr}`);
-      loadAssets();
     } else {
       showToast(data.error || `Errore scaricamento prezzo per ${ticker}`, true);
     }
   } catch (err) {
     showToast(`Errore connessione per ${ticker}`, true);
+  } finally {
+    await loadAssets();
   }
 }
 
