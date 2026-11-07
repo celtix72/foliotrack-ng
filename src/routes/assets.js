@@ -397,7 +397,7 @@ router.put('/:ticker', (req, res) => {
       : cleanSource;
   }
 
-  const isDelisted = cleanSource === 'DELISTED';
+  const isCustomManaged = cleanSource === 'DELISTED' || cleanSource === 'MANUAL';
 
   db.prepare(`
     UPDATE assets
@@ -415,9 +415,9 @@ router.put('/:ticker', (req, res) => {
         dividendYield = ?,
         dataSource = ?,
         pe = ?,
-        lastSyncStatus = CASE WHEN ? THEN 'DELISTED' ELSE lastSyncStatus END,
+        lastSyncStatus = CASE WHEN ? THEN ? ELSE lastSyncStatus END,
         lastSyncError = CASE WHEN ? THEN NULL ELSE lastSyncError END,
-        historicalSyncStatus = CASE WHEN ? THEN 'DELISTED' ELSE historicalSyncStatus END,
+        historicalSyncStatus = CASE WHEN ? THEN ? ELSE historicalSyncStatus END,
         historicalSyncError = CASE WHEN ? THEN NULL ELSE historicalSyncError END,
         updatedAt = datetime('now')
     WHERE ticker = ?
@@ -436,10 +436,12 @@ router.put('/:ticker', (req, res) => {
     cleanDiv,
     cleanSource,
     cleanPe,
-    isDelisted ? 1 : 0,
-    isDelisted ? 1 : 0,
-    isDelisted ? 1 : 0,
-    isDelisted ? 1 : 0,
+    isCustomManaged ? 1 : 0,
+    cleanSource,
+    isCustomManaged ? 1 : 0,
+    isCustomManaged ? 1 : 0,
+    cleanSource,
+    isCustomManaged ? 1 : 0,
     ticker
   );
 
@@ -495,18 +497,19 @@ router.post('/:ticker/sync-quote', async (req, res) => {
       });
     }
 
-    if (asset.dataSource === 'DELISTED') {
+    if (asset.dataSource === 'DELISTED' || asset.dataSource === 'MANUAL') {
       return res.json({
         success: true,
-        message: `Titolo '${ticker}' è contrassegnato come DELISTED. Aggiornamento quotazioni live disattivato.`,
+        message: `Titolo '${ticker}' è contrassegnato come ${asset.dataSource}. Aggiornamento quotazioni live disattivato.`,
         quote: {
           ticker,
           name: asset.name,
           currentPrice: asset.currentPrice,
-          changePercent: 0,
-          changeValue: 0,
-          source: 'DELISTED',
-          isDelisted: true
+          changePercent: asset.dataSource === 'DELISTED' ? 0 : (asset.changePercent || 0),
+          changeValue: asset.dataSource === 'DELISTED' ? 0 : (asset.changeValue || 0),
+          source: asset.dataSource,
+          isManual: asset.dataSource === 'MANUAL',
+          isDelisted: asset.dataSource === 'DELISTED'
         },
         asset
       });
@@ -547,14 +550,14 @@ router.post('/:ticker/sync-history', async (req, res) => {
 
   try {
     const asset = db.prepare('SELECT * FROM assets WHERE ticker = ?').get(ticker);
-    if (asset && asset.dataSource === 'DELISTED') {
+    if (asset && (asset.dataSource === 'DELISTED' || asset.dataSource === 'MANUAL')) {
       const count = db.prepare('SELECT COUNT(*) as c FROM asset_quotes WHERE ticker = ?').get(ticker).c;
       return res.json({
         success: true,
         ticker,
         period,
         count,
-        message: `Titolo '${ticker}' è contrassegnato come DELISTED. Storico esistente mantenuto (${count} punti).`
+        message: `Titolo '${ticker}' è contrassegnato come ${asset.dataSource}. Storico esistente mantenuto (${count} punti).`
       });
     }
 

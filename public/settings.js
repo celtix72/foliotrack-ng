@@ -565,11 +565,13 @@ async function loadAssets() {
 
       const sourceVal = a.dataSource || 'YAHOO';
       const isDelisted = sourceVal === 'DELISTED';
+      const isManual = sourceVal === 'MANUAL';
+      const isCustomManaged = isDelisted || isManual;
 
-      // Check sync errors for alert display (suppressed for DELISTED assets)
+      // Check sync errors for alert display (suppressed for DELISTED and MANUAL assets)
       const isRealtimeError = a.lastSyncStatus === 'ERROR';
       const isHistoricalError = a.historicalSyncStatus === 'ERROR';
-      const hasSyncError = !isDelisted && (isRealtimeError || isHistoricalError);
+      const hasSyncError = !isCustomManaged && (isRealtimeError || isHistoricalError);
 
       let errorTooltip = '';
       if (isRealtimeError && isHistoricalError) {
@@ -587,11 +589,13 @@ async function loadAssets() {
           </span>`
         : '';
 
-      const delistedBadgeHtml = isDelisted
+      const customBadgeHtml = isDelisted
         ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30 ml-2 shadow-2xs" title="Titolo Delistato: storico e movimenti mantenuti, aggiornamento disattivato">
             DELISTED
           </span>`
-        : '';
+        : (isManual ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-gray-500/15 text-gray-600 dark:text-gray-400 border border-gray-500/30 ml-2 shadow-2xs" title="Gestione Manuale: nessun aggiornamento automatico da provider">
+            MANUALE
+          </span>` : '');
 
       return `
         <tr class="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
@@ -600,7 +604,7 @@ async function loadAssets() {
               <span class="font-mono text-xs px-2 py-0.5 rounded bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/10">
                 ${a.ticker}
               </span>
-              ${delistedBadgeHtml}
+              ${customBadgeHtml}
               ${alertBadgeHtml}
             </div>
           </td>

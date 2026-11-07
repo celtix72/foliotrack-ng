@@ -77,8 +77,8 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
     if (!preferredSource) preferredSource = borsa.isIsin(symbol) ? 'BORSA_ITALIANA' : 'YAHOO';
   }
 
-  // Handle DELISTED source: do not scrape, preserve current price and history
-  if (preferredSource === 'DELISTED') {
+  // Handle DELISTED or MANUAL source: do not scrape external APIs, preserve current price and history
+  if (preferredSource === 'DELISTED' || preferredSource === 'MANUAL') {
     return {
       ticker: symbol,
       name: assetRow?.name || symbol,
@@ -86,27 +86,12 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
       exchange: assetRow?.exchange || '',
       currency: assetRow?.currency || 'EUR',
       currentPrice: assetRow?.currentPrice || 0,
-      changePercent: 0,
-      changeValue: 0,
-      source: 'DELISTED',
-      isDelisted: true,
+      changePercent: preferredSource === 'DELISTED' ? 0 : (assetRow?.changePercent || 0),
+      changeValue: preferredSource === 'DELISTED' ? 0 : (assetRow?.changeValue || 0),
+      source: preferredSource,
+      isDelisted: preferredSource === 'DELISTED',
+      isManual: preferredSource === 'MANUAL',
       quoteDate: assetRow?.quoteDate || getTradingDateStr()
-    };
-  }
-
-  // Handle MANUAL source: do not scrape, preserve current price
-  if (preferredSource === 'MANUAL' && assetRow && assetRow.currentPrice > 0) {
-    return {
-      ticker: symbol,
-      name: assetRow.name,
-      type: assetRow.type,
-      exchange: assetRow.exchange,
-      currency: assetRow.currency,
-      currentPrice: assetRow.currentPrice,
-      changePercent: assetRow.changePercent || 0,
-      changeValue: assetRow.changeValue || 0,
-      source: 'MANUAL',
-      quoteDate: assetRow.quoteDate || new Date().toISOString().split('T')[0]
     };
   }
 
@@ -277,8 +262,8 @@ async function fetchUnifiedHistorical(ticker, period = '5Y', forcedSource = null
 
   let points = [];
 
-  // Handle DELISTED source: do not scrape external APIs, return existing SQLite cached points
-  if (preferredSource === 'DELISTED') {
+  // Handle DELISTED or MANUAL source: do not scrape external APIs, return existing SQLite cached points
+  if (preferredSource === 'DELISTED' || preferredSource === 'MANUAL') {
     return db.prepare(`
       SELECT date, close, volume, source
       FROM asset_quotes
@@ -435,9 +420,9 @@ async function updateAllAssetPrices(options = {}) {
   for (const ticker of tickers) {
     try {
       const asset = db.prepare('SELECT ticker, dataSource, currentPrice FROM assets WHERE ticker = ?').get(ticker);
-      if (asset?.dataSource === 'DELISTED') {
+      if (asset?.dataSource === 'DELISTED' || asset?.dataSource === 'MANUAL') {
         updatedCount++;
-        results.push({ ticker, status: 'DELISTED', price: asset.currentPrice || 0, source: 'DELISTED' });
+        results.push({ ticker, status: asset.dataSource, price: asset.currentPrice || 0, source: asset.dataSource });
         continue;
       }
 
@@ -512,9 +497,9 @@ async function syncAllAssetsHistorical(delayMs = 200) {
   for (const ticker of tickers) {
     try {
       const asset = db.prepare('SELECT ticker, dataSource FROM assets WHERE ticker = ?').get(ticker);
-      if (asset?.dataSource === 'DELISTED') {
+      if (asset?.dataSource === 'DELISTED' || asset?.dataSource === 'MANUAL') {
         succeeded++;
-        results.push({ ticker, count: 0, status: 'DELISTED' });
+        results.push({ ticker, count: 0, status: asset.dataSource });
         continue;
       }
 

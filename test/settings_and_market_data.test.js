@@ -310,6 +310,8 @@ describe('Settings, FX, Assets Market Sources & 5Y History Reconstruction', () =
     const data = await res.json();
     assert.equal(data.success, true);
     assert.equal(data.asset.dataSource, 'MANUAL');
+    assert.equal(data.quote.source, 'MANUAL');
+    assert.equal(data.quote.isManual, true);
   });
 
   test('POST /api/assets/:ticker/sync-history and /api/assets/sync-all-history', async () => {
@@ -324,6 +326,7 @@ describe('Settings, FX, Assets Market Sources & 5Y History Reconstruction', () =
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.equal(data.success, true);
+    assert.ok(data.message.includes('MANUAL'));
     assert.equal(typeof data.count, 'number');
 
     // Bulk history sync test
