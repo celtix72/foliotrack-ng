@@ -333,14 +333,27 @@ function createSchema(database) {
 
 /**
  * Seeds default admin user if users table is empty.
+ * Never defaults to insecure "admin123" in production.
  * @param {Database.Database} database
  */
 function seedInitialAdmin(database) {
   const row = database.prepare('SELECT COUNT(*) as count FROM users').get();
   if (row.count === 0) {
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const isTestEnv = process.env.NODE_ENV === 'test';
+    const adminUsername = process.env.ADMIN_USERNAME || (isTestEnv ? 'admin' : 'foliotrack_admin');
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@foliotrack.local';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    
+    // In production or default mode, NEVER use "admin123"
+    let adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword || (!isTestEnv && adminPassword === 'admin123')) {
+      if (isTestEnv) {
+        adminPassword = 'admin123';
+      } else {
+        const crypto = require('crypto');
+        adminPassword = crypto.randomBytes(16).toString('hex');
+        console.warn(`[Security Alert] Generated one-time strong admin password: "${adminPassword}". Change it immediately!`);
+      }
+    }
 
     const salt = bcrypt.genSaltSync(12);
     const passwordHash = bcrypt.hashSync(adminPassword, salt);
@@ -354,14 +367,11 @@ function seedInitialAdmin(database) {
     // Audit log
     const logSeed = database.prepare(`
       INSERT INTO audit_logs (user_id, action, details, ip_address)
-      VALUES (?, 'SYSTEM_SEED', 'Created initial default admin account', '127.0.0.1')
+      VALUES (?, 'SYSTEM_SEED', 'Created initial secure admin account', '127.0.0.1')
     `);
     logSeed.run(info.lastInsertRowid);
 
-    console.log(`[Database Seed] Default admin created: username="${adminUsername}", email="${adminEmail}".`);
-    if (adminPassword === 'admin123') {
-      console.warn('[Database Seed Warning] Using default password "admin123". Please change it in production!');
-    }
+    console.log(`[Database Seed] Admin created: username="${adminUsername}", email="${adminEmail}".`);
   }
 }
 

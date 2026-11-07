@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test test/**/*.test.js",
+    "test": "NODE_ENV=test ADMIN_USERNAME=admin ADMIN_PASSWORD=admin123 node --test test/**/*.test.js",
     "build:css": "tailwindcss -i ./public/input.css -o ./public/dist/style.css --minify",
     "watch:css": "tailwindcss -i ./public/input.css -o ./public/dist/style.css --watch",
     "db:reset": "node src/scripts/resetDatabase.js"

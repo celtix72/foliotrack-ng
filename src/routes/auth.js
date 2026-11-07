@@ -77,6 +77,16 @@ router.post('/login', strictLoginLimiter, (req, res) => {
     });
   }
 
+  // Security Hardening: Default password "admin123" is permanently deactivated in production
+  if (process.env.NODE_ENV !== 'test' && password === 'admin123') {
+    recordFailedLogin(clientIp, username);
+    recordAuditLog(user.id, 'BLOCKED_DEFAULT_PASSWORD', 'Attempted login with permanently deactivated default password', clientIp);
+    return res.status(401).json({
+      success: false,
+      error: 'Credenziali non valide.'
+    });
+  }
+
   // Sign JWT token
   const tokenPayload = {
     id: user.id,
@@ -416,6 +426,7 @@ router.get('/security-status', requireAuth, (req, res) => {
   const user = db.prepare('SELECT id, username, email, password_hash FROM users WHERE id = ?').get(userId);
 
   const isDefaultPassword = Boolean(user && bcrypt.compareSync('admin123', user.password_hash));
+  const isDefaultAdminUsername = Boolean(user && user.username.toLowerCase() === 'admin');
   const isDefaultJwtSecret = !process.env.JWT_SECRET || process.env.JWT_SECRET === 'foliotrack-super-secret-jwt-key-change-in-production-min32chars' || process.env.JWT_SECRET.length < 32;
   const isDefaultEncryptionKey = !process.env.SETTINGS_ENCRYPTION_KEY || process.env.SETTINGS_ENCRYPTION_KEY === 'foliotrack-encryption-secret-key-32chars' || process.env.SETTINGS_ENCRYPTION_KEY.length < 32;
   const isHttps = isRequestHttps(req);
@@ -446,6 +457,15 @@ router.get('/security-status', requireAuth, (req, res) => {
       level: 'CRITICAL',
       title: 'Password predefinita attiva',
       message: 'L\'account sta ancora usando la password predefinita "admin123". Cambiala immediatamente prima di esporre l\'app su Internet.'
+    });
+  }
+
+  if (isDefaultAdminUsername) {
+    score -= 20;
+    recommendations.push({
+      level: 'WARNING',
+      title: 'Username predefinito "admin"',
+      message: 'L\'account sta ancora usando l\'username generico "admin". Si raccomanda di personalizzarlo per impedire attacchi di enumerazione.'
     });
   }
 
@@ -481,6 +501,7 @@ router.get('/security-status', requireAuth, (req, res) => {
     status: {
       score: Math.max(0, score),
       isDefaultPassword,
+      isDefaultAdminUsername,
       isDefaultJwtSecret,
       isDefaultEncryptionKey,
       isHttps,
