@@ -195,6 +195,74 @@ describe('Settings, FX, Assets Market Sources & 5Y History Reconstruction', () =
     assert.equal(typeof data.assets[0].quotesCount, 'number');
   });
 
+  test('PUT /api/assets/:ticker sets dataSource to DELISTED and skips updates while preserving history', async () => {
+    // 1. Set asset to DELISTED
+    const putRes = await fetch(`${baseUrl}/api/assets/IT0005240830`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        dataSource: 'DELISTED',
+        currentPrice: 100.15
+      })
+    });
+    assert.equal(putRes.status, 200);
+    const putData = await putRes.json();
+    assert.equal(putData.success, true);
+    assert.equal(putData.asset.dataSource, 'DELISTED');
+    assert.equal(putData.asset.lastSyncStatus, 'DELISTED');
+    assert.equal(putData.asset.lastSyncError, null);
+
+    // 2. Query filter with dataSource=DELISTED
+    const filterRes = await fetch(`${baseUrl}/api/assets?dataSource=DELISTED`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(filterRes.status, 200);
+    const filterData = await filterRes.json();
+    assert.equal(filterData.success, true);
+    const delistedAsset = filterData.assets.find(a => a.ticker === 'IT0005240830');
+    assert.ok(delistedAsset, 'Asset must be returned by DELISTED filter');
+    assert.equal(delistedAsset.dataSource, 'DELISTED');
+
+    // 3. POST sync-quote returns message and does NOT scrape external market
+    const syncRes = await fetch(`${baseUrl}/api/assets/IT0005240830/sync-quote`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(syncRes.status, 200);
+    const syncData = await syncRes.json();
+    assert.equal(syncData.success, true);
+    assert.equal(syncData.quote.source, 'DELISTED');
+    assert.equal(syncData.quote.isDelisted, true);
+    assert.equal(syncData.asset.currentPrice, 100.15);
+
+    // 4. POST sync-history preserves cached quotes without error
+    const histRes = await fetch(`${baseUrl}/api/assets/IT0005240830/sync-history`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ period: '5Y' })
+    });
+    assert.equal(histRes.status, 200);
+    const histData = await histRes.json();
+    assert.equal(histData.success, true);
+    assert.ok(histData.message.includes('DELISTED'));
+
+    // Revert to MANUAL for remaining tests
+    await fetch(`${baseUrl}/api/assets/IT0005240830`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ dataSource: 'MANUAL' })
+    });
+  });
+
   // ==========================================
   // 3. TAXONOMY & RAPID CLASSIFICATION
   // ==========================================

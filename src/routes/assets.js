@@ -35,7 +35,7 @@ router.get('/taxonomy', (req, res) => {
       riskCategories: RISK_CATEGORIES,
       regions: REGIONS,
       currencies: CURRENCIES,
-      dataSources: ['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL']
+      dataSources: ['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL', 'DELISTED']
     }
   });
 });
@@ -285,7 +285,7 @@ router.post('/', (req, res) => {
 
   const cleanTicker = ticker.toUpperCase().trim();
   const cleanName = (name || cleanTicker).trim();
-  const validSource = ['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL'].includes(dataSource.toUpperCase())
+  const validSource = ['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL', 'DELISTED'].includes(dataSource.toUpperCase())
     ? dataSource.toUpperCase()
     : 'YAHOO';
 
@@ -333,8 +333,8 @@ router.post('/', (req, res) => {
 
   const saved = db.prepare('SELECT * FROM assets WHERE ticker = ?').get(cleanTicker);
 
-  // Download realtime quote and ensure 5Y historical quotes una tantum if not manual
-  if (validSource !== 'MANUAL') {
+  // Download realtime quote and ensure 5Y historical quotes una tantum if not manual and not delisted
+  if (validSource !== 'MANUAL' && validSource !== 'DELISTED') {
     fetchUnifiedQuote(cleanTicker)
       .catch(e => console.warn(`[Asset Create] Realtime quote fetch failed for ${cleanTicker}:`, e.message));
     ensureHistoricalQuotesIfMissing(cleanTicker)
@@ -392,10 +392,12 @@ router.put('/:ticker', (req, res) => {
 
   let cleanSource = existing.dataSource || 'YAHOO';
   if (dataSource !== undefined) {
-    cleanSource = ['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL'].includes(String(dataSource).toUpperCase())
+    cleanSource = ['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL', 'DELISTED'].includes(String(dataSource).toUpperCase())
       ? String(dataSource).toUpperCase()
       : cleanSource;
   }
+
+  const isDelisted = cleanSource === 'DELISTED';
 
   db.prepare(`
     UPDATE assets
@@ -413,6 +415,10 @@ router.put('/:ticker', (req, res) => {
         dividendYield = ?,
         dataSource = ?,
         pe = ?,
+        lastSyncStatus = CASE WHEN ? THEN 'DELISTED' ELSE lastSyncStatus END,
+        lastSyncError = CASE WHEN ? THEN NULL ELSE lastSyncError END,
+        historicalSyncStatus = CASE WHEN ? THEN 'DELISTED' ELSE historicalSyncStatus END,
+        historicalSyncError = CASE WHEN ? THEN NULL ELSE historicalSyncError END,
         updatedAt = datetime('now')
     WHERE ticker = ?
   `).run(
@@ -430,6 +436,10 @@ router.put('/:ticker', (req, res) => {
     cleanDiv,
     cleanSource,
     cleanPe,
+    isDelisted ? 1 : 0,
+    isDelisted ? 1 : 0,
+    isDelisted ? 1 : 0,
+    isDelisted ? 1 : 0,
     ticker
   );
 
@@ -477,6 +487,31 @@ router.put('/:ticker/classification', (req, res) => {
 router.post('/:ticker/sync-quote', async (req, res) => {
   const ticker = req.params.ticker.toUpperCase().trim();
   try {
+    const asset = db.prepare('SELECT * FROM assets WHERE ticker = ?').get(ticker);
+    if (!asset) {
+      return res.status(404).json({
+        success: false,
+        error: `Titolo '${ticker}' non trovato nel catalogo.`
+      });
+    }
+
+    if (asset.dataSource === 'DELISTED') {
+      return res.json({
+        success: true,
+        message: `Titolo '${ticker}' è contrassegnato come DELISTED. Aggiornamento quotazioni live disattivato.`,
+        quote: {
+          ticker,
+          name: asset.name,
+          currentPrice: asset.currentPrice,
+          changePercent: 0,
+          changeValue: 0,
+          source: 'DELISTED',
+          isDelisted: true
+        },
+        asset
+      });
+    }
+
     const quote = await fetchUnifiedQuote(ticker);
     if (!quote) {
       return res.status(404).json({
@@ -511,6 +546,18 @@ router.post('/:ticker/sync-history', async (req, res) => {
   const period = req.body?.period || '5Y';
 
   try {
+    const asset = db.prepare('SELECT * FROM assets WHERE ticker = ?').get(ticker);
+    if (asset && asset.dataSource === 'DELISTED') {
+      const count = db.prepare('SELECT COUNT(*) as c FROM asset_quotes WHERE ticker = ?').get(ticker).c;
+      return res.json({
+        success: true,
+        ticker,
+        period,
+        count,
+        message: `Titolo '${ticker}' è contrassegnato come DELISTED. Storico esistente mantenuto (${count} punti).`
+      });
+    }
+
     const points = await fetchUnifiedHistorical(ticker, period);
     const count = points ? points.length : 0;
 

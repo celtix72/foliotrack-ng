@@ -174,7 +174,7 @@ function createSchema(database) {
       highPrice REAL DEFAULT 0.0,
       lowPrice REAL DEFAULT 0.0,
       previousClose REAL DEFAULT 0.0,
-      dataSource TEXT DEFAULT 'YAHOO' CHECK(dataSource IN ('YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL')),
+      dataSource TEXT DEFAULT 'YAHOO' CHECK(dataSource IN ('YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL', 'DELISTED')),
       quoteDate TEXT,
       marketState TEXT,
       regularMarketTime TEXT,

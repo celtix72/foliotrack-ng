@@ -564,11 +564,12 @@ async function loadAssets() {
         : 'Nessun prezzo storico 5Y scaricato';
 
       const sourceVal = a.dataSource || 'YAHOO';
+      const isDelisted = sourceVal === 'DELISTED';
 
-      // Check sync errors for alert display
+      // Check sync errors for alert display (suppressed for DELISTED assets)
       const isRealtimeError = a.lastSyncStatus === 'ERROR';
       const isHistoricalError = a.historicalSyncStatus === 'ERROR';
-      const hasSyncError = isRealtimeError || isHistoricalError;
+      const hasSyncError = !isDelisted && (isRealtimeError || isHistoricalError);
 
       let errorTooltip = '';
       if (isRealtimeError && isHistoricalError) {
@@ -586,6 +587,12 @@ async function loadAssets() {
           </span>`
         : '';
 
+      const delistedBadgeHtml = isDelisted
+        ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30 ml-2 shadow-2xs" title="Titolo Delistato: storico e movimenti mantenuti, aggiornamento disattivato">
+            DELISTED
+          </span>`
+        : '';
+
       return `
         <tr class="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
           <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">
@@ -593,6 +600,7 @@ async function loadAssets() {
               <span class="font-mono text-xs px-2 py-0.5 rounded bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/10">
                 ${a.ticker}
               </span>
+              ${delistedBadgeHtml}
               ${alertBadgeHtml}
             </div>
           </td>
@@ -613,12 +621,14 @@ async function loadAssets() {
                 sourceVal === 'YAHOO' ? 'border-blue-500/30 text-blue-600 bg-blue-500/5 dark:text-blue-400' :
                 sourceVal === 'BORSA_ITALIANA' ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/5 dark:text-emerald-400' :
                 sourceVal === 'GOOGLE' ? 'border-amber-500/30 text-amber-600 bg-amber-500/5 dark:text-amber-400' :
+                sourceVal === 'DELISTED' ? 'border-purple-500/30 text-purple-600 bg-purple-500/5 dark:text-purple-400' :
                 'border-gray-500/30 text-gray-600 bg-gray-500/5 dark:text-gray-400'
               }">
               <option value="YAHOO" ${sourceVal === 'YAHOO' ? 'selected' : ''}>Yahoo Finance</option>
               <option value="BORSA_ITALIANA" ${sourceVal === 'BORSA_ITALIANA' ? 'selected' : ''}>Borsa Italiana</option>
               <option value="GOOGLE" ${sourceVal === 'GOOGLE' ? 'selected' : ''}>Google Finance</option>
               <option value="MANUAL" ${sourceVal === 'MANUAL' ? 'selected' : ''}>Manuale</option>
+              <option value="DELISTED" ${sourceVal === 'DELISTED' ? 'selected' : ''}>DELISTED (Non aggiornare)</option>
             </select>
           </td>
           <td class="px-4 py-3 text-right font-mono font-bold tabular-nums text-gray-900 dark:text-white">
@@ -898,6 +908,7 @@ async function openQuotesHistoryModal(ticker) {
       asset.dataSource === 'YAHOO' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20' :
       asset.dataSource === 'BORSA_ITALIANA' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
       asset.dataSource === 'GOOGLE' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' :
+      asset.dataSource === 'DELISTED' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' :
       'bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20'
     }`;
 

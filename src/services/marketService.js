@@ -77,6 +77,23 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
     if (!preferredSource) preferredSource = borsa.isIsin(symbol) ? 'BORSA_ITALIANA' : 'YAHOO';
   }
 
+  // Handle DELISTED source: do not scrape, preserve current price and history
+  if (preferredSource === 'DELISTED') {
+    return {
+      ticker: symbol,
+      name: assetRow?.name || symbol,
+      type: assetRow?.type || 'EQUITY',
+      exchange: assetRow?.exchange || '',
+      currency: assetRow?.currency || 'EUR',
+      currentPrice: assetRow?.currentPrice || 0,
+      changePercent: 0,
+      changeValue: 0,
+      source: 'DELISTED',
+      isDelisted: true,
+      quoteDate: assetRow?.quoteDate || getTradingDateStr()
+    };
+  }
+
   // Handle MANUAL source: do not scrape, preserve current price
   if (preferredSource === 'MANUAL' && assetRow && assetRow.currentPrice > 0) {
     return {
@@ -260,6 +277,16 @@ async function fetchUnifiedHistorical(ticker, period = '5Y', forcedSource = null
 
   let points = [];
 
+  // Handle DELISTED source: do not scrape external APIs, return existing SQLite cached points
+  if (preferredSource === 'DELISTED') {
+    return db.prepare(`
+      SELECT date, close, volume, source
+      FROM asset_quotes
+      WHERE ticker = ?
+      ORDER BY date ASC
+    `).all(symbol);
+  }
+
   if (preferredSource === 'BORSA_ITALIANA' || borsa.isIsin(symbol)) {
     try {
       points = await borsa.fetchHistorical(symbol, period);
@@ -361,7 +388,7 @@ async function ensureHistoricalQuotesIfMissing(ticker) {
 
   try {
     const asset = db.prepare('SELECT ticker, dataSource FROM assets WHERE ticker = ?').get(symbol);
-    if (!asset || asset.dataSource === 'MANUAL') return false;
+    if (!asset || asset.dataSource === 'MANUAL' || asset.dataSource === 'DELISTED') return false;
 
     const countRow = db.prepare('SELECT COUNT(*) as c FROM asset_quotes WHERE ticker = ?').get(symbol);
     if (!countRow || countRow.c === 0) {
@@ -407,6 +434,13 @@ async function updateAllAssetPrices(options = {}) {
 
   for (const ticker of tickers) {
     try {
+      const asset = db.prepare('SELECT ticker, dataSource, currentPrice FROM assets WHERE ticker = ?').get(ticker);
+      if (asset?.dataSource === 'DELISTED') {
+        updatedCount++;
+        results.push({ ticker, status: 'DELISTED', price: asset.currentPrice || 0, source: 'DELISTED' });
+        continue;
+      }
+
       // Ensure historical quotes are downloaded one-off if missing
       await ensureHistoricalQuotesIfMissing(ticker);
 
@@ -477,6 +511,13 @@ async function syncAllAssetsHistorical(delayMs = 200) {
 
   for (const ticker of tickers) {
     try {
+      const asset = db.prepare('SELECT ticker, dataSource FROM assets WHERE ticker = ?').get(ticker);
+      if (asset?.dataSource === 'DELISTED') {
+        succeeded++;
+        results.push({ ticker, count: 0, status: 'DELISTED' });
+        continue;
+      }
+
       const points = await fetchUnifiedHistorical(ticker, '5Y');
       const count = points ? points.length : 0;
       if (count > 0) {

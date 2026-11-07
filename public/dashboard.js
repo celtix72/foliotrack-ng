@@ -262,6 +262,11 @@
   function isAssetMarketClosed(h, refDate = new Date()) {
     if (!h) return false;
 
+    // 0. DELISTED assets never trade
+    if (h.dataSource === 'DELISTED') {
+      return true;
+    }
+
     // 1. Crypto trades 24/7/365 uninterrupted
     const type = (h.type || '').toUpperCase();
     if (type === 'CRYPTO') {
@@ -337,6 +342,14 @@
    * Returns human-readable status metadata for an asset's market state.
    */
   function getAssetMarketStatusInfo(h, refDate = new Date()) {
+    if (h && h.dataSource === 'DELISTED') {
+      return {
+        isClosed: true,
+        label: 'DELISTED',
+        reason: 'Titolo Delistato (Aggiornamenti quotazioni disattivati, storico preservato)'
+      };
+    }
+
     const isClosed = isAssetMarketClosed(h, refDate);
     const curr = (h.currency || 'EUR').toUpperCase();
     const exchange = (h.exchange || '').toUpperCase();
