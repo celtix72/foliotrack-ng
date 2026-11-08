@@ -187,6 +187,79 @@ describe('Mobile Custom Widgets: Category Quotes & Top Winner/Loser 1D (Photos 1
     assert.ok(html.includes('CHIUSO'), 'Must show CHIUSO badge for closed US market');
   });
 
+  test('WIDGET_RENDERERS.categoryQuotes provides compact layout, category pills, select dropdown, and category filtering', () => {
+    const code = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
+
+    const renderersMatch = code.match(/const WIDGET_RENDERERS = \{([\s\S]*?)\n  \};/);
+    const evalEnv = vm.createContext({
+      localStorage: {
+        getItem: (k) => k === 'foliotrack_catquotes_filter' ? 'ALL' : null,
+        setItem: () => {}
+      },
+      document: {
+        getElementById: () => null,
+        querySelector: () => ({})
+      }
+    });
+
+    vm.runInContext(`
+      ${code.substring(code.indexOf('function formatEur'), code.indexOf('const WIDGET_RENDERERS'))}
+      const WIDGET_RENDERERS = {
+        ${renderersMatch[1]}
+      };
+      this.renderCategoryQuotes = WIDGET_RENDERERS.categoryQuotes;
+      this.getFilter = () => activeCategoryQuotesFilter;
+      this.setFilterDirect = (f) => { activeCategoryQuotesFilter = f; };
+    `, evalEnv);
+
+    const mockHoldings = {
+      activeHoldings: [
+        {
+          ticker: 'MSF.DE',
+          type: 'EQUITY',
+          currency: 'EUR',
+          quantity: 10,
+          currentPrice: 485.00,
+          pmc: 400.00,
+          marketValue: 4850.00,
+          unrealizedPnl: 850.00,
+          changePercent: 1.5,
+          changeValue: 7.2,
+          dayPnlEur: 72.0,
+          quoteDate: new Date().toISOString().split('T')[0]
+        },
+        {
+          ticker: 'VWCE.DE',
+          type: 'ETF',
+          currency: 'EUR',
+          quantity: 50,
+          currentPrice: 114.80,
+          pmc: 100.00,
+          marketValue: 5740.00,
+          unrealizedPnl: 740.00,
+          changePercent: -0.5,
+          dayPnlEur: -28.7,
+          quoteDate: new Date().toISOString().split('T')[0]
+        }
+      ]
+    };
+
+    // 1. All view renders category selector pills and dropdown
+    const allHtml = evalEnv.renderCategoryQuotes(mockHoldings);
+    assert.ok(allHtml.includes('data-catquotes-filter="ALL"'), 'Must have "Tutte" category filter pill');
+    assert.ok(allHtml.includes('data-catquotes-filter="AZIONI_EUR"'), 'Must have AZIONI_EUR pill');
+    assert.ok(allHtml.includes('data-catquotes-filter="ETF"'), 'Must have ETF pill');
+    assert.ok(allHtml.includes('data-catquotes-select'), 'Must have category select dropdown');
+    assert.ok(allHtml.includes('MSF.DE'), 'All view must show MSF.DE');
+    assert.ok(allHtml.includes('VWCE.DE'), 'All view must show VWCE.DE');
+
+    // 2. Filter to ETF only
+    evalEnv.setFilterDirect('ETF');
+    const etfHtml = evalEnv.renderCategoryQuotes(mockHoldings);
+    assert.ok(etfHtml.includes('VWCE.DE'), 'Filtered view must include VWCE.DE');
+    assert.ok(!etfHtml.includes('MSF.DE'), 'Filtered ETF view must not include MSF.DE');
+  });
+
   test('WIDGET_RENDERERS.moversDay renders TOP WINNER / LOSER (1D) with % and Valore toggle (Photo 3)', () => {
     const code = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
 

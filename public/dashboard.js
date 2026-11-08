@@ -184,6 +184,7 @@
 
   let activeMoversMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_movers_mode') : null) || 'pct';
   let activeCompactSort = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_compact_sort') : null) || 'day_desc';
+  let activeCategoryQuotesFilter = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_catquotes_filter') : null) || 'ALL';
   let collapsedCategorySet = new Set();
   try {
     const rawCollapsed = typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_collapsed_categories') : null;
@@ -1659,7 +1660,7 @@
       `;
     },
 
-    // 11b. Quotazioni per Categoria (Accordion live view - Photos 1 & 2)
+    // 11b. Quotazioni per Categoria (Compact live view with category selectors)
     categoryQuotes: (data) => {
       const holdings = data.activeHoldings || [];
       if (holdings.length === 0) {
@@ -1672,11 +1673,112 @@
 
       const categories = groupHoldingsByCategory(holdings);
 
+      let currentFilter = (typeof activeCategoryQuotesFilter !== 'undefined') ? activeCategoryQuotesFilter : 'ALL';
+      if (currentFilter !== 'ALL' && !categories.some(c => c.id === currentFilter)) {
+        currentFilter = 'ALL';
+      }
+
+      // Compute summary stats for the active filter scope
+      let scopeHoldingsCount = 0;
+      let scopeDayPnl = 0;
+      let scopeCostBasis = 0;
+      let scopeUnrealizedPnl = 0;
+
+      const activeCategories = currentFilter === 'ALL'
+        ? categories
+        : categories.filter(c => c.id === currentFilter);
+
+      for (const cat of activeCategories) {
+        scopeHoldingsCount += cat.holdings.length;
+        scopeDayPnl += cat.totDayPnl;
+        scopeCostBasis += cat.totCostBasis;
+        scopeUnrealizedPnl += cat.totUnrealizedPnl;
+      }
+      const scopePnlPct = scopeCostBasis > 0 ? (scopeUnrealizedPnl / scopeCostBasis) * 100 : 0;
+
+      const scopeDayNum = Math.round(scopeDayPnl);
+      const scopeDaySign = scopeDayNum > 0 ? '+' : (scopeDayNum < 0 ? '-' : '');
+      const scopeDayStr = Math.abs(scopeDayNum) >= 1000
+        ? `${scopeDaySign}${(Math.abs(scopeDayNum) / 1000).toFixed(1).replace('.', ',')}k`
+        : `${scopeDaySign}${Math.abs(scopeDayNum).toLocaleString('it-IT')} €`;
+
+      const scopeTotNum = Math.round(scopeUnrealizedPnl);
+      const scopeTotSign = scopeTotNum > 0 ? '+' : (scopeTotNum < 0 ? '-' : '');
+      const scopeTotStr = Math.abs(scopeTotNum) >= 1000
+        ? `${scopeTotSign}${(Math.abs(scopeTotNum) / 1000).toFixed(1).replace('.', ',')}k`
+        : `${scopeTotSign}${Math.abs(scopeTotNum).toLocaleString('it-IT')} €`;
+
+      const scopePctSign = scopePnlPct >= 0 ? '+' : '';
+      const scopePctStr = `${scopePctSign}${scopePnlPct.toFixed(1).replace('.', ',')}%`;
+
+      const pillButtons = [
+        { id: 'ALL', label: 'Tutte', count: holdings.length },
+        ...categories.map(c => ({ id: c.id, label: c.title, count: c.holdings.length }))
+      ].map(tab => {
+        const isActive = currentFilter === tab.id;
+        return `
+          <button type="button"
+            class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium transition shrink-0 cursor-pointer ${isActive ? 'bg-amber-600 text-white font-bold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-white/5'}"
+            data-catquotes-filter="${tab.id}">
+            ${tab.label} <span class="opacity-75 text-[9px]">(${tab.count})</span>
+          </button>
+        `;
+      }).join('');
+
+      const selectOptions = [
+        `<option value="ALL" ${currentFilter === 'ALL' ? 'selected' : ''}>Tutte (${holdings.length})</option>`,
+        ...categories.map(c => `<option value="${c.id}" ${currentFilter === c.id ? 'selected' : ''}>${c.title} (${c.holdings.length})</option>`)
+      ].join('');
+
       return `
         <div class="h-full flex flex-col -m-2 sm:-m-3 overflow-hidden select-none">
-          <div class="flex-1 overflow-y-auto no-scrollbar space-y-2 py-1">
-            ${categories.map(cat => {
-              const isCollapsed = collapsedCategorySet.has(cat.id);
+          <!-- Top Control Header: Scope summary + Category selectors -->
+          <div class="px-2.5 sm:px-3 pt-2 pb-1.5 border-b border-gray-100 dark:border-white/5 shrink-0 bg-white/40 dark:bg-black/20">
+            <div class="flex items-center justify-between gap-1 mb-1.5">
+              <div class="flex items-center space-x-1.5 min-w-0">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">Quotazioni Categorie</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">${scopeHoldingsCount} Titoli</span>
+              </div>
+
+              <!-- Scope KPIs (DAILY & TOT P&L) -->
+              <div class="flex items-center space-x-2 text-right shrink-0">
+                <div class="leading-none">
+                  <span class="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">DAILY</span>
+                  <span class="text-[11px] sm:text-xs font-mono font-bold leading-tight ${scopeDayNum >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeDayStr}</span>
+                </div>
+                <div class="border-l border-gray-200 dark:border-white/10 pl-2 leading-none">
+                  <span class="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">TOT P&L</span>
+                  <span class="text-[10px] sm:text-[11px] font-mono font-bold leading-tight ${scopeUnrealizedPnl >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeTotStr} (${scopePctStr})</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Specific Category Selectors (Pills & Dropdown) -->
+            <div class="flex items-center justify-between gap-1">
+              <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
+                ${pillButtons}
+              </div>
+              <div class="shrink-0 pl-1">
+                <select data-catquotes-select class="text-[10px] font-mono font-semibold py-0.5 px-1.5 rounded bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 border-0 focus:ring-1 focus:ring-amber-500 cursor-pointer max-w-[110px] truncate" aria-label="Seleziona categoria">
+                  ${selectOptions}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Single Sticky Table Header -->
+          <div class="px-2.5 py-1 bg-gray-50/95 dark:bg-[#18181b]/95 backdrop-blur border-b border-gray-200/60 dark:border-white/10 text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wider shrink-0"
+               style="display: grid; grid-template-columns: 1.15fr 1.25fr 1.1fr 1.2fr; align-items: center;">
+            <div class="text-left pl-0.5">TICKER</div>
+            <div class="text-right">PREZZO</div>
+            <div class="text-right pr-1">% GIORNO</div>
+            <div class="text-right pr-0.5">VAL GIORNO</div>
+          </div>
+
+          <!-- Table Body Content -->
+          <div class="flex-1 overflow-y-auto no-scrollbar divide-y divide-gray-100/50 dark:divide-white/5">
+            ${activeCategories.map(cat => {
+              const isCollapsed = currentFilter === 'ALL' && collapsedCategorySet.has(cat.id);
               const dayNum = Math.round(cat.totDayPnl);
               const daySign = dayNum > 0 ? '+' : (dayNum < 0 ? '-' : '+');
               const dayStyleColor = dayNum > 0 ? '#15803D' : (dayNum < 0 ? '#DC2626' : '#78350F');
@@ -1700,167 +1802,154 @@
               const totPctStr = `${pctSign}${pctNum.toFixed(1).replace('.', ',')} %`;
 
               return `
-                <div class="category-block border-y border-amber-300 dark:border-amber-700/60 shadow-xs mb-2 bg-white dark:bg-[#141416]">
-                  <!-- Accordion Header Banner (Yellow/Warm theme matching Photo 1 & 2) -->
-                  <div class="category-header cursor-pointer select-none px-3 py-2 flex items-center justify-between"
+                <div class="category-block bg-white dark:bg-[#141416]">
+                  <!-- Compact Category Banner -->
+                  <div class="category-header cursor-pointer select-none px-2.5 py-1 flex items-center justify-between border-y border-amber-300/70 dark:border-amber-700/60"
                        style="background-color: #FEF9C3;"
                        data-toggle-category="${cat.id}">
-                    <!-- Left: Chevron + Dot + Title -->
-                    <div class="flex items-center space-x-2 min-w-0 pr-2">
-                      <span id="cat-chevron-${cat.id}" class="transform transition-transform duration-200 font-black text-sm shrink-0 ${isCollapsed ? '-rotate-90' : 'rotate-0'}" style="color: #78350F !important;">
+                    <!-- Left: Chevron + Dot + Title + Count -->
+                    <div class="flex items-center space-x-1.5 min-w-0 pr-1">
+                      <span id="cat-chevron-${cat.id}" class="transform transition-transform duration-150 font-black text-xs shrink-0 ${isCollapsed ? '-rotate-90' : 'rotate-0'}" style="color: #78350F !important;">
                         ⌄
                       </span>
-                      <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style="background-color: #2563EB;"></span>
-                      <span class="font-extrabold text-xs sm:text-sm tracking-wider uppercase font-mono truncate" style="color: #78350F !important;">
+                      <span class="w-2 h-2 rounded-full inline-block shrink-0 shadow-xs" style="background-color: #2563EB;"></span>
+                      <span class="font-extrabold text-[11px] sm:text-xs tracking-wider uppercase font-mono truncate" style="color: #78350F !important;">
                         ${cat.title}
+                      </span>
+                      <span class="text-[9px] font-mono font-bold" style="color: #92400E !important;">
+                        (${cat.holdings.length})
                       </span>
                     </div>
 
-                    <!-- Right: Two Metric Columns -->
-                    <div class="flex items-center space-x-3.5 shrink-0">
-                      <!-- Column 1: Daily delta -->
-                      <div class="text-right">
-                        <div class="text-xs sm:text-sm font-extrabold font-mono leading-tight ${dayColor}" style="color: ${dayStyleColor} !important;">
+                    <!-- Right: Compact Metrics (DAILY & TOT P&L) -->
+                    <div class="flex items-center space-x-2 shrink-0 text-right">
+                      <div class="leading-none">
+                        <span class="text-[11px] sm:text-xs font-extrabold font-mono ${dayColor}" style="color: ${dayStyleColor} !important;">
                           ${dayStr}
-                        </div>
-                        <div class="text-[9px] font-black tracking-widest uppercase font-mono" style="color: #92400E !important;">
+                        </span>
+                        <span class="text-[8px] sm:text-[9px] font-black uppercase font-mono ml-0.5" style="color: #92400E !important;">
                           DAILY
-                        </div>
+                        </span>
                       </div>
-
-                      <!-- Column 2: Total P&L / Return -->
-                      <div class="text-right">
-                        <div class="text-xs sm:text-sm font-extrabold font-mono leading-tight ${totColor}" style="color: ${totStyleColor} !important;">
+                      <div class="border-l border-amber-400/60 dark:border-amber-600/60 pl-2 leading-none">
+                        <span class="text-[10px] sm:text-[11px] font-extrabold font-mono ${totColor}" style="color: ${totStyleColor} !important;">
                           ${totStr}
-                        </div>
-                        <div class="text-[10px] font-extrabold font-mono leading-tight ${totPctColor}" style="color: ${totPctStyleColor} !important;">
-                          ${totPctStr}
-                        </div>
+                        </span>
+                        <span class="text-[9px] sm:text-[10px] font-extrabold font-mono ${totPctColor}" style="color: ${totPctStyleColor} !important;">
+                          (${totPctStr})
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Table Section -->
-                  <div id="cat-body-${cat.id}" class="${isCollapsed ? 'hidden' : ''}">
-                    <!-- Table Header Row -->
-                    <div class="px-3 py-1.5 bg-gray-50/90 dark:bg-[#18181b] border-b border-gray-200/60 dark:border-white/5 text-[10px] sm:text-[11px] font-extrabold font-mono text-gray-500 uppercase tracking-wider"
-                         style="display: grid; grid-template-columns: 1.1fr 1.3fr 1.1fr 1.2fr; align-items: center;">
-                      <div class="text-left pl-0.5">TICKER</div>
-                      <div class="text-right">PREZZO</div>
-                      <div class="text-right pr-1.5">% GIORNO</div>
-                      <div class="text-right pr-0.5">VAL GIORNO</div>
-                    </div>
+                  <!-- Table Rows Section -->
+                  <div id="cat-body-${cat.id}" class="${isCollapsed ? 'hidden' : ''} divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-[#141416]">
+                    ${cat.holdings.map(h => {
+                      const isToday = isHoldingQuotedToday(h);
+                      const isClosed = !isToday;
+                      const isNonEur = cat.currency !== 'EUR';
 
-                    <!-- Table Rows -->
-                    <div class="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-[#141416]">
-                      ${cat.holdings.map(h => {
-                        const isToday = isHoldingQuotedToday(h);
-                        const isClosed = !isToday;
-                        const isMarketClosed = isAssetMarketClosed(h);
-                        const isNonEur = cat.currency !== 'EUR';
+                      const rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;
+                      const priceStr = rawPrice.toLocaleString('it-IT', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      }) + ' ' + cat.currSym;
 
-                        const rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;
-                        const priceStr = rawPrice.toLocaleString('it-IT', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        }) + ' ' + cat.currSym;
-
-                        let dayVal = 0;
-                        if (isToday && !isClosed) {
-                          dayVal = Number(isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur) || 0;
-                          if (!dayVal && h.changeValue && h.quantity) {
-                            dayVal = Number(h.changeValue) * Number(h.quantity);
-                          }
+                      let dayVal = 0;
+                      if (isToday && !isClosed) {
+                        dayVal = Number(isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur) || 0;
+                        if (!dayVal && h.changeValue && h.quantity) {
+                          dayVal = Number(h.changeValue) * Number(h.quantity);
                         }
+                      }
 
-                        const dayPct = isToday && !isClosed ? (Number(h.changePercent) || 0) : 0;
+                      const dayPct = isToday && !isClosed ? (Number(h.changePercent) || 0) : 0;
 
-                        let pctBadgeHtml = '';
-                        if (isClosed) {
-                          pctBadgeHtml = `
-                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tracking-wide uppercase" style="background-color: #E2E8F0; color: #475569;">
-                              CHIUSO
-                            </span>
-                          `;
-                        } else if (Math.abs(dayPct) < 0.0001) {
-                          pctBadgeHtml = `
-                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #F1F5F9; color: #334155;">
-                              0,00%
-                            </span>
-                          `;
-                        } else if (dayPct > 0) {
-                          pctBadgeHtml = `
-                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #DCFCE7; color: #15803D;">
-                              +${dayPct.toFixed(2).replace('.', ',')}%
-                            </span>
-                          `;
-                        } else {
-                          pctBadgeHtml = `
-                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tabular-nums" style="background-color: #FFE4E6; color: #BE123C;">
-                              ${dayPct.toFixed(2).replace('.', ',')}%
-                            </span>
-                          `;
-                        }
-
-                        let valGiornoHtml = '';
-                        const absCatDayVal = Math.abs(dayVal);
-                        let formattedCatDayDelta = '';
-                        if (absCatDayVal >= 1000) {
-                          formattedCatDayDelta = (absCatDayVal / 1000).toFixed(1).replace('.', ',') + 'k';
-                        } else {
-                          formattedCatDayDelta = Math.abs(Math.round(dayVal)).toLocaleString('it-IT') + ' ' + cat.currSym;
-                        }
-
-                        if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
-                          const zeroLabel = `0 ${cat.currSym}`;
-                          valGiornoHtml = `
-                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
-                              ${zeroLabel}
-                            </span>
-                          `;
-                        } else if (dayVal > 0) {
-                          valGiornoHtml = `
-                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;">
-                              +${formattedCatDayDelta}
-                            </span>
-                          `;
-                        } else {
-                          valGiornoHtml = `
-                            <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;">
-                              -${formattedCatDayDelta}
-                            </span>
-                          `;
-                        }
-
-                        return `
-                          <div class="px-3 py-2 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition"
-                               style="display: grid; grid-template-columns: 1.1fr 1.3fr 1.1fr 1.2fr; align-items: center;"
-                               data-open-asset="${h.ticker}">
-                            <!-- Ticker Badge -->
-                            <div class="text-left pl-0.5">
-                              <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-black font-mono text-xs sm:text-sm tracking-tight cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10">
-                                ${h.ticker}
-                              </span>
-                            </div>
-
-                            <!-- Prezzo -->
-                            <div class="text-right font-extrabold font-mono text-xs sm:text-sm text-gray-900 dark:text-gray-100 tabular-nums">
-                              ${priceStr}
-                            </div>
-
-                            <!-- % Giorno -->
-                            <div class="text-right pr-1.5">
-                              ${pctBadgeHtml}
-                            </div>
-
-                            <!-- Val Giorno -->
-                            <div class="text-right pr-0.5">
-                              ${valGiornoHtml}
-                            </div>
-                          </div>
+                      let pctBadgeHtml = '';
+                      if (isClosed) {
+                        pctBadgeHtml = `
+                          <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-bold font-mono text-[9px] sm:text-[10px] tracking-wide uppercase" style="background-color: #E2E8F0; color: #475569;">
+                            CHIUSO
+                          </span>
                         `;
-                      }).join('')}
-                    </div>
+                      } else if (Math.abs(dayPct) < 0.0001) {
+                        pctBadgeHtml = `
+                          <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-bold font-mono text-[10px] tabular-nums" style="background-color: #F1F5F9; color: #334155;">
+                            0,00%
+                          </span>
+                        `;
+                      } else if (dayPct > 0) {
+                        pctBadgeHtml = `
+                          <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-bold font-mono text-[10px] tabular-nums" style="background-color: #DCFCE7; color: #15803D;">
+                            +${dayPct.toFixed(2).replace('.', ',')}%
+                          </span>
+                        `;
+                      } else {
+                        pctBadgeHtml = `
+                          <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-bold font-mono text-[10px] tabular-nums" style="background-color: #FFE4E6; color: #BE123C;">
+                            ${dayPct.toFixed(2).replace('.', ',')}%
+                          </span>
+                        `;
+                      }
+
+                      let valGiornoHtml = '';
+                      const absCatDayVal = Math.abs(dayVal);
+                      let formattedCatDayDelta = '';
+                      if (absCatDayVal >= 1000) {
+                        formattedCatDayDelta = (absCatDayVal / 1000).toFixed(1).replace('.', ',') + 'k';
+                      } else {
+                        formattedCatDayDelta = Math.abs(Math.round(dayVal)).toLocaleString('it-IT') + ' ' + cat.currSym;
+                      }
+
+                      if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
+                        const zeroLabel = `0 ${cat.currSym}`;
+                        valGiornoHtml = `
+                          <span class="text-right font-extrabold font-mono text-[11px] sm:text-xs tabular-nums" style="color: #64748B;">
+                            ${zeroLabel}
+                          </span>
+                        `;
+                      } else if (dayVal > 0) {
+                        valGiornoHtml = `
+                          <span class="text-right font-extrabold font-mono text-[11px] sm:text-xs tabular-nums" style="color: #15803D;">
+                            +${formattedCatDayDelta}
+                          </span>
+                        `;
+                      } else {
+                        valGiornoHtml = `
+                          <span class="text-right font-extrabold font-mono text-[11px] sm:text-xs tabular-nums" style="color: #BE123C;">
+                            -${formattedCatDayDelta}
+                          </span>
+                        `;
+                      }
+
+                      return `
+                        <div class="px-2.5 py-1 sm:py-1.2 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/60 dark:hover:bg-white/5 transition cursor-pointer"
+                             style="display: grid; grid-template-columns: 1.15fr 1.25fr 1.1fr 1.2fr; align-items: center;"
+                             data-open-asset="${h.ticker}">
+                          <!-- Ticker Badge -->
+                          <div class="text-left pl-0.5">
+                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-black font-mono text-[11px] sm:text-xs tracking-tight cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10">
+                              ${h.ticker}
+                            </span>
+                          </div>
+
+                          <!-- Prezzo -->
+                          <div class="text-right font-extrabold font-mono text-[11px] sm:text-xs text-gray-900 dark:text-gray-100 tabular-nums">
+                            ${priceStr}
+                          </div>
+
+                          <!-- % Giorno -->
+                          <div class="text-right pr-1">
+                            ${pctBadgeHtml}
+                          </div>
+
+                          <!-- Val Giorno -->
+                          <div class="text-right pr-0.5">
+                            ${valGiornoHtml}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
                   </div>
                 </div>
               `;
@@ -3960,6 +4049,14 @@
         }
       }
 
+      // 6b. Category Quotes Filter (Pills)
+      const catFilterBtn = e.target.closest('[data-catquotes-filter]');
+      if (catFilterBtn) {
+        const catFilter = catFilterBtn.getAttribute('data-catquotes-filter');
+        setCategoryQuotesFilter(catFilter);
+        return;
+      }
+
       // 7. Category Accordion Toggle (Photos 1 & 2)
       const catHeader = e.target.closest('[data-toggle-category]');
       if (catHeader) {
@@ -3977,8 +4074,14 @@
       }
     });
 
-    // Checkbox change for widget visibility
+    // Change events for filters & widget visibility
     document.addEventListener('change', (e) => {
+      const catSelect = e.target.closest('[data-catquotes-select]');
+      if (catSelect) {
+        setCategoryQuotesFilter(catSelect.value);
+        return;
+      }
+
       const chk = e.target.closest('[data-widget-checkbox]');
       if (chk) {
         const wId = chk.getAttribute('data-widget-checkbox');
@@ -4023,6 +4126,27 @@
     }
   }
 
+  function setCategoryQuotesFilter(filterId) {
+    if (filterId === activeCategoryQuotesFilter) return;
+    activeCategoryQuotesFilter = filterId;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('foliotrack_catquotes_filter', filterId);
+      }
+    } catch {}
+    if (rawPortfolioData) {
+      const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+      const catEl = document.getElementById('widget-body-categoryQuotes');
+      if (catEl && WIDGET_RENDERERS.categoryQuotes) {
+        catEl.innerHTML = WIDGET_RENDERERS.categoryQuotes(activeView);
+      }
+      const brkEl = document.getElementById('widget-body-breakdown');
+      if (brkEl && isMobileDashboard() && WIDGET_RENDERERS.categoryQuotes) {
+        brkEl.innerHTML = WIDGET_RENDERERS.categoryQuotes(activeView);
+      }
+    }
+  }
+
   function openAssetDetail(ticker) {
     if (!ticker) return;
     const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
@@ -4054,6 +4178,7 @@
     resetDefaultWidgets,
     openAssetDetail,
     toggleCategoryAccordion,
+    setCategoryQuotesFilter,
     setMoversMode,
     setCompactSort: (s) => {
       activeCompactSort = s;
