@@ -163,6 +163,12 @@ describe('Reports & PDF Section under Strumenti (/reports & /api/reports)', () =
     assert.ok(html.includes('data-subpage="reports"'), 'Sidebar subpage link should be present');
     assert.ok(html.includes('Zainetto Fiscale & Minusvalenze'), 'Zainetto Fiscale section should be in page');
     assert.ok(html.includes('/pdf_report.js'), 'pdf_report script included');
+    // Verify 2-line compacted column headers
+    assert.ok(html.includes('Asset / Strumento'), 'Compact col 1 header');
+    assert.ok(html.includes('Q.tà / PMC'), 'Compact col 2 header');
+    assert.ok(html.includes('Quotaz. / Costo'), 'Compact col 3 header');
+    assert.ok(html.includes('Valore Att. / Peso'), 'Compact col 4 header');
+    assert.ok(html.includes('Gain / Rend.'), 'Compact col 5 header');
   });
 
   test('2. GET /reports?view=mobile serves mobile layout', async () => {
@@ -258,3 +264,4 @@ describe('Reports & PDF Section under Strumenti (/reports & /api/reports)', () =
     assert.ok(html.includes('aiDiversificationScore'));
   });
 });
+

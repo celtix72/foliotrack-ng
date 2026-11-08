@@ -13,7 +13,7 @@
         @media print {
           @page {
             size: A4 portrait;
-            margin: 12mm 15mm 15mm 15mm;
+            margin: 8mm 10mm 10mm 10mm;
           }
           body {
             background: #ffffff !important;
@@ -35,11 +35,21 @@
             break-inside: avoid !important;
             margin-bottom: 12px !important;
           }
+          table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+          }
+          th, td {
+            word-wrap: break-word !important;
+          }
           canvas {
             max-width: 100% !important;
             height: auto !important;
           }
-          #printDisclaimer {
+          #printDisclaimer,
+          #printReportFooter {
             display: block !important;
           }
         }
