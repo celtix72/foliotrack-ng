@@ -1718,9 +1718,9 @@
         const isActive = currentFilter === tab.id;
         return `
           <button type="button"
-            class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium transition shrink-0 cursor-pointer ${isActive ? 'bg-amber-600 text-white font-bold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-white/5'}"
+            class="px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-mono font-medium transition shrink-0 cursor-pointer ${isActive ? 'bg-amber-600 text-white font-bold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-white/5'}"
             data-catquotes-filter="${tab.id}">
-            ${tab.label} <span class="opacity-75 text-[9px]">(${tab.count})</span>
+            ${tab.label} <span class="opacity-75 text-[8px] sm:text-[9px]">(${tab.count})</span>
           </button>
         `;
       }).join('');
@@ -1733,22 +1733,22 @@
       return `
         <div class="h-full flex flex-col -m-2 sm:-m-3 overflow-hidden select-none">
           <!-- Top Control Header: Scope summary + Category selectors -->
-          <div class="px-2.5 sm:px-3 pt-2 pb-1.5 border-b border-gray-100 dark:border-white/5 shrink-0 bg-white/40 dark:bg-black/20">
-            <div class="flex items-center justify-between gap-1 mb-1.5">
+          <div class="px-2 sm:px-2.5 pt-1 pb-1 border-b border-gray-100 dark:border-white/5 shrink-0 bg-white/40 dark:bg-black/20">
+            <div class="flex items-center justify-between gap-1 mb-1">
               <div class="flex items-center space-x-1.5 min-w-0">
                 <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">Quotazioni Categorie</span>
-                <span class="px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">${scopeHoldingsCount} Titoli</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">${scopeHoldingsCount} Titoli</span>
               </div>
 
               <!-- Scope KPIs (DAILY & TOT P&L) -->
-              <div class="flex items-center space-x-2 text-right shrink-0">
+              <div class="flex items-center space-x-1.5 text-right shrink-0">
                 <div class="leading-none">
-                  <span class="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">DAILY</span>
-                  <span class="text-[11px] sm:text-xs font-mono font-bold leading-tight ${scopeDayNum >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeDayStr}</span>
+                  <span class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">DAILY</span>
+                  <span class="text-[10px] sm:text-[11px] font-mono font-bold leading-tight ${scopeDayNum >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeDayStr}</span>
                 </div>
-                <div class="border-l border-gray-200 dark:border-white/10 pl-2 leading-none">
-                  <span class="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">TOT P&L</span>
-                  <span class="text-[10px] sm:text-[11px] font-mono font-bold leading-tight ${scopeUnrealizedPnl >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeTotStr} (${scopePctStr})</span>
+                <div class="border-l border-gray-200 dark:border-white/10 pl-1.5 leading-none">
+                  <span class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">TOT P&L</span>
+                  <span class="text-[9px] sm:text-[10px] font-mono font-bold leading-tight ${scopeUnrealizedPnl >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeTotStr} (${scopePctStr})</span>
                 </div>
               </div>
             </div>
@@ -1759,7 +1759,7 @@
                 ${pillButtons}
               </div>
               <div class="shrink-0 pl-1">
-                <select data-catquotes-select class="text-[10px] font-mono font-semibold py-0.5 px-1.5 rounded bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 border-0 focus:ring-1 focus:ring-amber-500 cursor-pointer max-w-[110px] truncate" aria-label="Seleziona categoria">
+                <select data-catquotes-select class="text-[9px] sm:text-[10px] font-mono font-semibold py-0.5 px-1 rounded bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 border-0 focus:ring-1 focus:ring-amber-500 cursor-pointer max-w-[100px] truncate" aria-label="Seleziona categoria">
                   ${selectOptions}
                 </select>
               </div>
@@ -1767,7 +1767,7 @@
           </div>
 
           <!-- Single Sticky Table Header -->
-          <div class="px-2.5 py-1 bg-gray-50/95 dark:bg-[#18181b]/95 backdrop-blur border-b border-gray-200/60 dark:border-white/10 text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wider shrink-0"
+          <div class="px-2 py-0.5 bg-gray-50/95 dark:bg-[#18181b]/95 backdrop-blur border-b border-gray-200/60 dark:border-white/10 text-[9px] sm:text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wider shrink-0 leading-none"
                style="display: grid; grid-template-columns: 1.15fr 1.25fr 1.1fr 1.2fr; align-items: center;">
             <div class="text-left pl-0.5">TICKER</div>
             <div class="text-right">PREZZO</div>
@@ -1804,7 +1804,7 @@
               return `
                 <div class="category-block bg-white dark:bg-[#141416]">
                   <!-- Compact Category Banner -->
-                  <div class="category-header cursor-pointer select-none px-2.5 py-1 flex items-center justify-between border-y border-amber-300/70 dark:border-amber-700/60"
+                  <div class="category-header cursor-pointer select-none px-2 py-0.5 flex items-center justify-between border-y border-amber-300/70 dark:border-amber-700/60 leading-none"
                        style="background-color: #FEF9C3;"
                        data-toggle-category="${cat.id}">
                     <!-- Left: Chevron + Dot + Title + Count -->
@@ -1812,30 +1812,30 @@
                       <span id="cat-chevron-${cat.id}" class="transform transition-transform duration-150 font-black text-xs shrink-0 ${isCollapsed ? '-rotate-90' : 'rotate-0'}" style="color: #78350F !important;">
                         ⌄
                       </span>
-                      <span class="w-2 h-2 rounded-full inline-block shrink-0 shadow-xs" style="background-color: #2563EB;"></span>
-                      <span class="font-extrabold text-[11px] sm:text-xs tracking-wider uppercase font-mono truncate" style="color: #78350F !important;">
+                      <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0 shadow-xs" style="background-color: #2563EB;"></span>
+                      <span class="font-extrabold text-[10px] sm:text-[11px] tracking-wider uppercase font-mono truncate" style="color: #78350F !important;">
                         ${cat.title}
                       </span>
-                      <span class="text-[9px] font-mono font-bold" style="color: #92400E !important;">
+                      <span class="text-[8px] sm:text-[9px] font-mono font-bold" style="color: #92400E !important;">
                         (${cat.holdings.length})
                       </span>
                     </div>
 
                     <!-- Right: Compact Metrics (DAILY & TOT P&L) -->
-                    <div class="flex items-center space-x-2 shrink-0 text-right">
+                    <div class="flex items-center space-x-1.5 shrink-0 text-right">
                       <div class="leading-none">
-                        <span class="text-[11px] sm:text-xs font-extrabold font-mono ${dayColor}" style="color: ${dayStyleColor} !important;">
+                        <span class="text-[10px] sm:text-[11px] font-extrabold font-mono ${dayColor}" style="color: ${dayStyleColor} !important;">
                           ${dayStr}
                         </span>
-                        <span class="text-[8px] sm:text-[9px] font-black uppercase font-mono ml-0.5" style="color: #92400E !important;">
+                        <span class="text-[7px] sm:text-[8px] font-black uppercase font-mono ml-0.5" style="color: #92400E !important;">
                           DAILY
                         </span>
                       </div>
-                      <div class="border-l border-amber-400/60 dark:border-amber-600/60 pl-2 leading-none">
-                        <span class="text-[10px] sm:text-[11px] font-extrabold font-mono ${totColor}" style="color: ${totStyleColor} !important;">
+                      <div class="border-l border-amber-400/60 dark:border-amber-600/60 pl-1.5 leading-none">
+                        <span class="text-[9px] sm:text-[10px] font-extrabold font-mono ${totColor}" style="color: ${totStyleColor} !important;">
                           ${totStr}
                         </span>
-                        <span class="text-[9px] sm:text-[10px] font-extrabold font-mono ${totPctColor}" style="color: ${totPctStyleColor} !important;">
+                        <span class="text-[8px] sm:text-[9px] font-extrabold font-mono ${totPctColor}" style="color: ${totPctStyleColor} !important;">
                           (${totPctStr})
                         </span>
                       </div>
@@ -1868,25 +1868,25 @@
                       let pctBadgeHtml = '';
                       if (isClosed) {
                         pctBadgeHtml = `
-                          <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-bold font-mono text-[9px] sm:text-[10px] tracking-wide uppercase" style="background-color: #E2E8F0; color: #475569;">
+                          <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-bold font-mono text-[8px] sm:text-[9px] tracking-wide uppercase leading-none" style="background-color: #E2E8F0; color: #475569;">
                             CHIUSO
                           </span>
                         `;
                       } else if (Math.abs(dayPct) < 0.0001) {
                         pctBadgeHtml = `
-                          <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-bold font-mono text-[10px] tabular-nums" style="background-color: #F1F5F9; color: #334155;">
+                          <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-bold font-mono text-[9px] sm:text-[10px] tabular-nums leading-none" style="background-color: #F1F5F9; color: #334155;">
                             0,00%
                           </span>
                         `;
                       } else if (dayPct > 0) {
                         pctBadgeHtml = `
-                          <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-bold font-mono text-[10px] tabular-nums" style="background-color: #DCFCE7; color: #15803D;">
+                          <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-bold font-mono text-[9px] sm:text-[10px] tabular-nums leading-none" style="background-color: #DCFCE7; color: #15803D;">
                             +${dayPct.toFixed(2).replace('.', ',')}%
                           </span>
                         `;
                       } else {
                         pctBadgeHtml = `
-                          <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-bold font-mono text-[10px] tabular-nums" style="background-color: #FFE4E6; color: #BE123C;">
+                          <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-bold font-mono text-[9px] sm:text-[10px] tabular-nums leading-none" style="background-color: #FFE4E6; color: #BE123C;">
                             ${dayPct.toFixed(2).replace('.', ',')}%
                           </span>
                         `;
@@ -1904,47 +1904,47 @@
                       if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
                         const zeroLabel = `0 ${cat.currSym}`;
                         valGiornoHtml = `
-                          <span class="text-right font-extrabold font-mono text-[11px] sm:text-xs tabular-nums" style="color: #64748B;">
+                          <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #64748B;">
                             ${zeroLabel}
                           </span>
                         `;
                       } else if (dayVal > 0) {
                         valGiornoHtml = `
-                          <span class="text-right font-extrabold font-mono text-[11px] sm:text-xs tabular-nums" style="color: #15803D;">
+                          <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #15803D;">
                             +${formattedCatDayDelta}
                           </span>
                         `;
                       } else {
                         valGiornoHtml = `
-                          <span class="text-right font-extrabold font-mono text-[11px] sm:text-xs tabular-nums" style="color: #BE123C;">
+                          <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #BE123C;">
                             -${formattedCatDayDelta}
                           </span>
                         `;
                       }
 
                       return `
-                        <div class="px-2.5 py-1 sm:py-1.2 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/60 dark:hover:bg-white/5 transition cursor-pointer"
+                        <div class="px-2 py-[2px] border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer select-none leading-tight"
                              style="display: grid; grid-template-columns: 1.15fr 1.25fr 1.1fr 1.2fr; align-items: center;"
                              data-open-asset="${h.ticker}">
                           <!-- Ticker Badge -->
-                          <div class="text-left pl-0.5">
-                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-black font-mono text-[11px] sm:text-xs tracking-tight cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10">
+                          <div class="text-left pl-0.5 flex items-center min-w-0">
+                            <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-black font-mono text-[10px] sm:text-[11px] tracking-tight leading-none cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10">
                               ${h.ticker}
                             </span>
                           </div>
 
                           <!-- Prezzo -->
-                          <div class="text-right font-extrabold font-mono text-[11px] sm:text-xs text-gray-900 dark:text-gray-100 tabular-nums">
+                          <div class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] text-gray-900 dark:text-gray-100 tabular-nums leading-none">
                             ${priceStr}
                           </div>
 
                           <!-- % Giorno -->
-                          <div class="text-right pr-1">
+                          <div class="text-right pr-1 flex items-center justify-end leading-none">
                             ${pctBadgeHtml}
                           </div>
 
                           <!-- Val Giorno -->
-                          <div class="text-right pr-0.5">
+                          <div class="text-right pr-0.5 font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none">
                             ${valGiornoHtml}
                           </div>
                         </div>
