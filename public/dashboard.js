@@ -65,41 +65,41 @@
     { id: 'riskMetrics', name: 'Rischio & Efficienza (Sharpe, Volatilità)', category: 'Rischio', w: 2, h: 2, x: 0, y: 10 },
 
     // Interactive Net Worth & Performance Chart (full width)
-    { id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 2, h: 5, x: 0, y: 12 },
+    { id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 2, h: 6, minW: 2, minH: 5, x: 0, y: 12 },
 
     // Quotazioni per Categoria (Accordion live view - Photo 1 & 2)
-    { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 2, h: 8, x: 0, y: 17 },
+    { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 2, h: 8, x: 0, y: 18 },
 
     // Titoli Compatti in Singola Riga (Variazioni Giornaliere)
-    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 25 },
+    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 26 },
 
     // Portfolio Composition with Sparklines (full width)
-    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 31 },
+    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 32 },
 
     // Daily Movers and All-Time Movers (full width)
-    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 38 },
-    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 43 },
+    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 39 },
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 44 },
 
     // Multi-Period Return Matrix (full width)
-    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 48 },
+    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 49 },
 
     // Ultime Notizie Portafoglio (full width)
-    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 2, h: 6, x: 0, y: 52 },
+    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 2, h: 6, x: 0, y: 53 },
 
     // Allocation Donut Charts (full width)
-    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 58 },
-    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 63 },
-    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 68 },
-    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 73 },
+    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 59 },
+    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 64 },
+    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 69 },
+    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 74 },
 
     // Strategy & Targets (full width)
-    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 78 },
+    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 79 },
 
     // Portfolio Concentration (full width)
-    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 84 },
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 85 },
 
     // Holdings Breakdown Table (full width)
-    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 89 }
+    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 90 }
   ];
 
   function isMobileDashboard() {
@@ -885,7 +885,7 @@
       const t = data.totals || {};
       const pct = Number(t.unrealizedPnlPercent) || 0;
       const isPos = pct >= 0;
-      const label = data.isAggregate ? 'Patrimonio' : (data.selectedPortfolio?.name || 'Patrimonio');
+      const label = data.isAggregate ? 'P.Lordo' : (data.selectedPortfolio?.name || 'P.Lordo');
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
@@ -1003,7 +1003,7 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">P&L Totale</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">P&L Tot.</span>
             <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${isPos ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'}">
               ${formatPct(pct)}
             </span>
@@ -1025,68 +1025,66 @@
 
       const tfButtons = timeframes.map(tf => `
         <button type="button"
-          class="perf-tf-btn px-2.5 py-1 rounded-lg text-[10px] font-mono font-medium transition ${activeHistoryRange === tf ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-white/5'}"
+          class="perf-tf-btn px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[10px] font-mono font-medium transition shrink-0 ${activeHistoryRange === tf ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-white/5'}"
           data-perf-range="${tf}">
           ${tf}
         </button>
       `).join('');
 
       return `
-        <div class="h-full flex flex-col justify-between">
-          <!-- Widget Header Controls -->
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-gray-100 dark:border-white/5">
-            <div class="flex items-center space-x-3">
-              <div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Performance</span>
-                  <span class="badge-profit text-[10px] uppercase font-mono">${isAgg ? 'Aggr.' : 'Conto'}</span>
-                </div>
-                <div class="text-[11px] font-mono text-gray-400 truncate max-w-[220px]">${subtitle}</div>
-              </div>
+        <div class="h-full flex flex-col justify-between overflow-hidden">
+          <!-- Top Row: Title & Badges Left, Controls Right -->
+          <div class="flex items-center justify-between gap-1.5 pb-2 border-b border-gray-100 dark:border-white/5 shrink-0">
+            <div class="flex items-center space-x-2 min-w-0">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 shrink-0">Performance</span>
+              <span class="badge-profit text-[9px] sm:text-[10px] uppercase font-mono shrink-0">${isAgg ? 'Aggr.' : 'Conto'}</span>
+              <span class="text-[10px] font-mono text-gray-400 truncate hidden xs:inline" title="${subtitle}">${subtitle}</span>
             </div>
 
-            <!-- Controls: Metric Toggle + Timeframe Buttons -->
-            <div class="flex flex-wrap items-center gap-2">
+            <!-- Controls: Metric Toggle + Recalculate -->
+            <div class="flex items-center space-x-1.5 shrink-0">
               <!-- Metric Toggle -->
               <div class="inline-flex rounded-lg bg-gray-100 dark:bg-white/5 p-0.5 text-xs font-mono">
-                <button type="button" data-perf-metric="NAV" class="perf-metric-btn px-2.5 py-1 rounded-md transition text-[11px] ${activeHistoryMetric === 'NAV' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}">
+                <button type="button" data-perf-metric="NAV" class="perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${activeHistoryMetric === 'NAV' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}">
                   Valore
                 </button>
-                <button type="button" data-perf-metric="RETURN" class="perf-metric-btn px-2.5 py-1 rounded-md transition text-[11px] ${activeHistoryMetric === 'RETURN' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}">
+                <button type="button" data-perf-metric="RETURN" class="perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${activeHistoryMetric === 'RETURN' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}">
                   Rendimento
                 </button>
               </div>
 
-              <!-- Timeframe Selector -->
-              <div class="inline-flex rounded-lg space-x-1">
-                ${tfButtons}
-              </div>
-
               <!-- Recalculate Performance on Demand Button -->
-              <button type="button" id="btn-recalculate-perf" data-action="recalculate-perf" title="Ricalcola e ricostruisci performance storica su richiesta" class="px-2 py-1 rounded-md text-[11px] font-mono border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1f1f22] text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/30 transition flex items-center space-x-1 shadow-xs cursor-pointer">
+              <button type="button" id="btn-recalculate-perf" data-action="recalculate-perf" title="Ricalcola e ricostruisci performance storica su richiesta" class="p-1 sm:px-2 sm:py-1 rounded-md text-[10px] sm:text-[11px] font-mono border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1f1f22] text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/30 transition flex items-center space-x-1 shadow-xs cursor-pointer">
                 <svg id="icon-recalc-perf" class="w-3.5 h-3.5 text-gray-400 hover:text-emerald-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span class="hidden sm:inline font-semibold">Ricalcola</span>
+                <span class="hidden md:inline font-semibold">Ricalcola</span>
               </button>
             </div>
           </div>
 
-          <!-- Dynamic Key Metric Header -->
-          <div class="flex items-center justify-between my-2 px-1">
-            <div class="flex items-baseline space-x-3">
-              <span id="perf-display-val" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">--</span>
-              <span id="perf-display-badge" class="badge-profit text-xs font-mono font-semibold">--</span>
+          <!-- Middle Row: Timeframe Pills & Range Info -->
+          <div class="flex items-center justify-between gap-1 py-1.5 shrink-0 overflow-hidden">
+            <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5">
+              ${tfButtons}
             </div>
-            <div class="flex items-center space-x-4 text-[11px] font-mono text-gray-400">
+            <div class="text-[10px] sm:text-[11px] font-mono text-gray-400 shrink-0 text-right">
               <span id="perf-display-range-lbl">Per.: ${activeHistoryRange}</span>
-              <span id="perf-display-dd" class="hidden sm:inline">Max DD: --</span>
             </div>
           </div>
 
-          <!-- Chart Area -->
-          <div class="flex-1 relative min-h-[160px] w-full">
-            <canvas id="chart-performance"></canvas>
+          <!-- Dynamic Key Metric Bar -->
+          <div class="flex items-center justify-between px-0.5 pb-1.5 shrink-0">
+            <div class="flex items-baseline space-x-2 min-w-0">
+              <span id="perf-display-val" class="text-xl sm:text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">--</span>
+              <span id="perf-display-badge" class="badge-profit text-[10px] sm:text-xs font-mono font-semibold truncate">--</span>
+            </div>
+            <span id="perf-display-dd" class="text-[10px] sm:text-[11px] font-mono text-gray-400 shrink-0">Max DD: --</span>
+          </div>
+
+          <!-- Chart Area: Fills all remaining vertical space cleanly -->
+          <div class="flex-1 relative w-full min-h-[170px] sm:min-h-[200px] overflow-hidden">
+            <canvas id="chart-performance" class="block w-full h-full"></canvas>
             <div id="chart-perf-loading" class="hidden absolute inset-0 bg-white/50 dark:bg-black/40 backdrop-blur-xs flex items-center justify-center text-xs font-mono text-gray-500">
               Caricamento...
             </div>
@@ -2296,7 +2294,7 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rend. TWRR</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">TWRR</span>
             <div class="flex items-center space-x-1">
               ${pillsHtml}
             </div>
@@ -2323,7 +2321,7 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rend. MWRR</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">MWRR</span>
             <span class="badge-profit text-[10px] uppercase font-mono">XIRR</span>
           </div>
           <div class="my-1.5">
@@ -2349,7 +2347,7 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Drawdown</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">DD</span>
             <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${curDd > 5 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'}">Max -${maxDd.toFixed(2)}%</span>
           </div>
           <div class="my-1.5 flex items-baseline justify-between">
@@ -2469,7 +2467,7 @@
               <thead class="sticky top-0 bg-gray-50/90 dark:bg-[#151518]/90 backdrop-blur z-20 text-[10px] uppercase font-mono text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10">
                 <tr>
                   <th scope="col" class="py-1.5 px-3">Periodo</th>
-                  <th scope="col" class="py-1.5 px-3 text-right">Rend. TWRR</th>
+                  <th scope="col" class="py-1.5 px-3 text-right">TWRR</th>
                   <th scope="col" class="py-1.5 px-3 text-right">Guadagno</th>
                   <th scope="col" class="py-1.5 px-3 text-right hidden sm:table-cell">Annualizzato</th>
                   <th scope="col" class="py-1.5 px-3 text-right">Stato</th>
@@ -2650,7 +2648,8 @@
           ddEl.textContent = `Max DD: -${(data.maxDrawdown || 0).toFixed(2)}%`;
         }
         if (rangeLblEl) {
-          rangeLblEl.textContent = `Dal ${first.date} al ${last.date} (${range})`;
+          const isMob = isMobileDashboard();
+          rangeLblEl.textContent = isMob ? range : `Dal ${first.date} al ${last.date} (${range})`;
         }
       } else {
         if (valEl) valEl.textContent = formatEur(0);
@@ -2658,7 +2657,7 @@
           badgeEl.className = 'badge-profit text-xs font-mono';
           badgeEl.textContent = 'Inizializzazione...';
         }
-        if (rangeLblEl) rangeLblEl.textContent = `Periodo: ${range}`;
+        if (rangeLblEl) rangeLblEl.textContent = range;
         if (ddEl) ddEl.textContent = 'Max DD: 0.00%';
       }
 
@@ -2763,20 +2762,31 @@
               }
             }
           },
+          layout: {
+            padding: {
+              left: 2,
+              right: 6,
+              top: 4,
+              bottom: 2
+            }
+          },
           scales: {
             x: {
               grid: { display: false },
               ticks: {
                 color: textColor,
-                font: { family: 'JetBrains Mono', size: 9 },
-                maxTicksLimit: 8
+                font: { family: 'JetBrains Mono', size: isMobileDashboard() ? 8 : 9 },
+                maxTicksLimit: isMobileDashboard() ? 5 : 8,
+                maxRotation: 0,
+                autoSkip: true
               }
             },
             y: {
               grid: { color: gridColor },
               ticks: {
                 color: textColor,
-                font: { family: 'JetBrains Mono', size: 9 },
+                font: { family: 'JetBrains Mono', size: isMobileDashboard() ? 8 : 9 },
+                maxTicksLimit: 5,
                 callback: (val) => isMetricNav ? formatEur(val) : formatPct(val)
               }
             }
@@ -3370,12 +3380,16 @@
         if (isMobile) {
           w = Math.min(2, Math.max(1, w));
         }
+        let h = (Number.isInteger(item.h) && item.h > 0) ? item.h : (def.h || 2);
+        if (isMobile && effectiveId === 'performanceChart' && h < 6) {
+          h = 6;
+        }
         return {
           ...def,
           ...item,
           id: effectiveId,
           w: w,
-          h: (Number.isInteger(item.h) && item.h > 0) ? item.h : (def.h || 2),
+          h: h,
           x: Number.isInteger(item.x) ? (isMobile ? Math.min(1, item.x) : item.x) : (def.x !== undefined ? def.x : 0),
           y: Number.isInteger(item.y) ? item.y : (def.y !== undefined ? def.y : 0)
         };

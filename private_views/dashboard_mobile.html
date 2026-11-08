@@ -93,6 +93,18 @@
     .grid-stack .signature-card input {
       font-family: inherit;
     }
+
+    /* Performance chart specific mobile responsive optimizations */
+    .grid-stack-item[gs-id="performanceChart"] .signature-card {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #chart-performance {
+      width: 100% !important;
+      height: 100% !important;
+      max-height: 100% !important;
+    }
   </style>
 </head>
 <body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24 select-none">

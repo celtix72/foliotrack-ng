@@ -236,7 +236,8 @@ describe('Widget Appearance, Typography Scaling & Mobile Homogeneity', () => {
     const renderersMatch = code.match(/const WIDGET_RENDERERS = \{([\s\S]*?)\n  \};/);
     const evalEnv = vm.createContext({
       localStorage: { getItem: () => null, setItem: () => {} },
-      document: { getElementById: () => null, querySelector: () => ({}) }
+      document: { getElementById: () => null, querySelector: () => ({}) },
+      activeTwrrPeriod: '1Y'
     });
 
     vm.runInContext(`
@@ -277,9 +278,54 @@ describe('Widget Appearance, Typography Scaling & Mobile Homogeneity', () => {
     assert.ok(dayHtml.includes('+1,5k'), 'dayChange must format thousands with k (+1,5k)');
     assert.ok(dayHtml.includes('text-emerald-600 dark:text-emerald-400'), 'dayChange must use unified emerald text');
 
-    assert.ok(pnlHtml.includes('P&L Totale'), 'pnl must have title');
+    assert.ok(pnlHtml.includes('P&L Tot.') || pnlHtml.includes('P&L Totale'), 'pnl must have title');
     assert.ok(pnlHtml.includes('12') || dayHtml.includes('12.0%'), 'pnl must render % badge');
     assert.ok(pnlHtml.includes('12,0k'), 'pnl must format thousands with k (12,0k)');
     assert.ok(pnlHtml.includes('text-emerald-600 dark:text-emerald-400'), 'pnl must use unified emerald text');
+  });
+
+  test('Dashboard widgets reflect shortened labels (P.Lordo, MWRR, TWRR, P&L Tot., DD) and mobile performanceChart layout', () => {
+    const code = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
+
+    // Verify shortened titles in renderers
+    const renderersMatch = code.match(/const WIDGET_RENDERERS = \{([\s\S]*?)\n  \};/);
+    const evalEnv = vm.createContext({
+      localStorage: { getItem: () => null, setItem: () => {} },
+      document: { getElementById: () => null, querySelector: () => ({}) },
+      activeTwrrPeriod: '1Y'
+    });
+
+    vm.runInContext(`
+      ${code.substring(code.indexOf('function formatEur'), code.indexOf('const WIDGET_RENDERERS'))}
+      const WIDGET_RENDERERS = {
+        ${renderersMatch[1]}
+      };
+      this.renderValue = WIDGET_RENDERERS.value;
+      this.renderPnl = WIDGET_RENDERERS.pnl;
+      this.renderTwrr = WIDGET_RENDERERS.twrr;
+      this.renderMwrr = WIDGET_RENDERERS.mwrr;
+      this.renderDrawdown = WIDGET_RENDERERS.drawdown;
+    `, evalEnv);
+
+    const mockData = {
+      totals: { totalValue: 418200, unrealizedPnlPercent: 5.5, unrealizedPnl: 22000 },
+      metrics: { twr: 12.4, twr1y: 10.2, xirr: 11.5, maxDrawdown: 4.8, currentDrawdown: 1.2 },
+      isAggregate: true
+    };
+
+    const valHtml = evalEnv.renderValue(mockData);
+    const pnlHtml = evalEnv.renderPnl(mockData);
+    const twrrHtml = evalEnv.renderTwrr(mockData);
+    const mwrrHtml = evalEnv.renderMwrr(mockData);
+    const ddHtml = evalEnv.renderDrawdown(mockData);
+
+    assert.ok(valHtml.includes('P.Lordo'), 'PATRIMONIO must be abbreviated to P.Lordo');
+    assert.ok(pnlHtml.includes('P&L Tot.'), 'P&L TOTALE must be abbreviated to P&L Tot.');
+    assert.ok(twrrHtml.includes('TWRR'), 'REND TWRR must be abbreviated to TWRR');
+    assert.ok(mwrrHtml.includes('MWRR'), 'REND MWRR must be abbreviated to MWRR');
+    assert.ok(ddHtml.includes('DD'), 'DRAWDOWN must be abbreviated to DD');
+
+    // Verify performanceChart mobile layout height is increased to h: 6 for full mobile display
+    assert.ok(code.includes("id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 2, h: 6"), 'performanceChart mobile default layout must have h: 6');
   });
 });
