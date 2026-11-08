@@ -19,89 +19,89 @@
     <div id="live-ticker-container"></div>
 
     <!-- Header & Top Actions -->
-    <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <header class="px-6 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Registro Movimenti</h1>
-        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">Storico transazioni, compravendite, dividendi, cedole e versamenti</p>
+        <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Registro Movimenti</h1>
+        <p class="text-[11px] font-mono text-gray-500 dark:text-gray-400">Storico transazioni, compravendite, dividendi, cedole e versamenti</p>
       </div>
 
-      <div class="flex items-center space-x-2.5">
-        <button id="recalculatePerfBtn" class="btn-pill px-3.5 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5 cursor-pointer" title="Ricostruisci andamento storico e ricalcola indicatori di performance">
+      <div class="flex items-center space-x-2">
+        <button id="recalculatePerfBtn" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5 cursor-pointer" title="Ricostruisci andamento storico e ricalcola indicatori di performance">
           <svg id="iconRecalculatePerf" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
           <span>Ricalcola Performance</span>
         </button>
 
-        <button id="exportWealthfolioBtn" class="btn-pill px-3.5 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5">
+        <button id="exportWealthfolioBtn" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
           <span>Esporta Wealthfolio</span>
         </button>
 
-        <button id="bulkImportBtn" class="btn-pill px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition shadow-md shadow-blue-600/20 flex items-center space-x-1.5">
+        <button id="bulkImportBtn" class="btn-pill px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition shadow-md shadow-blue-600/20 flex items-center space-x-1.5">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
           <span>Importa CSV</span>
         </button>
 
-        <button id="newTxBtn" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-1">
+        <button id="newTxBtn" class="btn-pill px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-1">
           <span>+ Nuovo Movimento</span>
         </button>
       </div>
     </header>
 
-    <main class="flex-1 px-8 pb-16 space-y-4">
+    <main class="flex-1 px-6 pb-12 space-y-3">
       <!-- Wealthfolio-style Summary KPIs Bar -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-        <div class="signature-card p-3 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
-          <div class="text-[10px] uppercase font-bold text-gray-400">Movimenti Filtrati</div>
-          <div class="mt-1 flex items-baseline justify-between">
-            <span id="kpiTxCount" class="text-lg font-bold text-gray-900 dark:text-white">0</span>
-            <span class="text-[10px] text-gray-400">operazioni</span>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+        <div class="signature-card p-2 sm:p-2.5 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[9px] uppercase font-bold text-gray-400">Movimenti Filtrati</div>
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span id="kpiTxCount" class="text-base font-bold text-gray-900 dark:text-white">0</span>
+            <span class="text-[9px] text-gray-400">operazioni</span>
           </div>
         </div>
-        <div class="signature-card p-3 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
-          <div class="text-[10px] uppercase font-bold text-gray-400">Totale Entrate / Incassi</div>
-          <div class="mt-1 flex items-baseline justify-between">
-            <span id="kpiTotalInflow" class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+€ 0,00</span>
-            <span class="text-[10px] text-emerald-500 font-bold">IN</span>
+        <div class="signature-card p-2 sm:p-2.5 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[9px] uppercase font-bold text-gray-400">Totale Entrate / Incassi</div>
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span id="kpiTotalInflow" class="text-base font-bold text-emerald-600 dark:text-emerald-400">+€ 0,00</span>
+            <span class="text-[9px] text-emerald-500 font-bold">IN</span>
           </div>
         </div>
-        <div class="signature-card p-3 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
-          <div class="text-[10px] uppercase font-bold text-gray-400">Totale Uscite / Acquisti</div>
-          <div class="mt-1 flex items-baseline justify-between">
-            <span id="kpiTotalOutflow" class="text-lg font-bold text-gray-900 dark:text-gray-200">-€ 0,00</span>
-            <span class="text-[10px] text-gray-400 font-bold">OUT</span>
+        <div class="signature-card p-2 sm:p-2.5 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[9px] uppercase font-bold text-gray-400">Totale Uscite / Acquisti</div>
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span id="kpiTotalOutflow" class="text-base font-bold text-gray-900 dark:text-gray-200">-€ 0,00</span>
+            <span class="text-[9px] text-gray-400 font-bold">OUT</span>
           </div>
         </div>
-        <div class="signature-card p-3 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
-          <div class="text-[10px] uppercase font-bold text-gray-400">Flusso Netto Periodo</div>
-          <div class="mt-1 flex items-baseline justify-between">
-            <span id="kpiNetFlow" class="text-lg font-bold text-gray-900 dark:text-white">€ 0,00</span>
-            <span id="kpiNetSign" class="text-[10px] font-bold text-gray-400">NET</span>
+        <div class="signature-card p-2 sm:p-2.5 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[9px] uppercase font-bold text-gray-400">Flusso Netto Periodo</div>
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span id="kpiNetFlow" class="text-base font-bold text-gray-900 dark:text-white">€ 0,00</span>
+            <span id="kpiNetSign" class="text-[9px] font-bold text-gray-400">NET</span>
           </div>
         </div>
       </div>
 
       <!-- Advanced Filter Bar Card (Wealthfolio-style) -->
-      <div class="signature-card p-4 space-y-3 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5">
+      <div class="signature-card p-2.5 sm:p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5">
         <!-- Row 1: Main Dropdowns & Search -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
           <!-- Portfolio Filter -->
           <div>
-            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Conto / Portafoglio</label>
-            <select id="filterPortfolio" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Conto / Portafoglio</label>
+            <select id="filterPortfolio" class="w-full px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs">
               <option value="">Tutti i portafogli</option>
             </select>
           </div>
 
           <!-- Type Filter -->
           <div>
-            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Tipo Operazione</label>
-            <select id="filterType" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Tipo Operazione</label>
+            <select id="filterType" class="w-full px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs">
               <option value="">Tutti i tipi</option>
               <option value="BUY">BUY - Acquisto</option>
               <option value="SELL">SELL - Vendita</option>
@@ -118,8 +118,8 @@
 
           <!-- Instrument / Asset Type Filter -->
           <div>
-            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Strumento / Asset Type</label>
-            <select id="filterInstrumentType" class="w-full px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Strumento / Asset Type</label>
+            <select id="filterInstrumentType" class="w-full px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs">
               <option value="">Tutti gli strumenti</option>
               <option value="EQUITY">Azioni (Equity / Stock)</option>
               <option value="ETF">ETF / Fondi UCITS</option>
@@ -132,47 +132,47 @@
 
           <!-- Search Ticker / Name / Notes -->
           <div>
-            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cerca (Ticker, Nome, Note)</label>
+            <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Cerca (Ticker, Nome, Note)</label>
             <div class="relative">
               <input type="text" id="filterSearch" placeholder="es. AAPL, SPM, cedola..."
-                class="w-full pl-8 pr-7 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                class="w-full pl-7 pr-6 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs">
+              <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <button id="clearSearchBtn" class="hidden absolute right-2.5 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold">✕</button>
+              <button id="clearSearchBtn" class="hidden absolute right-2 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold text-xs">✕</button>
             </div>
           </div>
         </div>
 
         <!-- Row 2: Date Filters & Quick Presets -->
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2 border-t border-gray-200/50 dark:border-white/5 text-xs font-mono">
-          <div class="flex flex-wrap items-center gap-1.5">
-            <span class="text-[10px] uppercase font-bold text-gray-400 mr-1">Periodo Rapido:</span>
-            <button data-range="all" class="date-preset-btn px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-semibold text-[11px] transition">Tutto</button>
-            <button data-range="ytd" class="date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">Quest'anno</button>
-            <button data-range="30d" class="date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">30 gg</button>
-            <button data-range="90d" class="date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">90 gg</button>
-            <button data-range="1y" class="date-preset-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">1 Anno</button>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2 pt-1.5 border-t border-gray-200/50 dark:border-white/5 text-xs font-mono">
+          <div class="flex flex-wrap items-center gap-1">
+            <span class="text-[9px] uppercase font-bold text-gray-400 mr-1">Periodo Rapido:</span>
+            <button data-range="all" class="date-preset-btn px-2 py-0.5 rounded text-[10px] bg-emerald-600 text-white font-semibold transition">Tutto</button>
+            <button data-range="ytd" class="date-preset-btn px-2 py-0.5 rounded text-[10px] bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold transition">Quest'anno</button>
+            <button data-range="30d" class="date-preset-btn px-2 py-0.5 rounded text-[10px] bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold transition">30 gg</button>
+            <button data-range="90d" class="date-preset-btn px-2 py-0.5 rounded text-[10px] bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold transition">90 gg</button>
+            <button data-range="1y" class="date-preset-btn px-2 py-0.5 rounded text-[10px] bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold transition">1 Anno</button>
           </div>
 
           <div class="flex items-center space-x-2">
-            <div class="flex items-center space-x-1.5">
-              <span class="text-gray-400 text-[11px]">Da:</span>
+            <div class="flex items-center space-x-1">
+              <span class="text-gray-400 text-[10px]">Da:</span>
               <input type="date" id="filterStartDate"
-                class="px-2.5 py-1 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
+                class="px-2 py-0.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs">
             </div>
-            <div class="flex items-center space-x-1.5">
-              <span class="text-gray-400 text-[11px]">A:</span>
+            <div class="flex items-center space-x-1">
+              <span class="text-gray-400 text-[10px]">A:</span>
               <input type="date" id="filterEndDate"
-                class="px-2.5 py-1 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs">
+                class="px-2 py-0.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs">
             </div>
           </div>
         </div>
 
         <!-- Row 3: Active Filters Pills & Reset -->
-        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/50 dark:border-white/5 text-xs font-mono">
-          <div id="activeFiltersList" class="flex flex-wrap items-center gap-1.5">
-            <span class="text-gray-400 text-[11px]">Nessun filtro attivo (mostrati tutti i movimenti)</span>
+        <div class="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-gray-200/50 dark:border-white/5 text-xs font-mono">
+          <div id="activeFiltersList" class="flex flex-wrap items-center gap-1">
+            <span class="text-gray-400 text-[10px]">Nessun filtro attivo (mostrati tutti i movimenti)</span>
           </div>
           <button id="resetFiltersBtn" class="text-rose-600 hover:text-rose-700 dark:text-rose-400 font-semibold transition flex items-center space-x-1 text-xs">
             <span>↺ Resetta Filtri</span>
@@ -182,51 +182,51 @@
 
       <!-- Transactions Table Card -->
       <div class="signature-card overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-sm font-mono">
-            <thead class="bg-gray-50/70 dark:bg-white/5 text-gray-500 uppercase tracking-wider text-xs font-semibold">
+        <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Tabella registro movimenti">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
+            <thead class="bg-gray-50/90 dark:bg-[#141416]/90 backdrop-blur text-gray-400 uppercase tracking-wider text-[10px] font-semibold sticky top-0 z-10 border-b border-gray-200 dark:border-white/5">
               <tr>
-                <th class="px-4 py-3">Data</th>
-                <th class="px-4 py-3">Conto</th>
-                <th class="px-3 py-3">Tipo</th>
-                <th class="px-3 py-3">Strumento</th>
-                <th class="px-4 py-3">Asset / Ticker</th>
-                <th class="px-3 py-3 text-right">Quantità</th>
-                <th class="px-3 py-3 text-right">Prezzo</th>
-                <th class="px-3 py-3 text-right">Comm./Tax</th>
-                <th class="px-4 py-3 text-right">Controvalore</th>
-                <th class="px-5 py-3 text-right font-bold text-gray-800 dark:text-gray-200">Liquidità Cumulativa</th>
-                <th class="px-4 py-3">Note</th>
-                <th class="px-4 py-3 text-center">Azioni</th>
+                <th class="px-2.5 py-1.5 whitespace-nowrap">Data</th>
+                <th class="px-2.5 py-1.5 whitespace-nowrap">Conto</th>
+                <th class="px-2 py-1.5 whitespace-nowrap">Tipo</th>
+                <th class="px-2 py-1.5 whitespace-nowrap">Strumento</th>
+                <th class="px-2.5 py-1.5 whitespace-nowrap">Asset / Ticker</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap">Quantità</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap">Prezzo</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap">Comm./Tax</th>
+                <th class="px-2.5 py-1.5 text-right whitespace-nowrap">Controvalore</th>
+                <th class="px-3 py-1.5 text-right font-bold text-gray-700 dark:text-gray-200 whitespace-nowrap">Liquidità Cumulativa</th>
+                <th class="px-2.5 py-1.5 whitespace-nowrap">Note</th>
+                <th class="px-2 py-1.5 text-center whitespace-nowrap">Azioni</th>
               </tr>
             </thead>
             <tbody id="txTableBody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums">
               <tr>
-                <td colspan="12" class="px-6 py-10 text-center text-gray-400">Caricamento movimenti in corso...</td>
+                <td colspan="12" class="px-4 py-6 text-center text-gray-400 text-xs">Caricamento movimenti in corso...</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <!-- Pagination Bar -->
-        <div class="px-6 py-4 bg-gray-50/70 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-mono">
+        <div class="px-3 py-2 bg-gray-50/70 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs font-mono">
           <div class="text-gray-500 flex items-center space-x-3">
             <span>Mostrati <span id="paginationRange" class="font-bold text-gray-900 dark:text-white">0-0</span> di <span id="paginationTotal" class="font-bold text-gray-900 dark:text-white">0</span> movimenti</span>
             <div class="flex items-center space-x-1.5 text-xs text-gray-400">
               <span>Righe:</span>
-              <select id="pageSizeSelect" class="px-2 py-0.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-700 dark:text-gray-300 text-xs font-mono">
+              <select id="pageSizeSelect" class="px-1.5 py-0.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-700 dark:text-gray-300 text-xs font-mono">
                 <option value="25">25</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
               </select>
             </div>
           </div>
-          <div class="flex items-center space-x-2">
-            <button id="prevPageBtn" disabled class="btn-pill px-3 py-1.5 bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-white/20 transition">
+          <div class="flex items-center space-x-1.5">
+            <button id="prevPageBtn" disabled class="btn-pill px-2.5 py-1 bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-white/20 transition text-xs">
               &larr; Precedente
             </button>
-            <span id="pageIndicator" class="px-2 font-bold text-gray-700 dark:text-gray-300">1</span>
-            <button id="nextPageBtn" disabled class="btn-pill px-3 py-1.5 bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-white/20 transition">
+            <span id="pageIndicator" class="px-2 font-bold text-gray-700 dark:text-gray-300 text-xs">1</span>
+            <button id="nextPageBtn" disabled class="btn-pill px-2.5 py-1 bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-white/20 transition text-xs">
               Successiva &rarr;
             </button>
           </div>
@@ -363,7 +363,7 @@
         const isSinglePortfolio = Boolean(pId);
 
         tbody.innerHTML = data.transactions.map(t => {
-          let badgeClass = 'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wide leading-none ';
+          let badgeClass = 'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold font-mono tracking-wide leading-none ';
           if (t.type === 'BUY') badgeClass += 'badge-profit';
           else if (t.type === 'SELL') badgeClass += 'badge-loss';
           else if (t.type === 'DIVIDEND' || t.type === 'INTEREST') badgeClass += 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
@@ -401,40 +401,40 @@
 
           return `
             <tr class="hover:bg-gray-50/70 dark:hover:bg-white/5 transition group">
-              <td class="px-4 py-2.5 whitespace-nowrap text-xs text-gray-600 dark:text-gray-400 font-mono">${t.date}</td>
-              <td class="px-4 py-2.5 whitespace-nowrap font-medium text-xs text-gray-800 dark:text-gray-200">${t.portfolioName || 'P #' + t.portfolioId}</td>
-              <td class="px-3 py-2.5 whitespace-nowrap"><span class="${badgeClass}">${t.type}</span></td>
-              <td class="px-3 py-2.5 whitespace-nowrap">${instBadge}</td>
-              <td class="px-4 py-2.5 whitespace-nowrap">
+              <td class="px-2.5 py-1 whitespace-nowrap text-xs text-gray-600 dark:text-gray-400 font-mono">${t.date}</td>
+              <td class="px-2.5 py-1 whitespace-nowrap font-medium text-xs text-gray-800 dark:text-gray-200">${t.portfolioName || 'P #' + t.portfolioId}</td>
+              <td class="px-2 py-1 whitespace-nowrap"><span class="${badgeClass}">${t.type}</span></td>
+              <td class="px-2 py-1 whitespace-nowrap">${instBadge}</td>
+              <td class="px-2.5 py-1 whitespace-nowrap">
                 ${t.assetTicker ? `
-                  <div class="inline-flex items-center space-x-1.5 leading-none">
+                  <div class="inline-flex items-center space-x-1.5 leading-tight">
                     <span class="font-bold text-xs text-gray-900 dark:text-white">${t.assetTicker}</span>
-                    ${t.assetName ? `<span class="text-gray-400 text-[11px] truncate max-w-[130px] font-sans" title="${t.assetName}">(${t.assetName})</span>` : ''}
+                    ${t.assetName ? `<span class="text-gray-400 text-[10px] truncate max-w-[120px] font-sans" title="${t.assetName}">(${t.assetName})</span>` : ''}
                   </div>
                 ` : '<span class="text-gray-400 text-xs italic">Liquidità (Cassa)</span>'}
               </td>
-              <td class="px-3 py-2.5 whitespace-nowrap text-right font-medium text-xs text-gray-800 dark:text-gray-200">${t.quantity ? fmtQty(t.quantity) : '-'}</td>
-              <td class="px-3 py-2.5 whitespace-nowrap text-right text-xs text-gray-700 dark:text-gray-300">${t.price ? fmtPrice(t.price) : '-'}</td>
-              <td class="px-3 py-2.5 whitespace-nowrap text-right text-[11px] text-gray-400 font-mono">${fees > 0 ? fmtEur(fees) : '-'}</td>
-              <td class="px-4 py-2.5 whitespace-nowrap text-right text-xs font-mono ${flowColor}">${flowSign}${fmtEur(t.amount)}</td>
-              <td class="px-5 py-2.5 whitespace-nowrap text-right font-mono text-xs">
+              <td class="px-2 py-1 whitespace-nowrap text-right font-medium text-xs text-gray-800 dark:text-gray-200">${t.quantity ? fmtQty(t.quantity) : '-'}</td>
+              <td class="px-2 py-1 whitespace-nowrap text-right text-xs text-gray-700 dark:text-gray-300">${t.price ? fmtPrice(t.price) : '-'}</td>
+              <td class="px-2 py-1 whitespace-nowrap text-right text-[11px] text-gray-400 font-mono">${fees > 0 ? fmtEur(fees) : '-'}</td>
+              <td class="px-2.5 py-1 whitespace-nowrap text-right text-xs font-mono ${flowColor}">${flowSign}${fmtEur(t.amount)}</td>
+              <td class="px-3 py-1 whitespace-nowrap text-right font-mono text-xs">
                 <div class="${runningCashColor}">${fmtEur(t.runningCash)}</div>
                 ${!isSinglePortfolio && t.globalRunningCash !== undefined ? `
-                  <div class="text-[10px] text-gray-400 font-normal leading-tight" title="Liquidità totale aggregata di tutti i portafogli">
+                  <div class="text-[9px] text-gray-400 font-normal leading-none mt-0.5" title="Liquidità totale aggregata di tutti i portafogli">
                     Tot: ${fmtEur(t.globalRunningCash)}
                   </div>
                 ` : ''}
               </td>
-              <td class="px-4 py-2.5 whitespace-nowrap text-gray-400 truncate max-w-[140px] font-sans text-xs" title="${t.notes || ''}">${t.notes || '-'}</td>
-              <td class="px-4 py-2.5 whitespace-nowrap text-center">
-                <div class="inline-flex items-center space-x-1 opacity-80 group-hover:opacity-100 transition leading-none">
-                  <button data-edit-id="${t.id}" title="Modifica" class="p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <td class="px-2.5 py-1 whitespace-nowrap text-gray-400 truncate max-w-[130px] font-sans text-xs" title="${t.notes || ''}">${t.notes || '-'}</td>
+              <td class="px-2 py-1 whitespace-nowrap text-center">
+                <div class="inline-flex items-center space-x-1 opacity-75 group-hover:opacity-100 transition leading-none">
+                  <button data-edit-id="${t.id}" title="Modifica" class="p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                   </button>
-                  <button data-delete-id="${t.id}" title="Elimina" class="p-1 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <button data-delete-id="${t.id}" title="Elimina" class="p-1 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 rounded hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>

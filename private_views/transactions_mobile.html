@@ -12,41 +12,41 @@
   <link rel="stylesheet" href="/dist/style.css">
   <style>
     .signature-card {
-      padding: 0.65rem 0.55rem !important;
-      border-radius: 0.75rem !important;
+      padding: 0.35rem 0.5rem !important;
+      border-radius: 0.6rem !important;
     }
   </style>
 </head>
 <body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
 
   <!-- Mobile Top Header Bar -->
-  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+  <header class="px-3 py-2 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
     <div>
-      <h1 class="text-base font-bold text-gray-900 dark:text-white">Movimenti</h1>
-      <span id="mTotalCount" class="text-[10px] font-mono text-gray-400">0 registrati</span>
+      <h1 class="text-sm font-bold text-gray-900 dark:text-white leading-tight">Movimenti</h1>
+      <span id="mTotalCount" class="text-[10px] font-mono text-gray-400 leading-none">0 registrati</span>
     </div>
 
-    <div class="flex items-center space-x-1.5">
-      <button id="mRecalculatePerfBtn" title="Ricalcola Performance Storica" class="p-2 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
-        <svg id="mIconRecalculatePerf" class="w-5 h-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div class="flex items-center space-x-1">
+      <button id="mRecalculatePerfBtn" title="Ricalcola Performance Storica" class="p-1.5 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg id="mIconRecalculatePerf" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       </button>
 
-      <button id="mToggleFiltersBtn" class="p-2 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button id="mToggleFiltersBtn" title="Filtri" class="p-1.5 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
         </svg>
       </button>
 
-      <button id="mBulkImportBtn" class="p-2 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button id="mBulkImportBtn" title="Importa CSV" class="p-1.5 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
       </button>
 
-      <a id="mExportBtn" href="/api/transactions/export/wealthfolio" class="p-2 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <a id="mExportBtn" href="/api/transactions/export/wealthfolio" title="Esporta Wealthfolio" class="p-1.5 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
       </a>
@@ -56,17 +56,17 @@
   <div id="live-ticker-container"></div>
 
   <!-- Collapsible Mobile Filters Drawer -->
-  <div id="mFiltersPanel" class="hidden px-2 py-2.5 bg-gray-50 dark:bg-white/[0.03] border-b border-gray-200/50 dark:border-white/5 space-y-2 text-xs font-mono">
-    <div class="grid grid-cols-2 gap-2">
+  <div id="mFiltersPanel" class="hidden px-2 py-2 bg-gray-50/90 dark:bg-white/[0.03] border-b border-gray-200/50 dark:border-white/5 space-y-1.5 text-xs font-mono">
+    <div class="grid grid-cols-2 gap-1.5">
       <div>
-        <label class="block text-[10px] text-gray-400 uppercase font-bold">Portafoglio</label>
-        <select id="mFilterPortfolio" class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+        <label class="block text-[9px] text-gray-400 uppercase font-bold">Portafoglio</label>
+        <select id="mFilterPortfolio" class="w-full px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs">
           <option value="">Tutti</option>
         </select>
       </div>
       <div>
-        <label class="block text-[10px] text-gray-400 uppercase font-bold">Tipo Operazione</label>
-        <select id="mFilterType" class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+        <label class="block text-[9px] text-gray-400 uppercase font-bold">Tipo Operazione</label>
+        <select id="mFilterType" class="w-full px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs">
           <option value="">Tutti</option>
           <option value="BUY">BUY - Acquisto</option>
           <option value="SELL">SELL - Vendita</option>
@@ -80,10 +80,10 @@
         </select>
       </div>
     </div>
-    <div class="grid grid-cols-2 gap-2">
+    <div class="grid grid-cols-2 gap-1.5">
       <div>
-        <label class="block text-[10px] text-gray-400 uppercase font-bold">Strumento</label>
-        <select id="mFilterInstrumentType" class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+        <label class="block text-[9px] text-gray-400 uppercase font-bold">Strumento</label>
+        <select id="mFilterInstrumentType" class="w-full px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs">
           <option value="">Tutti</option>
           <option value="EQUITY">Azioni (Equity)</option>
           <option value="ETF">ETF</option>
@@ -93,52 +93,52 @@
         </select>
       </div>
       <div>
-        <label class="block text-[10px] text-gray-400 uppercase font-bold">Cerca</label>
+        <label class="block text-[9px] text-gray-400 uppercase font-bold">Cerca</label>
         <input type="text" id="mFilterTicker" placeholder="Ticker, nome..."
-          class="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          class="w-full px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs">
       </div>
     </div>
     <!-- Date Presets & Inputs -->
     <div>
       <div class="flex items-center justify-between mb-1">
-        <label class="text-[10px] text-gray-400 uppercase font-bold">Periodo Rapido</label>
-        <button id="mResetFiltersBtn" class="text-[11px] text-rose-500 hover:text-rose-600 font-bold">↺ Reset</button>
+        <label class="text-[9px] text-gray-400 uppercase font-bold">Periodo Rapido</label>
+        <button id="mResetFiltersBtn" class="text-[10px] text-rose-500 hover:text-rose-600 font-bold">↺ Reset</button>
       </div>
-      <div class="flex items-center space-x-1 overflow-x-auto pb-1">
+      <div class="flex items-center space-x-1 overflow-x-auto pb-0.5">
         <button data-m-range="all" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white">Tutto</button>
         <button data-m-range="ytd" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">YTD</button>
         <button data-m-range="30d" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">30G</button>
         <button data-m-range="90d" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">90G</button>
         <button data-m-range="1y" class="m-range-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">1A</button>
       </div>
-      <div class="grid grid-cols-2 gap-2 mt-1.5">
+      <div class="grid grid-cols-2 gap-1.5 mt-1">
         <div>
           <label class="text-[9px] text-gray-400">Da:</label>
-          <input type="date" id="mFilterStartDate" class="w-full px-1.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px]">
+          <input type="date" id="mFilterStartDate" class="w-full px-1.5 py-0.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px]">
         </div>
         <div>
           <label class="text-[9px] text-gray-400">A:</label>
-          <input type="date" id="mFilterEndDate" class="w-full px-1.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px]">
+          <input type="date" id="mFilterEndDate" class="w-full px-1.5 py-0.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px]">
         </div>
       </div>
     </div>
   </div>
 
   <!-- Main Transactions List -->
-  <main class="flex-1 px-1.5 py-2 space-y-2">
-    <div id="mTxListContainer" class="space-y-2">
-      <div class="signature-card p-6 text-center text-xs text-gray-400 font-mono">
+  <main class="flex-1 px-1.5 py-1.5 space-y-1.5">
+    <div id="mTxListContainer" class="space-y-1">
+      <div class="signature-card p-4 text-center text-xs text-gray-400 font-mono">
         Caricamento movimenti...
       </div>
     </div>
 
     <!-- Mobile Pagination -->
-    <div class="pt-2 flex items-center justify-between text-xs font-mono">
-      <button id="mPrevBtn" disabled class="btn-pill px-3 py-1.5 bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300 disabled:opacity-40">
+    <div class="pt-1.5 flex items-center justify-between text-xs font-mono">
+      <button id="mPrevBtn" disabled class="btn-pill px-2.5 py-1 bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300 disabled:opacity-40 text-xs">
         &larr; Prec.
       </button>
-      <span id="mPageIndicator" class="text-gray-500">1</span>
-      <button id="mNextBtn" disabled class="btn-pill px-3 py-1.5 bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300 disabled:opacity-40">
+      <span id="mPageIndicator" class="text-gray-500 text-xs">1</span>
+      <button id="mNextBtn" disabled class="btn-pill px-2.5 py-1 bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300 disabled:opacity-40 text-xs">
         Succ. &rarr;
       </button>
     </div>
@@ -241,60 +241,78 @@
         }
 
         container.innerHTML = allTransactions.map((t, idx) => {
-          let badgeClass = 'px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ';
+          let badgeClass = 'px-1 py-0.2 rounded text-[9px] font-bold font-mono tracking-wide leading-none ';
           if (t.type === 'BUY') badgeClass += 'badge-profit';
           else if (t.type === 'SELL') badgeClass += 'badge-loss';
           else if (t.type === 'DIVIDEND' || t.type === 'INTEREST') badgeClass += 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
           else if (t.type === 'DEPOSIT') badgeClass += 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300';
           else if (t.type === 'WITHDRAWAL') badgeClass += 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+          else if (t.type === 'TRANSFER') badgeClass += 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300';
           else badgeClass += 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300';
 
           const aType = (t.assetType || (t.assetTicker ? 'EQUITY' : 'CASH')).toUpperCase();
           let instBadge = '';
           if (aType === 'EQUITY' || aType === 'STOCK') {
-            instBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">EQUITY</span>';
+            instBadge = '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">EQ</span>';
           } else if (aType === 'ETF') {
-            instBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300">ETF</span>';
+            instBadge = '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300">ETF</span>';
           } else if (aType === 'BOND') {
-            instBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">BOND</span>';
+            instBadge = '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">BND</span>';
+          } else if (aType === 'CRYPTO') {
+            instBadge = '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-950/60 dark:text-yellow-300">CRY</span>';
+          } else if (aType === 'COMMODITY') {
+            instBadge = '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">COM</span>';
           } else {
-            instBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300">${aType}</span>`;
+            instBadge = '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300">CSH</span>';
           }
 
           const isInflow = ['DEPOSIT', 'SELL', 'DIVIDEND', 'INTEREST'].includes(t.type);
           const flowSign = isInflow ? '+' : (['BUY', 'WITHDRAWAL', 'FEE', 'TAX'].includes(t.type) ? '-' : '');
-          const flowColor = isInflow ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white';
+          const flowColor = isInflow ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-900 dark:text-white font-bold';
 
-          const runningCashVal = Number(t.runningCash) || 0.0;
-          const runningCashColor = runningCashVal < 0
-            ? 'text-amber-500 font-bold'
-            : 'text-emerald-600 dark:text-emerald-400 font-bold';
+          // Short date format: DD/MM/YY
+          let shortDate = t.date || '';
+          if (shortDate.length === 10 && shortDate.includes('-')) {
+            const parts = shortDate.split('-');
+            shortDate = `${parts[2]}/${parts[1]}/${parts[0].slice(2)}`;
+          }
+
+          // Subtitle details on Line 2
+          const detailText = t.quantity
+            ? `${fmtQty(t.quantity)} @ ${fmtPrice(t.price)}`
+            : (t.notes ? t.notes : (t.type === 'DEPOSIT' || t.type === 'WITHDRAWAL' ? 'Liquidità' : ''));
 
           return `
-            <div class="signature-card p-3 space-y-2">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-1.5">
+            <div class="signature-card p-1.5 px-2 flex flex-col justify-between gap-0.5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition">
+              <!-- Line 1: Type + Badge + Ticker + Date (Left) | Controvalore (Right) -->
+              <div class="flex items-center justify-between min-w-0">
+                <div class="flex items-center space-x-1.5 min-w-0 overflow-hidden">
                   <span class="${badgeClass}">${t.type}</span>
                   ${instBadge}
-                  <span class="font-bold text-xs font-mono text-gray-900 dark:text-white">${t.assetTicker || t.portfolioName || '-'}</span>
+                  <span class="font-bold text-xs font-mono text-gray-900 dark:text-white truncate max-w-[120px]">${t.assetTicker || (t.type === 'DEPOSIT' || t.type === 'WITHDRAWAL' ? 'Cassa' : '-')}</span>
+                  <span class="text-[10px] text-gray-400 font-mono flex-shrink-0">${shortDate}</span>
                 </div>
-                <div class="font-bold font-mono text-xs tabular-nums ${flowColor}">${flowSign}${fmtEur(t.amount)}</div>
+                <div class="font-mono text-xs tabular-nums ${flowColor} flex-shrink-0 ml-2">${flowSign}${fmtEur(t.amount)}</div>
               </div>
 
-              <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
-                <span>${t.date} ${t.quantity ? `• ${fmtQty(t.quantity)} @ ${fmtPrice(t.price)}` : ''}</span>
-                <span class="text-[10px] text-gray-500">${t.portfolioName || ''}</span>
-              </div>
-
-              <!-- Running Cash Balance -->
-              <div class="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-white/5 text-[11px] font-mono">
-                <span class="text-gray-400">Saldo Cassa post-mov:</span>
-                <span class="${runningCashColor}">${fmtEur(t.runningCash)}</span>
-              </div>
-
-              <div class="flex items-center justify-end space-x-3 pt-1 text-[11px] font-mono">
-                <button data-m-edit="${t.id}" class="text-gray-400 hover:text-emerald-500">Modifica</button>
-                <button data-m-del="${t.id}" class="text-rose-500 hover:text-rose-600">Elimina</button>
+              <!-- Line 2: Conto + Qty/Price/Note (Left) | Quick Actions (Right) -->
+              <div class="flex items-center justify-between text-[10px] font-mono text-gray-400 min-w-0">
+                <div class="flex items-center space-x-1.5 truncate min-w-0">
+                  <span class="text-gray-500 dark:text-gray-400 font-medium truncate max-w-[90px]">${t.portfolioName || ''}</span>
+                  ${detailText ? `<span class="text-gray-400 dark:text-gray-500 truncate max-w-[160px]">• ${detailText}</span>` : ''}
+                </div>
+                <div class="flex items-center space-x-1 flex-shrink-0 ml-1">
+                  <button data-m-edit="${t.id}" aria-label="Modifica" class="p-0.5 text-gray-400 hover:text-emerald-500 rounded transition leading-none">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                  <button data-m-del="${t.id}" aria-label="Elimina" class="p-0.5 text-gray-400 hover:text-rose-500 rounded transition leading-none">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           `;
