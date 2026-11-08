@@ -12,11 +12,18 @@
   <!-- Google Fonts & Compiled Signature CSS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dist/style.css">
 
   <!-- GridStack.js CSS -->
   <link rel="stylesheet" href="/vendor/gridstack/gridstack.min.css">
+
+  <style>
+    .grid-stack > .grid-stack-item .signature-card {
+      font-family: var(--ft-widget-font-family, 'Inter', sans-serif);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
 </head>
 <body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
 

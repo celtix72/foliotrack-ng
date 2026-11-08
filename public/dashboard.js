@@ -900,24 +900,23 @@
         : (prevVal > 0 ? (dayVal / prevVal) * 100.0 : 0.0);
 
       const isPos = dayVal >= 0;
-      const styleInfo = getDayVarCardStyle(dayPct);
       const isAgg = data.isAggregate;
       const subtitle = isAgg ? 'Aggregato globale' : (data.selectedPortfolio?.name || 'Conto');
 
       return `
-        <div class="h-full flex flex-col justify-between rounded-xl p-0.5 transition-all duration-200" style="${styleInfo.style}">
+        <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider ${styleInfo.titleCls || 'text-gray-500 dark:text-gray-400'} truncate max-w-[150px]">Variazione Oggi</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${isPos ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'}">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate max-w-[150px]">Variazione Oggi</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${isPos ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'}">
               ${formatPct(dayPct)}
             </span>
           </div>
-          <div class="my-1.5">
-            <div class="text-2xl font-extrabold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
+          <div class="my-2">
+            <div class="text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
               ${formatEurSignedDec(dayVal, 2)}
             </div>
           </div>
-          <div class="flex items-center justify-between text-[11px] font-mono ${styleInfo.subCls || 'text-gray-400'}">
+          <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
             <span>Prec: ${formatEur(prevVal)}</span>
             <span class="text-[10px] truncate max-w-[110px]" title="${subtitle}">${subtitle}</span>
           </div>
@@ -931,9 +930,15 @@
       const cashPct = t.totalValue > 0 ? (t.currentCash / t.totalValue) * 100 : 0;
       return `
         <div class="h-full flex flex-col justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Liquidità</span>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Liquidità</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold">${cashPct.toFixed(1)}% tot.</span>
+          </div>
           <div class="my-2 text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">${formatEur(t.currentCash)}</div>
-          <div class="text-[11px] font-mono text-gray-400">${cashPct.toFixed(1)}% tot.</div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
+            <span>Disponibilità</span>
+            <span>c/c attivo</span>
+          </div>
         </div>
       `;
     },
@@ -943,9 +948,15 @@
       const t = data.totals || {};
       return `
         <div class="h-full flex flex-col justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Versato</span>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Versato</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold">Netto</span>
+          </div>
           <div class="my-2 text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">${formatEur(t.investedCapital)}</div>
-          <div class="text-[11px] font-mono text-gray-400">Net deposits</div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
+            <span>Capitale apportato</span>
+            <span>Depositi</span>
+          </div>
         </div>
       `;
     },
@@ -956,9 +967,15 @@
       const costBasis = (t.totalValue || 0) - (t.unrealizedPnl || 0) - (t.currentCash || 0);
       return `
         <div class="h-full flex flex-col justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Carico (PMC)</span>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Carico (PMC)</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold">Fiscale</span>
+          </div>
           <div class="my-2 text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">${formatEur(Math.max(0, costBasis))}</div>
-          <div class="text-[11px] font-mono text-gray-400">Costo titoli</div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
+            <span>Costo titoli</span>
+            <span>Prezzo carico</span>
+          </div>
         </div>
       `;
     },
@@ -967,12 +984,21 @@
     pnl: (data) => {
       const t = data.totals || {};
       const pnl = Number(t.unrealizedPnl) || 0;
+      const pct = Number(t.unrealizedPnlPercent) || 0;
       const isPos = pnl >= 0;
       return `
         <div class="h-full flex flex-col justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">P&L Totale</span>
-          <div class="my-2 text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">${formatEur(pnl)}</div>
-          <div class="text-[11px] font-mono text-gray-400">${formatPct(t.unrealizedPnlPercent)} su titoli</div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">P&L Totale</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${isPos ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'}">
+              ${formatPct(pct)}
+            </span>
+          </div>
+          <div class="my-2 text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${formatEur(pnl)}</div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
+            <span>Plus/Minusvalenza</span>
+            <span>su titoli</span>
+          </div>
         </div>
       `;
     },
@@ -1524,8 +1550,7 @@
                      data-open-asset="${h.ticker}">
                   <!-- Ticker + Dot / Closed indicator -->
                   <div class="flex items-center space-x-1.5 min-w-0 pl-0.5">
-                    <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-black font-mono text-xs sm:text-sm tracking-tight cursor-pointer active:scale-95 transition"
-                          style="border: 1px solid #FCA5A5; background-color: #FFF1F2; color: #111827 !important;">
+                    <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-black font-mono text-xs sm:text-sm tracking-tight cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10">
                       ${h.ticker}
                     </span>
                     ${!isClosed ? `
@@ -1770,9 +1795,9 @@
                           <div class="px-3 py-2 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition"
                                style="display: grid; grid-template-columns: 1.1fr 1.3fr 1.1fr 1.2fr; align-items: center;"
                                data-open-asset="${h.ticker}">
-                            <!-- Ticker Badge (Pink Box) -->
+                            <!-- Ticker Badge -->
                             <div class="text-left pl-0.5">
-                              <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-black font-mono text-xs sm:text-sm tracking-tight cursor-pointer active:scale-95 transition" style="border: 1px solid #FCA5A5; background-color: #FFF1F2; color: #111827 !important;">
+                              <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-black font-mono text-xs sm:text-sm tracking-tight cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10">
                                 ${h.ticker}
                               </span>
                             </div>
@@ -2052,16 +2077,16 @@
             </div>
             <!-- Losers -->
             <div class="space-y-2">
-              <span class="text-[11px] font-semibold text-red-600 dark:text-red-400 uppercase font-mono">Losers ▼</span>
+              <span class="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase font-mono">Losers ▼</span>
               ${losers.map(l => `
-                <div class="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-mono flex items-center justify-between cursor-pointer hover:opacity-80 transition" data-open-asset="${l.ticker}">
+                <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs font-mono flex items-center justify-between cursor-pointer hover:opacity-80 transition" data-open-asset="${l.ticker}">
                   <div class="min-w-0 pr-2">
                     <span class="font-bold text-gray-900 dark:text-white block truncate">${l.ticker}</span>
                     <span class="text-[10px] text-gray-400 block">${formatEur(l.marketValue)}</span>
                   </div>
                   <div class="text-right flex-shrink-0">
                     <span class="badge-loss tabular-nums inline-block">${formatPct(l.unrealizedPnlPercent)}</span>
-                    <span class="text-[11px] font-bold block mt-0.5 text-red-600 dark:text-red-400 tabular-nums">${formatEurSignedDec(l.unrealizedPnl)}</span>
+                    <span class="text-[11px] font-bold block mt-0.5 text-rose-600 dark:text-rose-400 tabular-nums">${formatEurSignedDec(l.unrealizedPnl)}</span>
                   </div>
                 </div>
               `).join('') || '<div class="text-xs text-gray-400 font-mono py-2">Nessun titolo in perdita</div>'}
@@ -2234,7 +2259,7 @@
             </div>
           </div>
           <div class="my-1.5">
-            <div class="text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">
+            <div class="text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
               ${formatPct(twrrVal)}
             </div>
           </div>
@@ -2259,7 +2284,7 @@
             <span class="badge-profit text-[10px] uppercase font-mono">XIRR Ann.</span>
           </div>
           <div class="my-1.5">
-            <div class="text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">
+            <div class="text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
               ${formatPct(xirrVal)} <span class="text-xs font-normal text-gray-500">p.a.</span>
             </div>
           </div>
@@ -3747,6 +3772,12 @@
 
     // Listen to themeChanged event to re-render charts
     document.addEventListener('themeChanged', () => {
+      const viewData = getViewData(rawPortfolioData, selectedPortfolioId);
+      renderAllCharts(viewData);
+    });
+
+    // Listen to widgetTypographyChanged event to update charts with active typography
+    document.addEventListener('widgetTypographyChanged', () => {
       const viewData = getViewData(rawPortfolioData, selectedPortfolioId);
       renderAllCharts(viewData);
     });

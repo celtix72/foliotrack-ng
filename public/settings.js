@@ -2590,6 +2590,25 @@ async function loadSettings() {
     setVal('tavily_api_key', s.tavily_api_key);
     setVal('gdrive_client_email', s.gdrive_client_email);
     setVal('gdrive_folder_id', s.gdrive_folder_id);
+
+    // Load and reflect Widget Typography Settings
+    const curTypo = window.getWidgetTypography ? window.getWidgetTypography() : {};
+    const family = s.widget_font_family || curTypo.fontFamily || 'inter';
+    const size = s.widget_font_size || curTypo.fontSize || 'standard';
+    const variant = s.widget_font_variant || curTypo.fontVariant || 'tabular-mono';
+    const weight = s.widget_font_weight || curTypo.fontWeight || 'balanced';
+
+    setVal('widget-font-family-select', family);
+    setVal('widget-font-size-select', size);
+    setVal('widget-font-variant-select', variant);
+
+    const weightRadio = document.querySelector(`input[name="widget_font_weight"][value="${weight}"]`);
+    if (weightRadio) weightRadio.checked = true;
+
+    if (window.setWidgetTypography) {
+      window.setWidgetTypography({ fontFamily: family, fontSize: size, fontVariant: variant, fontWeight: weight }, false);
+    }
+    updateWidgetTypographyPreview({ fontFamily: family, fontSize: size, fontVariant: variant, fontWeight: weight });
   } catch (err) {
     console.error('Errore caricamento impostazioni:', err);
   }
@@ -2628,6 +2647,120 @@ async function handleSaveSettings(e) {
     if (btn) btn.disabled = false;
   }
 }
+
+// ==========================================
+// 7b. WIDGET TYPOGRAPHY & APPEARANCE CONTROLLER
+// ==========================================
+
+function getWidgetTypographyFormState() {
+  const familyEl = document.getElementById('widget-font-family-select');
+  const sizeEl = document.getElementById('widget-font-size-select');
+  const variantEl = document.getElementById('widget-font-variant-select');
+  const weightEl = document.querySelector('input[name="widget_font_weight"]:checked');
+
+  return {
+    fontFamily: familyEl ? familyEl.value : 'inter',
+    fontSize: sizeEl ? sizeEl.value : 'standard',
+    fontVariant: variantEl ? variantEl.value : 'tabular-mono',
+    fontWeight: weightEl ? weightEl.value : 'balanced'
+  };
+}
+
+function onWidgetTypographyControlChange() {
+  const cfg = getWidgetTypographyFormState();
+  if (window.setWidgetTypography) {
+    window.setWidgetTypography(cfg, false);
+  }
+  updateWidgetTypographyPreview(cfg);
+}
+
+function updateWidgetTypographyPreview(cfg) {
+  if (!cfg) cfg = getWidgetTypographyFormState();
+  const preview = document.getElementById('widget-typography-preview');
+  if (!preview) return;
+
+  const fonts = window.WIDGET_FONTS || {
+    'inter': "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    'system': "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+    'plus-jakarta': "'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    'roboto': "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    'jetbrains': "'JetBrains Mono', monospace"
+  };
+  const sizes = window.WIDGET_SIZES || { compact: 0.9, standard: 1.0, large: 1.1 };
+  const variants = window.WIDGET_VARIANTS || { 'tabular-mono': "'JetBrains Mono', monospace", 'proportional': 'inherit' };
+  const weights = window.WIDGET_WEIGHTS || { balanced: { title: '600', val: '700' }, bold: { title: '700', val: '800' } };
+
+  const family = fonts[cfg.fontFamily] || fonts.inter;
+  const scale = sizes[cfg.fontSize] || 1.0;
+  const numFamily = variants[cfg.fontVariant] || variants['tabular-mono'];
+  const weight = weights[cfg.fontWeight] || weights.balanced;
+
+  preview.style.fontFamily = family;
+
+  const valEl = preview.querySelector('.preview-value');
+  const titleEl = preview.querySelector('.preview-title');
+  const deltaEl = preview.querySelector('.preview-delta');
+
+  if (valEl) {
+    valEl.style.fontFamily = numFamily;
+    valEl.style.fontWeight = weight.val;
+    valEl.style.fontSize = `calc(1.5rem * ${scale})`;
+  }
+  if (titleEl) {
+    titleEl.style.fontWeight = weight.title;
+    titleEl.style.fontSize = `calc(0.75rem * ${scale})`;
+  }
+  if (deltaEl) {
+    deltaEl.style.fontFamily = numFamily;
+    deltaEl.style.fontWeight = weight.val;
+    deltaEl.style.fontSize = `calc(0.75rem * ${scale})`;
+  }
+}
+
+async function saveWidgetTypographySettings() {
+  const cfg = getWidgetTypographyFormState();
+  const btn = document.getElementById('btn-save-widget-typography');
+  const statusEl = document.getElementById('widget-typography-save-status');
+
+  if (btn) btn.disabled = true;
+
+  try {
+    if (window.setWidgetTypography) {
+      window.setWidgetTypography(cfg, true);
+    }
+
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        widget_font_family: cfg.fontFamily,
+        widget_font_size: cfg.fontSize,
+        widget_font_variant: cfg.fontVariant,
+        widget_font_weight: cfg.fontWeight
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (statusEl) {
+        statusEl.classList.remove('hidden');
+        setTimeout(() => statusEl.classList.add('hidden'), 3500);
+      }
+      if (typeof showToast === 'function') {
+        showToast('✓ Impostazioni font e aspetto widget salvate con successo');
+      }
+    } else {
+      if (typeof showToast === 'function') showToast(data.error || 'Errore salvataggio impostazioni', true);
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('Errore di connessione durante il salvataggio', true);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+window.onWidgetTypographyControlChange = onWidgetTypographyControlChange;
+window.updateWidgetTypographyPreview = updateWidgetTypographyPreview;
+window.saveWidgetTypographySettings = saveWidgetTypographySettings;
 
 // ==========================================
 // 8. SECURITY & CREDENTIALS CONTROLLER

@@ -1,8 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* Dynamic Widget Typography Tokens */
+  --ft-widget-font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ft-widget-num-family: 'JetBrains Mono', monospace;
+  --ft-widget-font-scale: 1;
+  --ft-widget-font-weight-title: 600;
+  --ft-widget-font-weight-val: 700;
+}
 
 @layer base {
   body {
@@ -22,6 +31,33 @@
   .currency-amount {
     font-family: 'JetBrains Mono', monospace;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Scoped Widget Typography */
+  .grid-stack-item .signature-card,
+  .widget-preview-card {
+    font-family: var(--ft-widget-font-family, 'Inter', sans-serif);
+  }
+
+  .grid-stack-item .signature-card [class*="font-mono"],
+  .grid-stack-item .signature-card .font-mono,
+  .grid-stack-item .signature-card .tabular-nums,
+  .widget-preview-card [class*="font-mono"],
+  .widget-preview-card .font-mono,
+  .widget-preview-card .tabular-nums {
+    font-family: var(--ft-widget-num-family, 'JetBrains Mono', monospace) !important;
+  }
+
+  .grid-stack-item .signature-card [class*="font-bold"],
+  .grid-stack-item .signature-card [class*="font-extrabold"],
+  .widget-preview-card [class*="font-bold"],
+  .widget-preview-card [class*="font-extrabold"] {
+    font-weight: var(--ft-widget-font-weight-val, 700);
+  }
+
+  .grid-stack-item .signature-card [class*="font-semibold"],
+  .widget-preview-card [class*="font-semibold"] {
+    font-weight: var(--ft-widget-font-weight-title, 600);
   }
 }
 

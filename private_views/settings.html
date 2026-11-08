@@ -8,7 +8,7 @@
   <script src="/theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dist/style.css">
 </head>
 <body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
@@ -925,6 +925,125 @@
             <button type="button" onclick="setTheme('light')" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5">Tema Chiaro</button>
             <button type="button" onclick="setTheme('dark')" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5">Tema Scuro</button>
             <button type="button" onclick="setTheme('system')" class="btn-pill px-4 py-2 border border-gray-300 dark:border-white/10 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/5">Predefinito di Sistema</button>
+          </div>
+        </div>
+
+        <!-- Personalizzazione Font, Dimensioni & Tipologia Widget -->
+        <div class="signature-card p-6 space-y-6">
+          <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>🔤</span>
+                <span>Tipografia & Font dei Widget</span>
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                Configura la famiglia dei caratteri, la dimensione dei font e la tipologia di visualizzazione numerica dei widget
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Personalizzazione Widget
+            </span>
+          </div>
+
+          <!-- Controls Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- 1. Tipo di Font (Famiglia) -->
+            <div class="space-y-1.5">
+              <label for="widget-font-family-select" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                Tipo di Font (Famiglia)
+              </label>
+              <select id="widget-font-family-select" onchange="onWidgetTypographyControlChange()" class="w-full px-3 py-2 rounded-xl text-xs font-mono border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="inter">Inter (Sans-Serif Moderno - Default)</option>
+                <option value="system">System Native (SF Pro / Segoe UI / Roboto)</option>
+                <option value="plus-jakarta">Plus Jakarta Sans (Geometrico Elegante)</option>
+                <option value="roboto">Roboto (Google Clean)</option>
+                <option value="jetbrains">JetBrains Mono (Monospace Finanziario)</option>
+              </select>
+              <span class="text-[11px] text-gray-400 block font-mono">Famiglia dei caratteri applicata ai widget e alle schede.</span>
+            </div>
+
+            <!-- 2. Dimensione Font (Scala) -->
+            <div class="space-y-1.5">
+              <label for="widget-font-size-select" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                Dimensione Font Widget
+              </label>
+              <select id="widget-font-size-select" onchange="onWidgetTypographyControlChange()" class="w-full px-3 py-2 rounded-xl text-xs font-mono border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="compact">Compatta (-10% - Massima densità dati)</option>
+                <option value="standard">Standard (100% - Dimensione ideale)</option>
+                <option value="large">Grande (+10% - Elevato comfort visivo)</option>
+              </select>
+              <span class="text-[11px] text-gray-400 block font-mono">Scala proporzionalmente titoli, valori, tabelle e badge.</span>
+            </div>
+
+            <!-- 3. Tipologia / Stile Cifre Finanziarie -->
+            <div class="space-y-1.5">
+              <label for="widget-font-variant-select" class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                Tipologia Numeri & Cifre
+              </label>
+              <select id="widget-font-variant-select" onchange="onWidgetTypographyControlChange()" class="w-full px-3 py-2 rounded-xl text-xs font-mono border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="tabular-mono">Tabulari Monospace (Consigliato per finanza)</option>
+                <option value="proportional">Proporzionali Standard (Testo continuo)</option>
+              </select>
+              <span class="text-[11px] text-gray-400 block font-mono">Cifre ad ampiezza fissa per allineamento millimetrico.</span>
+            </div>
+          </div>
+
+          <!-- 4. Spessore / Tratto Tipografico -->
+          <div class="space-y-2">
+            <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+              Spessore / Peso Tipografico (Font Weight)
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-black/20 cursor-pointer hover:border-emerald-500/50 transition">
+                <input type="radio" name="widget_font_weight" value="balanced" onchange="onWidgetTypographyControlChange()" checked class="text-emerald-600 focus:ring-emerald-500">
+                <div>
+                  <div class="text-xs font-bold text-gray-900 dark:text-white">Bilanciato (Semibold - Default)</div>
+                  <div class="text-[11px] text-gray-400 font-mono">Tratto moderno, pulito ed armonioso</div>
+                </div>
+              </label>
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-black/20 cursor-pointer hover:border-emerald-500/50 transition">
+                <input type="radio" name="widget_font_weight" value="bold" onchange="onWidgetTypographyControlChange()" class="text-emerald-600 focus:ring-emerald-500">
+                <div>
+                  <div class="text-xs font-extrabold text-gray-900 dark:text-white">Spiccato (Bold / Black)</div>
+                  <div class="text-[11px] text-gray-400 font-mono">Contrasto marcato su cifre ed intestazioni</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Live Preview Box -->
+          <div class="pt-4 border-t border-gray-100 dark:border-white/5 space-y-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 font-mono">
+              Anteprima Reattiva in Tempo Reale
+            </span>
+            <div id="widget-typography-preview" class="widget-preview-card p-4 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#18181b] shadow-sm max-w-xl transition-all">
+              <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 preview-title">NAV Portafoglio</span>
+                <span class="badge-profit text-[10px] uppercase font-mono preview-badge">Aggregato</span>
+              </div>
+              <div class="my-2.5 flex items-baseline justify-between">
+                <div class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight preview-value">€ 148.250,00</div>
+                <span class="text-emerald-600 dark:text-emerald-400 font-bold text-xs font-mono tabular-nums preview-delta">+2,45% (+3.480 €)</span>
+              </div>
+              <div class="pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 rounded font-bold bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-white/10 text-[11px]">SWDA.MI</span>
+                  <span class="text-gray-400 text-[11px]">iShares Core MSCI World</span>
+                </div>
+                <span class="text-emerald-600 dark:text-emerald-400 font-bold tabular-nums text-xs">+1,15%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="flex items-center justify-between pt-2">
+            <button type="button" id="btn-save-widget-typography" onclick="saveWidgetTypographySettings()" class="btn-pill px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition flex items-center space-x-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Salva Impostazioni Widget</span>
+            </button>
+            <span id="widget-typography-save-status" class="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 hidden">✓ Preferenze widget salvate</span>
           </div>
         </div>
 
