@@ -3,14 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Strumenti | FolioTrack Mobile</title>
-  <link rel="stylesheet" href="/css/output.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="/theme.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+  <style>
+    .signature-card {
+      padding: 0.85rem 0.75rem !important;
+      border-radius: 0.85rem !important;
+    }
+  </style>
 </head>
-<body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-20 select-none">
+<body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24 select-none">
 
   <!-- Mobile Top Header -->
   <header class="sticky top-0 z-40 bg-white/80 dark:bg-[#131315]/90 backdrop-blur-md border-b border-gray-200/50 dark:border-white/5 px-4 py-3 flex items-center justify-between">
@@ -25,11 +34,14 @@
     </div>
   </header>
 
+  <!-- Live Market Ticker -->
+  <div id="live-ticker-container"></div>
+
   <!-- Mobile Main Content -->
-  <main class="flex-1 px-4 py-4 space-y-3.5">
+  <main class="flex-1 px-3 py-3 space-y-2.5">
 
     <!-- 1. Ribilanciamento -->
-    <a href="/rebalance" class="signature-card p-4 flex items-center justify-between space-x-3 active:scale-[0.99] transition-transform">
+    <a href="/rebalance" class="signature-card flex items-center justify-between space-x-3 active:scale-[0.99] transition-transform">
       <div class="flex items-center space-x-3 min-w-0">
         <div class="w-11 h-11 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
           ⚖️
@@ -37,20 +49,20 @@
         <div class="min-w-0">
           <div class="flex items-center space-x-1.5">
             <h2 class="text-sm font-bold text-gray-900 dark:text-white truncate">Ribilanciamento</h2>
-            <span class="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">Target</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">Target</span>
           </div>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
             Confronto pesi e generazione ordini Cash-First
           </p>
         </div>
       </div>
-      <div class="text-gray-400 text-sm shrink-0">
+      <div class="text-gray-400 text-sm shrink-0 pr-1">
         →
       </div>
     </a>
 
     <!-- 2. AI Financial Advisor -->
-    <a href="/ai-advisor" class="signature-card p-4 flex items-center justify-between space-x-3 active:scale-[0.99] transition-transform">
+    <a href="/ai-advisor" class="signature-card flex items-center justify-between space-x-3 active:scale-[0.99] transition-transform">
       <div class="flex items-center space-x-3 min-w-0">
         <div class="w-11 h-11 rounded-xl bg-purple-500/10 dark:bg-purple-400/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl shrink-0">
           🤖
@@ -58,20 +70,20 @@
         <div class="min-w-0">
           <div class="flex items-center space-x-1.5">
             <h2 class="text-sm font-bold text-gray-900 dark:text-white truncate">AI Advisor & FIRE</h2>
-            <span class="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20">AI</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20">AI</span>
           </div>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
             Audit di portafoglio, salute e simulatore Monte Carlo
           </p>
         </div>
       </div>
-      <div class="text-gray-400 text-sm shrink-0">
+      <div class="text-gray-400 text-sm shrink-0 pr-1">
         →
       </div>
     </a>
 
     <!-- 3. Flussi & Dividendi -->
-    <a href="/dividends" class="signature-card p-4 flex items-center justify-between space-x-3 active:scale-[0.99] transition-transform">
+    <a href="/dividends" class="signature-card flex items-center justify-between space-x-3 active:scale-[0.99] transition-transform">
       <div class="flex items-center space-x-3 min-w-0">
         <div class="w-11 h-11 rounded-xl bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shrink-0">
           📈
@@ -79,14 +91,14 @@
         <div class="min-w-0">
           <div class="flex items-center space-x-1.5">
             <h2 class="text-sm font-bold text-gray-900 dark:text-white truncate">Flussi, Dividendi & Fisco</h2>
-            <span class="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20">Fisco</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20">Fisco</span>
           </div>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
             Rendita dividendi e monitoraggio zainetto fiscale
           </p>
         </div>
       </div>
-      <div class="text-gray-400 text-sm shrink-0">
+      <div class="text-gray-400 text-sm shrink-0 pr-1">
         →
       </div>
     </a>
@@ -94,5 +106,6 @@
   </main>
 
   <!-- MOBILE_NAV_PARTIAL -->
+  <script src="/header_indices.js"></script>
 </body>
 </html>

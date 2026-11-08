@@ -62,6 +62,8 @@ describe('Navigation: Unified Strumenti (Tools) Hub & Submenu', () => {
       assert.ok(text.includes('Ribilanciamento Portafoglio'), `Response should list rebalance card`);
       assert.ok(text.includes('AI Financial Advisor'), `Response should list AI advisor card`);
       assert.ok(text.includes('Flussi, Dividendi & Fisco'), `Response should list dividends/tax card`);
+      assert.ok(text.includes('href="/dist/style.css"'), `Response should load /dist/style.css for ${endpoint}`);
+      assert.ok(!text.includes('/css/output.css'), `Response should not have broken /css/output.css`);
       // Sidebar partial check
       assert.ok(text.includes('id="nav-tools-group"'), `Sidebar partial should contain #nav-tools-group`);
       assert.ok(text.includes('id="btn-toggle-tools"'), `Sidebar partial should contain #btn-toggle-tools`);
@@ -77,6 +79,8 @@ describe('Navigation: Unified Strumenti (Tools) Hub & Submenu', () => {
     assert.equal(res.status, 200);
     const text = await res.text();
     assert.ok(text.includes('Strumenti | FolioTrack Mobile') || text.includes('Sezioni e Tool Analitici'));
+    assert.ok(text.includes('href="/dist/style.css"'), 'Mobile tools should load /dist/style.css');
+    assert.ok(!text.includes('/css/output.css'), 'Mobile tools should not load broken /css/output.css');
     assert.ok(text.includes('id="mobile-bottom-nav"'), 'Should contain mobile bottom nav partial');
     assert.ok(text.includes('data-mobile-page="tools"'), 'Mobile bottom nav should contain data-mobile-page="tools"');
     assert.ok(text.includes('>Strumenti</span>'), 'Mobile bottom nav should show Strumenti');

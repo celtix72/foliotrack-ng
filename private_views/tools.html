@@ -4,18 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Strumenti | FolioTrack</title>
-  <link rel="stylesheet" href="/css/output.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  
+  <!-- Anti-FOUC Theme Script -->
+  <script src="/theme.js"></script>
+
+  <!-- Google Fonts & Compiled Signature CSS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="/theme.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
 </head>
-<body class="signature-bg min-h-full flex text-gray-900 dark:text-gray-100 transition-colors duration-200">
+<body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
 
   <!-- SIDEBAR_PARTIAL -->
 
   <!-- Main Content Wrapper -->
   <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div id="live-ticker-container" class="no-print"></div>
 
     <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full">
       <div>
@@ -109,5 +115,7 @@
       </div>
     </main>
   </div>
+
+  <script src="/header_indices.js"></script>
 </body>
 </html>
