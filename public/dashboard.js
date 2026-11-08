@@ -185,6 +185,7 @@
   let activeMoversMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_movers_mode') : null) || 'pct';
   let activeCompactSort = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_compact_sort') : null) || 'day_desc';
   let activeCategoryQuotesFilter = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_catquotes_filter') : null) || 'ALL';
+  let activePerfMatrixFilter = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_perfmatrix_filter') : null) || 'ALL';
   let collapsedCategorySet = new Set();
   try {
     const rawCollapsed = typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_collapsed_categories') : null;
@@ -2488,87 +2489,196 @@
       `;
     },
 
-    // 19. Multi-Period Performance Matrix
+    // 19. Multi-Period Performance Matrix (Redesigned with Ultra-Compact Category Quotes Density)
     performanceMatrix: (data) => {
       const m = data.performanceMetrics || {};
       const twrMap = m.twr || {};
       const gainMap = m.periodGain || {};
 
-      const periods = [
-        { key: '1M', label: '1 Mese', years: 1/12 },
-        { key: '3M', label: '3 Mesi', years: 0.25 },
-        { key: '6M', label: '6 Mesi', years: 0.5 },
-        { key: '1Y', label: '1 Anno', years: 1.0 },
-        { key: '3Y', label: '3 Anni', years: 3.0 },
-        { key: '5Y', label: '5 Anni', years: 5.0 },
-        { key: 'ALL', label: 'Da Inizio', years: null }
+      const allPeriods = [
+        { key: '1M', label: '1 Mese', years: 1/12, group: 'SHORT' },
+        { key: '3M', label: '3 Mesi', years: 0.25, group: 'SHORT' },
+        { key: '6M', label: '6 Mesi', years: 0.5, group: 'SHORT' },
+        { key: '1Y', label: '1 Anno', years: 1.0, group: 'SHORT' },
+        { key: '3Y', label: '3 Anni', years: 3.0, group: 'LONG' },
+        { key: '5Y', label: '5 Anni', years: 5.0, group: 'LONG' },
+        { key: 'ALL', label: 'Da Inizio', years: null, group: 'LONG' }
       ];
 
-      const rowsHtml = periods.map(p => {
+      let currentFilter = (typeof activePerfMatrixFilter !== 'undefined') ? activePerfMatrixFilter : 'ALL';
+      let activePeriods = allPeriods;
+      if (currentFilter === 'SHORT') {
+        activePeriods = allPeriods.filter(p => p.group === 'SHORT');
+      } else if (currentFilter === 'LONG') {
+        activePeriods = allPeriods.filter(p => p.group === 'LONG');
+      } else if (currentFilter !== 'ALL') {
+        activePeriods = allPeriods.filter(p => p.key === currentFilter);
+        if (activePeriods.length === 0) {
+          currentFilter = 'ALL';
+          activePeriods = allPeriods;
+        }
+      }
+
+      // Summary KPIs for header (ALL period or current scope)
+      const allTwr = twrMap['ALL'] !== undefined ? Number(twrMap['ALL']) : null;
+      const allGain = gainMap['ALL'] !== undefined ? Number(gainMap['ALL']) : null;
+      const allTwrStr = allTwr !== null ? formatPct(allTwr) : '--';
+      const allGainStr = allGain !== null ? formatEurSigned(allGain) : '--';
+
+      // Specific filter selectors (Pills & Dropdown) matching categoryQuotes
+      const filterTabs = [
+        { id: 'ALL', label: 'Tutti', count: allPeriods.length },
+        { id: 'SHORT', label: 'Breve', count: 4 },
+        { id: 'LONG', label: 'Lungo', count: 3 }
+      ];
+
+      const pillButtons = filterTabs.map(tab => {
+        const isActive = currentFilter === tab.id;
+        return `
+          <button type="button"
+            class="px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-mono font-medium transition shrink-0 cursor-pointer ${isActive ? 'bg-amber-600 text-white font-bold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-white/5'}"
+            data-perfmatrix-filter="${tab.id}">
+            ${tab.label} <span class="opacity-75 text-[8px] sm:text-[9px]">(${tab.count})</span>
+          </button>
+        `;
+      }).join('');
+
+      const selectOptions = [
+        `<option value="ALL" ${currentFilter === 'ALL' ? 'selected' : ''}>Tutti i Periodi (${allPeriods.length})</option>`,
+        `<option value="SHORT" ${currentFilter === 'SHORT' ? 'selected' : ''}>Breve (1M - 1A)</option>`,
+        `<option value="LONG" ${currentFilter === 'LONG' ? 'selected' : ''}>Lungo (3A - All)</option>`,
+        ...allPeriods.map(p => `<option value="${p.key}" ${currentFilter === p.key ? 'selected' : ''}>${p.label} (${p.key})</option>`)
+      ].join('');
+
+      const rowsHtml = activePeriods.map(p => {
         const tVal = twrMap[p.key] !== undefined ? Number(twrMap[p.key]) : null;
         const gVal = gainMap[p.key] !== undefined ? Number(gainMap[p.key]) : null;
         const hasData = tVal !== null;
         const isPos = (tVal || 0) >= 0;
+
         let annStr = '-';
         if (hasData && p.years && p.years >= 2.0 && tVal > -100) {
           const ann = (Math.pow(1.0 + tVal / 100.0, 1.0 / p.years) - 1.0) * 100.0;
-          annStr = `${ann >= 0 ? '+' : ''}${ann.toFixed(2)}% p.a.`;
+          annStr = `${ann >= 0 ? '+' : ''}${ann.toFixed(1)}% a.`;
+        } else if (hasData && p.years === 1.0) {
+          annStr = `${tVal >= 0 ? '+' : ''}${tVal.toFixed(1)}% a.`;
+        }
+
+        let twrBadgeHtml = '<span class="text-[10px] font-mono text-gray-400 leading-none">--</span>';
+        if (hasData) {
+          if (isPos) {
+            twrBadgeHtml = `
+              <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-bold font-mono text-[9px] sm:text-[10px] tabular-nums leading-none" style="background-color: #DCFCE7; color: #15803D;">
+                ${formatPct(tVal)}
+              </span>
+            `;
+          } else {
+            twrBadgeHtml = `
+              <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-bold font-mono text-[9px] sm:text-[10px] tabular-nums leading-none" style="background-color: #FFE4E6; color: #BE123C;">
+                ${formatPct(tVal)}
+              </span>
+            `;
+          }
+        }
+
+        let gainHtml = '<span class="text-[10px] font-mono text-gray-400 leading-none">--</span>';
+        if (gVal !== null) {
+          const gainColor = gVal > 0 ? 'text-[#15803D] dark:text-[#4ADE80]' : (gVal < 0 ? 'text-[#BE123C] dark:text-[#FB7185]' : 'text-gray-500');
+          gainHtml = `
+            <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none ${gainColor}">
+              ${formatEurSigned(gVal)}
+            </span>
+          `;
         }
 
         return `
-          <tr class="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition">
-            <th scope="row" class="py-1.5 px-3 font-mono font-medium text-gray-900 dark:text-gray-100 text-left sticky left-0 bg-white dark:bg-[#1a1a1c] z-10">${p.label}</th>
-            <td class="py-1.5 px-3 text-right">
-              ${hasData ? `<span class="${isPos ? 'badge-profit' : 'badge-loss'} font-mono text-[11px]">${formatPct(tVal)}</span>` : '<span class="text-gray-400 font-mono text-xs">--</span>'}
-            </td>
-            <td class="py-1.5 px-3 font-mono text-right text-xs ${hasData ? (gVal >= 0 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-rose-600 dark:text-rose-400 font-medium') : 'text-gray-400'}">
-              ${hasData ? formatEurSigned(gVal) : '--'}
-            </td>
-            <td class="py-1.5 px-3 font-mono text-right text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+          <div class="px-2 py-[2px] border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/70 dark:hover:bg-white/5 transition select-none leading-tight"
+               style="display: grid; grid-template-columns: 1.25fr 1.15fr 1.2fr 1.1fr; align-items: center;">
+            <!-- Periodo Badge + Label -->
+            <div class="text-left pl-0.5 flex items-center min-w-0">
+              <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-black font-mono text-[9px] sm:text-[10px] tracking-tight leading-none bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10 mr-1.5 shrink-0">
+                ${p.key}
+              </span>
+              <span class="text-[10px] sm:text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">
+                ${p.label}
+              </span>
+            </div>
+
+            <!-- TWRR -->
+            <div class="text-right flex items-center justify-end leading-none">
+              ${twrBadgeHtml}
+            </div>
+
+            <!-- Guadagno (P&L) -->
+            <div class="text-right pr-1 flex items-center justify-end leading-none">
+              ${gainHtml}
+            </div>
+
+            <!-- Annualizzato -->
+            <div class="text-right pr-0.5 font-mono text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 tabular-nums leading-none">
               ${annStr}
-            </td>
-            <td class="py-1.5 px-3 text-right text-[11px] font-mono">
-              ${hasData ? (isPos ? '<span class="text-emerald-600 dark:text-emerald-400 font-bold">▲ Guadagno</span>' : '<span class="text-rose-600 dark:text-rose-400 font-bold">▼ Perdita</span>') : '--'}
-            </td>
-          </tr>
+            </div>
+          </div>
         `;
       }).join('');
 
       return `
-        <div class="h-full flex flex-col justify-between">
-          <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
-            <div>
-              <div class="flex items-center space-x-2">
-                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Matrice Rendimenti</span>
-                <span class="badge-profit text-[10px] uppercase font-mono">TWRR</span>
+        <div class="h-full flex flex-col -m-2 sm:-m-3 overflow-hidden select-none">
+          <!-- Top Control Header: Scope summary + Period selectors -->
+          <div class="px-2 sm:px-2.5 pt-1 pb-1 border-b border-gray-100 dark:border-white/5 shrink-0 bg-white/40 dark:bg-black/20">
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <div class="flex items-center space-x-1.5 min-w-0">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">Matrice Rendimenti</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">TWRR</span>
               </div>
-              <div class="text-[11px] font-mono text-gray-400">Rendimenti e guadagni per periodo</div>
+
+              <!-- Scope KPIs (DA INIZIO & P&L TOT) + Recalculate Button -->
+              <div class="flex items-center space-x-1.5 text-right shrink-0">
+                <div class="leading-none">
+                  <span class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">DA INIZIO</span>
+                  <span class="text-[10px] sm:text-[11px] font-mono font-bold leading-tight ${allTwr >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${allTwrStr}</span>
+                </div>
+                <div class="border-l border-gray-200 dark:border-white/10 pl-1.5 leading-none">
+                  <span class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">P&L TOT.</span>
+                  <span class="text-[9px] sm:text-[10px] font-mono font-bold leading-tight ${allGain >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${allGainStr}</span>
+                </div>
+                <button type="button" data-action="recalculate-perf" title="Ricalcola rendimenti e serie storiche" class="p-1 text-gray-400 hover:text-emerald-500 rounded transition cursor-pointer">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <button type="button" data-action="recalculate-perf" title="Ricalcola serie e indicatori" class="p-1 text-gray-400 hover:text-emerald-500 rounded transition cursor-pointer">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
+
+            <!-- Specific Period Selectors (Pills & Dropdown) -->
+            <div class="flex items-center justify-between gap-1">
+              <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
+                ${pillButtons}
+              </div>
+              <div class="shrink-0 pl-1">
+                <select data-perfmatrix-select class="text-[9px] sm:text-[10px] font-mono font-semibold py-0.5 px-1 rounded bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 border-0 focus:ring-1 focus:ring-amber-500 cursor-pointer max-w-[110px] truncate" aria-label="Seleziona periodo">
+                  ${selectOptions}
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div role="region" tabindex="0" aria-label="Tabella rendimenti per periodo" class="flex-1 overflow-x-auto overflow-y-auto my-2 no-scrollbar">
-            <table class="w-full text-left text-xs border-collapse">
-              <thead class="sticky top-0 bg-gray-50/90 dark:bg-[#151518]/90 backdrop-blur z-20 text-[10px] uppercase font-mono text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/10">
-                <tr>
-                  <th scope="col" class="py-1.5 px-3">Periodo</th>
-                  <th scope="col" class="py-1.5 px-3 text-right">TWRR</th>
-                  <th scope="col" class="py-1.5 px-3 text-right">Guadagno</th>
-                  <th scope="col" class="py-1.5 px-3 text-right hidden sm:table-cell">Annualizzato</th>
-                  <th scope="col" class="py-1.5 px-3 text-right">Stato</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
+          <!-- Single Sticky Table Header -->
+          <div class="px-2 py-0.5 bg-gray-50/95 dark:bg-[#18181b]/95 backdrop-blur border-b border-gray-200/60 dark:border-white/10 text-[9px] sm:text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wider shrink-0 leading-none"
+               style="display: grid; grid-template-columns: 1.25fr 1.15fr 1.2fr 1.1fr; align-items: center;">
+            <div class="text-left pl-0.5">PERIODO</div>
+            <div class="text-right">TWRR</div>
+            <div class="text-right pr-1">P&L TOT.</div>
+            <div class="text-right pr-0.5">ANN.</div>
           </div>
 
-          <div class="pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-400">
+          <!-- Table Body Content -->
+          <div role="region" tabindex="0" aria-label="Elenco rendimenti per periodo" class="flex-1 overflow-y-auto no-scrollbar divide-y divide-gray-100/50 dark:divide-white/5">
+            ${rowsHtml}
+          </div>
+
+          <!-- Compact Footer -->
+          <div class="px-2 py-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-gray-400 shrink-0 bg-white/30 dark:bg-black/10">
             <span>TWRR depurato da flussi</span>
             <span class="text-emerald-600 dark:text-emerald-400 font-semibold cursor-pointer hover:underline" onclick="FolioTrackDashboard.openDrawer()">Personalizza</span>
           </div>
@@ -4057,6 +4167,14 @@
         return;
       }
 
+      // 6c. Performance Matrix Filter (Pills)
+      const perfFilterBtn = e.target.closest('[data-perfmatrix-filter]');
+      if (perfFilterBtn) {
+        const perfFilter = perfFilterBtn.getAttribute('data-perfmatrix-filter');
+        setPerfMatrixFilter(perfFilter);
+        return;
+      }
+
       // 7. Category Accordion Toggle (Photos 1 & 2)
       const catHeader = e.target.closest('[data-toggle-category]');
       if (catHeader) {
@@ -4079,6 +4197,12 @@
       const catSelect = e.target.closest('[data-catquotes-select]');
       if (catSelect) {
         setCategoryQuotesFilter(catSelect.value);
+        return;
+      }
+
+      const perfSelect = e.target.closest('[data-perfmatrix-select]');
+      if (perfSelect) {
+        setPerfMatrixFilter(perfSelect.value);
         return;
       }
 
@@ -4147,6 +4271,23 @@
     }
   }
 
+  function setPerfMatrixFilter(filterId) {
+    if (filterId === activePerfMatrixFilter) return;
+    activePerfMatrixFilter = filterId;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('foliotrack_perfmatrix_filter', filterId);
+      }
+    } catch {}
+    if (rawPortfolioData) {
+      const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+      const perfEl = document.getElementById('widget-body-performanceMatrix');
+      if (perfEl && WIDGET_RENDERERS.performanceMatrix) {
+        perfEl.innerHTML = WIDGET_RENDERERS.performanceMatrix(activeView);
+      }
+    }
+  }
+
   function openAssetDetail(ticker) {
     if (!ticker) return;
     const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
@@ -4179,6 +4320,7 @@
     openAssetDetail,
     toggleCategoryAccordion,
     setCategoryQuotesFilter,
+    setPerfMatrixFilter,
     setMoversMode,
     setCompactSort: (s) => {
       activeCompactSort = s;
