@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analisi Titoli Azionari & Watchlist | FolioTrack</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+  <style>
+    dialog:modal {
+      overscroll-behavior: contain;
+    }
+    dialog::backdrop {
+      overflow: hidden;
+      overscroll-behavior: contain;
+      background-color: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+    }
+    dialog[open] {
+      animation: dialogFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes dialogFadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+  <!-- SIDEBAR_PARTIAL -->
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div id="live-ticker-container"></div>
+
+    <!-- Header & Top Actions -->
+    <header class="px-6 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Analisi Titoli Azionari & Watchlist</h1>
+        <p class="text-[11px] font-mono text-gray-500 dark:text-gray-400">
+          Quotazioni, variazioni 1W/1M/3M/1Y/3Y, Stop Loss, Take Profit e analisi fondamentale da Yahoo Finance
+        </p>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button id="refreshQuotesBtn" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5 cursor-pointer" title="Aggiorna dati e variazioni">
+          <svg id="iconRefresh" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Aggiorna</span>
+        </button>
+
+        <button id="openAddAssetBtn" class="btn-pill px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>+ Aggiungi Asset da Monitorare</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 px-6 pb-12 space-y-3">
+      <!-- Summary KPIs Bar -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+        <div class="signature-card p-2 sm:p-2.5 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[9px] uppercase font-bold text-gray-400">Titoli Azionari Monitorati</div>
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span id="kpiTotalAssets" class="text-base font-bold text-gray-900 dark:text-white">0</span>
+            <span id="kpiPortfolioCount" class="text-[9px] text-gray-400">0 in portafoglio</span>
+          </div>
+        </div>
+
+        <div class="signature-card p-2 sm:p-2.5 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[9px] uppercase font-bold text-gray-400">Titoli in Guadagno (1M / 1Y)</div>
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span id="kpiGainers" class="text-base font-bold text-emerald-600 dark:text-emerald-400">0 / 0</span>
+            <span class="text-[9px] text-emerald-500 font-bold">UP</span>
+          </div>
+        </div>
+
+        <div class="signature-card p-2 sm:p-2.5 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[9px] uppercase font-bold text-gray-400">Alert Stop Loss (SL)</div>
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span id="kpiSlAlerts" class="text-base font-bold text-rose-600 dark:text-rose-400">0</span>
+            <span id="kpiSlLabel" class="text-[9px] text-gray-400">sotto o vicini al limite</span>
+          </div>
+        </div>
+
+        <div class="signature-card p-2 sm:p-2.5 bg-white/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col justify-between">
+          <div class="text-[9px] uppercase font-bold text-gray-400">Target Take Profit (TP)</div>
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span id="kpiTpReached" class="text-base font-bold text-emerald-600 dark:text-emerald-400">0</span>
+            <span id="kpiTpLabel" class="text-[9px] text-gray-400">raggiunti o vicini</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact Search & Filter Controls -->
+      <div class="signature-card p-2.5 sm:p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/70 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
+        <div class="flex items-center space-x-1.5 overflow-x-auto pb-0.5">
+          <span class="text-[9px] uppercase font-bold text-gray-400 mr-1">Filtra:</span>
+          <button data-filter="all" class="analysis-filter-btn px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-semibold text-[11px] transition">Tutti (<span id="countAll">0</span>)</button>
+          <button data-filter="portfolio" class="analysis-filter-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">In Portafoglio (<span id="countPortfolio">0</span>)</button>
+          <button data-filter="monitored" class="analysis-filter-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">Solo Watchlist (<span id="countWatchlist">0</span>)</button>
+          <button data-filter="alerts" class="analysis-filter-btn px-2.5 py-1 rounded-lg bg-gray-200/70 dark:bg-white/5 hover:bg-gray-300 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-[11px] transition">Alert SL / TP (<span id="countAlerts">0</span>)</button>
+        </div>
+
+        <div class="relative w-full sm:w-64">
+          <input type="text" id="searchInput" placeholder="Cerca ticker o nome..."
+            class="w-full pl-7 pr-6 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-mono">
+          <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <button id="clearSearchBtn" class="hidden absolute right-2 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold text-xs">✕</button>
+        </div>
+      </div>
+
+      <!-- Main Analysis Table Card -->
+      <div class="signature-card overflow-hidden">
+        <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Tabella analisi titoli azionari">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
+            <thead class="bg-gray-50/90 dark:bg-[#141416]/90 backdrop-blur text-gray-400 uppercase tracking-wider text-[10px] font-semibold sticky top-0 z-10 border-b border-gray-200 dark:border-white/5">
+              <tr>
+                <th class="px-2.5 py-1.5 whitespace-nowrap">Asset Azionario</th>
+                <th class="px-2.5 py-1.5 whitespace-nowrap">Origine</th>
+                <th class="px-2.5 py-1.5 text-right whitespace-nowrap">Quotazione</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap" title="Variazione 1 Settimana">1W</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap" title="Variazione 1 Mese">1M</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap" title="Variazione 3 Mesi">3M</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap" title="Variazione 1 Anno">1Y</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap" title="Variazione 3 Anni">3Y</th>
+                <th class="px-2.5 py-1.5 text-right whitespace-nowrap" title="Livello Stop Loss">Stop Loss (SL)</th>
+                <th class="px-2.5 py-1.5 text-right whitespace-nowrap" title="Livello Take Profit">Take Profit (TP)</th>
+                <th class="px-2 py-1.5 text-center whitespace-nowrap">Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="analysisTableBody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums">
+              <tr>
+                <td colspan="11" class="px-4 py-8 text-center text-gray-400 text-xs">Caricamento analisi asset in corso...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="px-3 py-2 bg-gray-50/70 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono text-gray-400">
+          <span>💡 <em>Fai clic su qualsiasi riga per aprire la scheda di analisi fondamentale Yahoo Finance</em></span>
+          <span id="tableCountBadge" class="text-gray-500 font-bold">0 titoli</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Fundamentals Analysis Modal Dialog (Native <dialog> conforming to modern-web-guidance) -->
+  <dialog id="fundamentalsModal" aria-labelledby="modalStockTitle" class="signature-card p-0 rounded-2xl w-full max-w-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/60 font-sans">
+    <div class="flex flex-col max-h-[90vh]">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-gray-50/70 dark:bg-white/[0.02]">
+        <div class="flex items-center space-x-3">
+          <div id="modalStockBadge" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-mono font-bold text-white text-sm shadow">
+            --
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 id="modalStockTitle" class="text-base font-bold text-gray-900 dark:text-white leading-tight">Caricamento...</h2>
+              <span id="modalStockTicker" class="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">--</span>
+            </div>
+            <div id="modalStockSubtitle" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center space-x-2">
+              <span>--</span>
+            </div>
+          </div>
+        </div>
+
+        <form method="dialog">
+          <button type="submit" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div id="modalBody" class="p-6 overflow-y-auto space-y-5 text-xs font-mono">
+        <div class="py-12 text-center text-gray-400">
+          <svg class="w-8 h-8 mx-auto animate-spin text-emerald-500 mb-2" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Recupero metriche fondamentali Yahoo Finance...</span>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 border-t border-gray-200 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.02] flex items-center justify-between text-[11px] font-mono text-gray-400">
+        <span id="modalSourceBadge">Fonte dati: Yahoo Finance API</span>
+        <form method="dialog">
+          <button type="submit" class="btn-pill px-4 py-1.5 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-semibold transition">
+            Chiudi
+          </button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Add Asset to Watchlist Modal -->
+  <dialog id="addAssetModal" aria-labelledby="addAssetModalTitle" class="signature-card p-0 rounded-2xl w-full max-w-md border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/60 font-sans">
+    <div class="p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-white/10 pb-3">
+        <h3 id="addAssetModalTitle" class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+          <span>🔍 Monitora Nuovo Titolo</span>
+        </h3>
+        <form method="dialog">
+          <button type="submit" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg font-bold">&times;</button>
+        </form>
+      </div>
+
+      <form id="addAssetForm" class="space-y-3 font-mono text-xs">
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Ticker / Simbolo Azionario *</label>
+          <input type="text" id="addTickerInput" required placeholder="es. NVDA, ENI.MI, MC.PA, RACE..."
+            class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white uppercase font-bold text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+          <span class="text-[10px] text-gray-400 mt-0.5 block font-sans">Supporta azioni italiane (.MI), USA (NASDAQ/NYSE), europee (.PA, .DE, .AS)</span>
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Nome Azienda (opzionale)</label>
+          <input type="text" id="addNameInput" placeholder="es. NVIDIA Corporation"
+            class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Stop Loss (SL)</label>
+            <input type="number" step="any" id="addSlInput" placeholder="Prezzo min"
+              class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-rose-500">
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Take Profit (TP)</label>
+            <input type="number" step="any" id="addTpInput" placeholder="Prezzo target"
+              class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Note Operative / Tesi d'Investimento</label>
+          <textarea id="addNotesInput" rows="2" placeholder="Note facoltative..."
+            class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-200 dark:border-white/10 font-sans">
+          <button type="button" onclick="document.getElementById('addAssetModal').close()" class="btn-pill px-4 py-1.5 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium">Annulla</button>
+          <button type="submit" id="addAssetSubmitBtn" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow">Aggiungi a Watchlist</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Edit Targets (SL / TP) Modal -->
+  <dialog id="editTargetsModal" aria-labelledby="editTargetsModalTitle" class="signature-card p-0 rounded-2xl w-full max-w-sm border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/60 font-sans">
+    <div class="p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-white/10 pb-3">
+        <h3 id="editTargetsModalTitle" class="text-base font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+          <span>🎯 Imposta Stop Loss & Take Profit</span>
+        </h3>
+        <form method="dialog">
+          <button type="submit" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg font-bold">&times;</button>
+        </form>
+      </div>
+
+      <div class="font-mono text-xs text-gray-400">
+        <span class="text-gray-500">Asset:</span> <span id="targetModalTicker" class="font-bold text-gray-900 dark:text-white text-sm">--</span>
+        <span class="ml-2 text-gray-500">Prezzo:</span> <span id="targetModalPrice" class="font-bold text-emerald-600 dark:text-emerald-400">--</span>
+      </div>
+
+      <form id="editTargetsForm" class="space-y-3 font-mono text-xs">
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Stop Loss (SL) - Prezzo di Uscita</label>
+          <input type="number" step="any" id="editSlInput" placeholder="es. 120.50 (lascia vuoto per rimuovere)"
+            class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-rose-500">
+          <span class="text-[10px] text-gray-400 mt-0.5 block font-sans">Scatta un alert visivo quando il prezzo scende sotto questo valore</span>
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Take Profit (TP) - Prezzo Obiettivo</label>
+          <input type="number" step="any" id="editTpInput" placeholder="es. 175.00 (lascia vuoto per rimuovere)"
+            class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
+          <span class="text-[10px] text-gray-400 mt-0.5 block font-sans">Segnala il raggiungimento dell'obiettivo di guadagno</span>
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Note</label>
+          <input type="text" id="editNotesInput" placeholder="Note facoltative..."
+            class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-200 dark:border-white/10 font-sans">
+          <button type="button" onclick="document.getElementById('editTargetsModal').close()" class="btn-pill px-4 py-1.5 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium">Annulla</button>
+          <button type="submit" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow">Salva Livelli</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Client Script for Analysis & Fundamentals -->
+  <script src="/header_indices.js"></script>
+  <script src="/analysis.js"></script>
+</body>
+</html>

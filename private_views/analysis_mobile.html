@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Analisi Titoli | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+  <style>
+    .signature-card {
+      padding: 0.4rem 0.55rem !important;
+      border-radius: 0.6rem !important;
+    }
+    dialog:modal {
+      overscroll-behavior: contain;
+    }
+    dialog::backdrop {
+      overflow: hidden;
+      overscroll-behavior: contain;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+    }
+    dialog[open] {
+      animation: dialogSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes dialogSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="px-3 py-2 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+    <div>
+      <h1 class="text-sm font-bold text-gray-900 dark:text-white leading-tight">Analisi Azionaria</h1>
+      <span id="mTotalCount" class="text-[10px] font-mono text-gray-400 leading-none">0 titoli monitorati</span>
+    </div>
+
+    <div class="flex items-center space-x-1">
+      <button id="mRefreshBtn" title="Aggiorna Dati" class="p-1.5 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+        <svg id="mIconRefresh" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+
+      <button id="mOpenAddAssetBtn" class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center space-x-1 shadow">
+        <span>+ Monitora</span>
+      </button>
+    </div>
+  </header>
+
+  <div id="live-ticker-container"></div>
+
+  <!-- Mobile Filters & Search Bar -->
+  <div class="px-2 py-1.5 bg-gray-50/90 dark:bg-white/[0.03] border-b border-gray-200/50 dark:border-white/5 space-y-1.5 text-xs font-mono">
+    <div class="flex items-center space-x-1 overflow-x-auto pb-0.5">
+      <button data-m-filter="all" class="m-filter-btn px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white">Tutti (<span id="mCountAll">0</span>)</button>
+      <button data-m-filter="portfolio" class="m-filter-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">Portafoglio (<span id="mCountPortfolio">0</span>)</button>
+      <button data-m-filter="monitored" class="m-filter-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">Watchlist (<span id="mCountWatchlist">0</span>)</button>
+      <button data-m-filter="alerts" class="m-filter-btn px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">Alert (<span id="mCountAlerts">0</span>)</button>
+    </div>
+
+    <div>
+      <input type="text" id="mSearchInput" placeholder="Cerca ticker o azienda..."
+        class="w-full px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs">
+    </div>
+  </div>
+
+  <!-- Mobile Main List -->
+  <main class="flex-1 px-1.5 py-1.5 space-y-1.5">
+    <div id="mAnalysisListContainer" class="space-y-1">
+      <div class="signature-card p-4 text-center text-xs text-gray-400 font-mono">
+        Caricamento asset azionari...
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Fundamentals Modal (Native <dialog>) -->
+  <dialog id="fundamentalsModal" aria-labelledby="modalStockTitle" class="signature-card p-0 rounded-2xl w-[94vw] max-w-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/70 font-sans">
+    <div class="flex flex-col max-h-[85vh]">
+      <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-gray-50/80 dark:bg-white/[0.02]">
+        <div class="flex items-center space-x-2 truncate">
+          <div id="modalStockBadge" class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-mono font-bold text-white text-xs">
+            --
+          </div>
+          <div class="truncate">
+            <div class="flex items-center space-x-1.5">
+              <h2 id="modalStockTitle" class="text-xs font-bold text-gray-900 dark:text-white truncate">--</h2>
+              <span id="modalStockTicker" class="text-[10px] font-mono font-bold px-1 py-0.2 rounded bg-gray-200 dark:bg-white/10">--</span>
+            </div>
+            <div id="modalStockSubtitle" class="text-[10px] text-gray-400 truncate">--</div>
+          </div>
+        </div>
+
+        <form method="dialog">
+          <button type="submit" class="p-1 rounded text-gray-400 hover:text-gray-200 text-lg font-bold">&times;</button>
+        </form>
+      </div>
+
+      <div id="modalBody" class="p-3.5 overflow-y-auto space-y-3 text-xs font-mono">
+        <div class="py-10 text-center text-gray-400">
+          Caricamento analisi fondamentale...
+        </div>
+      </div>
+
+      <div class="px-4 py-2 border-t border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.02] flex items-center justify-between text-[10px] font-mono text-gray-400">
+        <span>Yahoo Finance API</span>
+        <form method="dialog">
+          <button type="submit" class="btn-pill px-3 py-1 bg-gray-200 dark:bg-white/10 text-gray-800 dark:text-gray-200 font-bold">Chiudi</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Mobile Add Asset Dialog -->
+  <dialog id="addAssetModal" aria-labelledby="addAssetModalTitle" class="signature-card p-0 rounded-2xl w-[92vw] max-w-sm border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl font-sans">
+    <div class="p-4 space-y-3">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-white/10 pb-2">
+        <h3 id="addAssetModalTitle" class="text-sm font-bold text-gray-900 dark:text-white">🔍 Monitora Titolo</h3>
+        <form method="dialog">
+          <button type="submit" class="text-gray-400 hover:text-gray-200 font-bold text-base">&times;</button>
+        </form>
+      </div>
+
+      <form id="addAssetForm" class="space-y-2.5 font-mono text-xs">
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Ticker *</label>
+          <input type="text" id="addTickerInput" required placeholder="es. NVDA, SPM.MI, RACE..."
+            class="w-full px-2.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-sm uppercase font-bold">
+        </div>
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Nome (opzionale)</label>
+          <input type="text" id="addNameInput" placeholder="es. Nvidia Corp"
+            class="w-full px-2.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Stop Loss (SL)</label>
+            <input type="number" step="any" id="addSlInput" placeholder="Prezzo min"
+              class="w-full px-2 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          </div>
+          <div>
+            <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Take Profit (TP)</label>
+            <input type="number" step="any" id="addTpInput" placeholder="Prezzo target"
+              class="w-full px-2 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-200 dark:border-white/10 font-sans">
+          <button type="button" onclick="document.getElementById('addAssetModal').close()" class="btn-pill px-3 py-1 bg-gray-200 dark:bg-white/10 text-xs">Annulla</button>
+          <button type="submit" id="addAssetSubmitBtn" class="btn-pill px-3 py-1 bg-emerald-600 text-white font-bold text-xs">Aggiungi</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Mobile Edit Targets Modal -->
+  <dialog id="editTargetsModal" aria-labelledby="editTargetsModalTitle" class="signature-card p-0 rounded-2xl w-[90vw] max-w-xs border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl font-sans">
+    <div class="p-4 space-y-3">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-white/10 pb-2">
+        <h3 id="editTargetsModalTitle" class="text-sm font-bold text-gray-900 dark:text-white">🎯 Target SL & TP</h3>
+        <form method="dialog">
+          <button type="submit" class="text-gray-400 hover:text-gray-200 font-bold">&times;</button>
+        </form>
+      </div>
+
+      <div class="text-[11px] font-mono text-gray-400">
+        <span id="targetModalTicker" class="font-bold text-gray-900 dark:text-white">--</span>:
+        <span id="targetModalPrice" class="font-bold text-emerald-500">--</span>
+      </div>
+
+      <form id="editTargetsForm" class="space-y-2.5 font-mono text-xs">
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Stop Loss (SL)</label>
+          <input type="number" step="any" id="editSlInput" placeholder="Lascia vuoto per rimuovere"
+            class="w-full px-2.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+        </div>
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Take Profit (TP)</label>
+          <input type="number" step="any" id="editTpInput" placeholder="Lascia vuoto per rimuovere"
+            class="w-full px-2.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+        </div>
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">Note</label>
+          <input type="text" id="editNotesInput" placeholder="Note opzionali"
+            class="w-full px-2.5 py-1 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-200 dark:border-white/10 font-sans">
+          <button type="button" onclick="document.getElementById('editTargetsModal').close()" class="btn-pill px-3 py-1 bg-gray-200 dark:bg-white/10 text-xs">Annulla</button>
+          <button type="submit" class="btn-pill px-3 py-1 bg-emerald-600 text-white font-bold text-xs">Salva</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <!-- MOBILE_NAV_PARTIAL -->
+
+  <!-- Scripts -->
+  <script src="/header_indices.js"></script>
+  <script src="/analysis.js"></script>
+</body>
+</html>

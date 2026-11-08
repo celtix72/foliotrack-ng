@@ -20,6 +20,7 @@ const backupsRouter = require('./routes/backups');
 const currenciesRouter = require('./routes/currencies');
 const rebalancingRouter = require('./routes/rebalancing');
 const newsRouter = require('./routes/news');
+const analysisRouter = require('./routes/analysis');
 const { db } = require('./db');
 const { serveWithSidebar, isMobile } = require('./utils/viewRenderer');
 
@@ -98,6 +99,7 @@ app.use('/api/push', notificationsRouter);
 app.use('/api/backups', backupsRouter);
 app.use('/api/currencies', currenciesRouter);
 app.use('/api/rebalancing', rebalancingRouter);
+app.use('/api/analysis', analysisRouter);
 app.use('/api/news', newsRouter);
 
 // 404 handler for unmatched API routes
@@ -152,6 +154,10 @@ app.get(['/portfolios/:id', '/portfolio/:id'], requireViewAuth, (req, res) => {
 
 app.get('/transactions', requireViewAuth, (req, res) => {
   serveWithSidebar(req, res, 'transactions');
+});
+
+app.get(['/analysis', '/analisi'], requireViewAuth, (req, res) => {
+  serveWithSidebar(req, res, 'analysis');
 });
 
 app.get(['/history', '/dividends'], requireViewAuth, (req, res) => {

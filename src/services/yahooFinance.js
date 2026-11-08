@@ -190,8 +190,114 @@ async function getHistorical(symbol, period1 = '2023-01-01', interval = '1d') {
   }
 }
 
+/**
+ * Fetches comprehensive fundamental analysis data for a given equity from Yahoo Finance.
+ *
+ * @param {string} symbol
+ * @returns {Promise<object|null>}
+ */
+async function getFundamentals(symbol) {
+  if (!symbol) return null;
+  const cleanSymbol = symbol.trim().toUpperCase();
+
+  try {
+    const summary = await yahooFinance.quoteSummary(cleanSymbol, {
+      modules: [
+        'summaryDetail',
+        'defaultKeyStatistics',
+        'financialData',
+        'assetProfile',
+        'recommendationTrend'
+      ]
+    });
+
+    if (!summary) return null;
+
+    const sd = summary.summaryDetail || {};
+    const ks = summary.defaultKeyStatistics || {};
+    const fd = summary.financialData || {};
+    const ap = summary.assetProfile || {};
+    const rt = summary.recommendationTrend || {};
+
+    let dividendYield = 0.0;
+    if (sd.dividendYield !== undefined && sd.dividendYield !== null) {
+      dividendYield = sd.dividendYield < 0.2 ? sd.dividendYield * 100 : sd.dividendYield;
+    }
+
+    return {
+      ticker: cleanSymbol,
+      companyName: ap.longName || ap.shortName || cleanSymbol,
+      sector: ap.sector || 'N/D',
+      industry: ap.industry || 'N/D',
+      country: ap.country || 'N/D',
+      city: ap.city || '',
+      website: ap.website || '',
+      employees: ap.fullTimeEmployees || null,
+      description: ap.longBusinessSummary || '',
+
+      // Market & Valuation
+      marketCap: sd.marketCap || null,
+      enterpriseValue: ks.enterpriseValue || null,
+      trailingPE: sd.trailingPE || null,
+      forwardPE: sd.forwardPE || ks.forwardPE || null,
+      pegRatio: ks.pegRatio || null,
+      priceToBook: ks.priceToBook || null,
+      priceToSales: sd.priceToSalesTrailing12Months || null,
+      enterpriseToEbitda: ks.enterpriseToEbitda || null,
+      enterpriseToRevenue: ks.enterpriseToRevenue || null,
+
+      // Profitability & Margins
+      profitMargins: fd.profitMargins !== undefined ? fd.profitMargins : (ks.profitMargins || null),
+      operatingMargins: fd.operatingMargins || null,
+      grossMargins: fd.grossMargins || null,
+      returnOnAssets: fd.returnOnAssets || null,
+      returnOnEquity: fd.returnOnEquity || null,
+
+      // Financials (Income & Balance Sheet)
+      totalRevenue: fd.totalRevenue || null,
+      revenuePerShare: fd.revenuePerShare || null,
+      grossProfits: fd.grossProfits || null,
+      ebitda: fd.ebitda || null,
+      netIncome: ks.netIncomeToCommon || null,
+      trailingEps: ks.trailingEps || null,
+      forwardEps: ks.forwardEps || null,
+      totalCash: fd.totalCash || null,
+      totalDebt: fd.totalDebt || null,
+      debtToEquity: fd.debtToEquity || null,
+      freeCashflow: fd.freeCashflow || null,
+      operatingCashflow: fd.operatingCashflow || null,
+
+      // Dividends & Trading
+      dividendRate: sd.dividendRate || null,
+      dividendYield: dividendYield > 0 ? dividendYield : null,
+      payoutRatio: sd.payoutRatio ? (sd.payoutRatio * 100) : null,
+      fiveYearAvgDividendYield: sd.fiveYearAvgDividendYield || null,
+      beta: sd.beta || ks.beta || null,
+      fiftyTwoWeekHigh: sd.fiftyTwoWeekHigh || null,
+      fiftyTwoWeekLow: sd.fiftyTwoWeekLow || null,
+      fiftyDayAverage: sd.fiftyDayAverage || null,
+      twoHundredDayAverage: sd.twoHundredDayAverage || null,
+      sharesOutstanding: ks.sharesOutstanding || null,
+
+      // Analyst Consensus & Price Targets
+      currentPrice: fd.currentPrice || sd.regularMarketPrice || null,
+      targetMeanPrice: fd.targetMeanPrice || null,
+      targetHighPrice: fd.targetHighPrice || null,
+      targetLowPrice: fd.targetLowPrice || null,
+      targetMedianPrice: fd.targetMedianPrice || null,
+      recommendationKey: fd.recommendationKey || null,
+      numberOfAnalystOpinions: fd.numberOfAnalystOpinions || null,
+      recommendationTrend: rt.trend || []
+    };
+  } catch (err) {
+    console.warn(`[YahooFinance Fundamentals Error] Symbol "${cleanSymbol}":`, err.message);
+    return null;
+  }
+}
+
 module.exports = {
   search,
   getQuote,
-  getHistorical
+  getHistorical,
+  getFundamentals
 };

@@ -298,6 +298,25 @@ function createSchema(database) {
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS analysis_watchlist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticker TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      name TEXT,
+      stopLoss REAL DEFAULT NULL,
+      takeProfit REAL DEFAULT NULL,
+      notes TEXT DEFAULT NULL,
+      isMonitored INTEGER DEFAULT 1,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS analysis_fundamentals_cache (
+      ticker TEXT PRIMARY KEY COLLATE NOCASE,
+      data TEXT NOT NULL,
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_analysis_watchlist_ticker ON analysis_watchlist(ticker);
     CREATE INDEX IF NOT EXISTS idx_portfolio_news_ticker ON portfolio_news(ticker);
     CREATE INDEX IF NOT EXISTS idx_portfolio_news_pubDate ON portfolio_news(pubDate DESC);
 
@@ -342,6 +361,28 @@ function createSchema(database) {
   try { database.exec("ALTER TABLE assets ADD COLUMN previousClose REAL DEFAULT 0.0"); } catch {}
   try { database.exec("ALTER TABLE assets ADD COLUMN marketState TEXT DEFAULT NULL"); } catch {}
   try { database.exec("ALTER TABLE assets ADD COLUMN regularMarketTime TEXT DEFAULT NULL"); } catch {}
+
+  try {
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS analysis_watchlist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticker TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        name TEXT,
+        stopLoss REAL DEFAULT NULL,
+        takeProfit REAL DEFAULT NULL,
+        notes TEXT DEFAULT NULL,
+        isMonitored INTEGER DEFAULT 1,
+        createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+        updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS analysis_fundamentals_cache (
+        ticker TEXT PRIMARY KEY COLLATE NOCASE,
+        data TEXT NOT NULL,
+        updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_analysis_watchlist_ticker ON analysis_watchlist(ticker);
+    `);
+  } catch {}
 
   seedCurrencies(database);
 }
@@ -542,12 +583,14 @@ async function resetFinancialDatabase(options = {}) {
     const delPortfolios = database.prepare('DELETE FROM portfolios').run().changes;
     const delQuotes = database.prepare('DELETE FROM asset_quotes').run().changes;
     const delAssets = database.prepare('DELETE FROM assets').run().changes;
+    try { database.prepare('DELETE FROM analysis_watchlist').run(); } catch {}
+    try { database.prepare('DELETE FROM analysis_fundamentals_cache').run(); } catch {}
 
     // Reset SQLite auto-increment sequences for wiped tables
     try {
       database.prepare(`
         DELETE FROM sqlite_sequence
-        WHERE name IN ('transactions', 'portfolio_losses', 'portfolio_history', 'dividend_projections', 'portfolio_users', 'portfolios', 'assets')
+        WHERE name IN ('transactions', 'portfolio_losses', 'portfolio_history', 'dividend_projections', 'portfolio_users', 'portfolios', 'assets', 'analysis_watchlist')
       `).run();
     } catch {}
 
