@@ -227,5 +227,185 @@ router.get('/portfolio-data', (req, res) => {
   });
 });
 
+/**
+ * GET /api/reports/closed-positions
+ * Retrieves all closed operations and realized gains across years:
+ * - Query filters: portfolioId (optional, 'all' or id), year (optional, 'all' or specific year)
+ * - Operations with sell date, quantity, buy price (PMC), sell price, total cost, net proceeds, realized PnL (€ and %)
+ * - Grouped by calendar year with annual subtotals, win rate, and overall totals.
+ */
+router.get('/closed-positions', (req, res) => {
+  const { portfolioId, year } = req.query;
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  let portfolios = [];
+  if (userRole === 'admin') {
+    portfolios = db.prepare('SELECT * FROM portfolios ORDER BY id ASC').all();
+  } else {
+    portfolios = db.prepare(`
+      SELECT p.*
+      FROM portfolios p
+      INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
+      WHERE pu.user_id = ?
+      ORDER BY p.id ASC
+    `).all(userId);
+  }
+
+  if (portfolioId && portfolioId !== 'all') {
+    const pId = parseInt(portfolioId, 10);
+    if (!isNaN(pId)) {
+      const access = checkPortfolioAccess(pId, userId, userRole);
+      if (!access.hasAccess) {
+        return res.status(403).json({ success: false, error: 'Accesso negato al portafoglio specificato.' });
+      }
+      portfolios = portfolios.filter(p => p.id === pId);
+    }
+  }
+
+  const assetsMap = getAssetsMap();
+  const allOperations = [];
+
+  for (const p of portfolios) {
+    const full = recalculatePortfolio(p.id, assetsMap);
+    if (!full || !full.metrics || !Array.isArray(full.metrics.closedPositions)) continue;
+
+    for (const cp of full.metrics.closedPositions) {
+      const opDate = cp.date || '';
+      const opYear = opDate ? parseInt(opDate.slice(0, 4), 10) : null;
+
+      // Filter by year if requested
+      if (year && year !== 'all' && !isNaN(parseInt(year, 10))) {
+        if (opYear !== parseInt(year, 10)) continue;
+      }
+
+      allOperations.push({
+        ...cp,
+        portfolioId: p.id,
+        portfolioName: p.name,
+        currency: p.currency || 'EUR',
+        year: opYear
+      });
+    }
+  }
+
+  // Sort operations by date DESC (most recent first), then id DESC
+  allOperations.sort((a, b) => {
+    const dDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (dDiff !== 0) return dDiff;
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  // Collect distinct available years
+  const distinctYears = Array.from(new Set(allOperations.map(o => o.year).filter(Boolean))).sort((a, b) => b - a);
+
+  // Group operations by year
+  const yearGroups = {};
+  for (const y of distinctYears) {
+    yearGroups[y] = {
+      year: y,
+      totalRealizedGain: 0.0,
+      totalProfits: 0.0,
+      totalLosses: 0.0,
+      totalCostBasis: 0.0,
+      totalProceeds: 0.0,
+      tradeCount: 0,
+      winCount: 0,
+      lossCount: 0,
+      operations: []
+    };
+  }
+
+  let grandRealizedGain = 0.0;
+  let grandProfits = 0.0;
+  let grandLosses = 0.0;
+  let grandCostBasis = 0.0;
+  let grandProceeds = 0.0;
+  let grandWinCount = 0;
+  let grandLossCount = 0;
+
+  for (const op of allOperations) {
+    const y = op.year;
+    const pnl = Number(op.realizedPnl) || 0.0;
+    const cost = Number(op.costBasis) || 0.0;
+    const proc = Number(op.proceeds) || 0.0;
+
+    grandRealizedGain += pnl;
+    grandCostBasis += cost;
+    grandProceeds += proc;
+
+    if (pnl >= 0) {
+      grandProfits += pnl;
+      grandWinCount++;
+    } else {
+      grandLosses += pnl;
+      grandLossCount++;
+    }
+
+    if (yearGroups[y]) {
+      const yg = yearGroups[y];
+      yg.totalRealizedGain += pnl;
+      yg.totalCostBasis += cost;
+      yg.totalProceeds += proc;
+      yg.tradeCount++;
+      if (pnl >= 0) {
+        yg.totalProfits += pnl;
+        yg.winCount++;
+      } else {
+        yg.totalLosses += pnl;
+        yg.lossCount++;
+      }
+      yg.operations.push(op);
+    }
+  }
+
+  // Finalize year statistics
+  const byYear = distinctYears.map(y => {
+    const yg = yearGroups[y];
+    const gainPct = yg.totalCostBasis > 0 ? (yg.totalRealizedGain / yg.totalCostBasis) * 100.0 : 0.0;
+    const winRate = yg.tradeCount > 0 ? (yg.winCount / yg.tradeCount) * 100.0 : 0.0;
+    return {
+      ...yg,
+      gainPercent: gainPct,
+      winRate: winRate
+    };
+  });
+
+  const grandGainPercent = grandCostBasis > 0 ? (grandRealizedGain / grandCostBasis) * 100.0 : 0.0;
+  const grandWinRate = allOperations.length > 0 ? (grandWinCount / allOperations.length) * 100.0 : 0.0;
+
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+  const formattedTime = today.toLocaleTimeString('it-IT', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  return res.json({
+    success: true,
+    generatedAt: today.toISOString(),
+    formattedDateTime: `${formattedDate} alle ${formattedTime}`,
+    totals: {
+      totalRealizedGain: grandRealizedGain,
+      totalProfits: grandProfits,
+      totalLosses: grandLosses,
+      totalCostBasis: grandCostBasis,
+      totalProceeds: grandProceeds,
+      gainPercent: grandGainPercent,
+      operationCount: allOperations.length,
+      winCount: grandWinCount,
+      lossCount: grandLossCount,
+      winRate: grandWinRate
+    },
+    years: distinctYears,
+    byYear,
+    operations: allOperations
+  });
+});
+
 module.exports = router;
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Report Portafogli & PDF | FolioTrack</title>
+  <title>Reportistica & PDF | FolioTrack</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
   
   <!-- Anti-FOUC Theme Script -->
@@ -40,7 +40,7 @@
         print-color-adjust: exact !important;
       }
 
-      /* Hide interactive navigation and sidebar */
+      /* Hide interactive navigation, buttons, and screen-only controls */
       #app-sidebar,
       #live-ticker-container,
       .no-print,
@@ -59,7 +59,9 @@
       main,
       #printableReportArea,
       #reportContent,
-      #portfoliosContainer {
+      #portfoliosContainer,
+      #closedContent,
+      #closedByYearContainer {
         height: auto !important;
         min-height: 0 !important;
         max-height: none !important;
@@ -85,7 +87,7 @@
         padding: 0.75rem !important;
       }
 
-      /* Portfolio cards allow breaking across pages when long */
+      /* Report cards allow breaking across pages when long */
       .portfolio-report-card {
         box-shadow: none !important;
         border: 1px solid #e5e7eb !important;
@@ -156,31 +158,36 @@
     <div id="live-ticker-container" class="no-print"></div>
 
     <!-- Header Actions Bar (Screen Only) -->
-    <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full no-print">
+    <header class="px-8 pt-8 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full no-print">
       <div>
         <div class="flex items-center space-x-2">
           <a href="/tools" class="text-xs font-mono text-gray-400 hover:text-emerald-500 transition-colors flex items-center space-x-1">
             <span>Strumenti</span>
             <span>/</span>
           </a>
-          <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Report Portafogli & PDF</h1>
+          <h1 id="pageHeading" class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Report Portafogli & PDF</h1>
           <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
             Export
           </span>
         </div>
-        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">
+        <p id="pageSubheading" class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">
           Prospetto patrimoniale con lista asset per portafoglio (q.tà, PMC, valore attuale, gain) e quadro completo minusvalenze
         </p>
       </div>
 
-      <div class="flex items-center space-x-3">
+      <div class="flex flex-wrap items-center gap-2.5">
         <!-- Portfolio selector -->
         <select id="portfolioSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
           <option value="all">Tutti i Portafogli (Consolidato)</option>
         </select>
 
+        <!-- Year selector (for closed positions report) -->
+        <select id="yearSelect" class="hidden px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="all">Tutti gli Anni</option>
+        </select>
+
         <!-- Refresh Button -->
-        <button id="refreshReportBtn" type="button" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5" title="Aggiorna dati">
+        <button id="refreshReportBtn" type="button" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5 cursor-pointer" title="Aggiorna dati">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
@@ -188,7 +195,7 @@
         </button>
 
         <!-- Download PDF / Print Button -->
-        <button id="downloadPdfBtn" type="button" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-2">
+        <button id="downloadPdfBtn" type="button" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-2 cursor-pointer">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
@@ -197,10 +204,24 @@
       </div>
     </header>
 
+    <!-- Report Type Switcher Tabs (Screen Only) -->
+    <div class="px-8 max-w-7xl mx-auto w-full no-print mb-4">
+      <div class="flex items-center space-x-2 border-b border-gray-200 dark:border-white/5 pb-2">
+        <button id="tabBtnPortfolios" type="button" class="report-tab-btn px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-2 bg-emerald-600 text-white shadow-sm cursor-pointer">
+          <span>💼</span>
+          <span>Prospetto Portafogli & Asset</span>
+        </button>
+        <button id="tabBtnClosed" type="button" class="report-tab-btn px-4 py-2 rounded-xl text-xs font-medium transition flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer">
+          <span>💰</span>
+          <span>Operazioni Chiuse & Storico Gain</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Printable Report Area -->
     <main id="printableReportArea" class="flex-1 px-8 pb-16 space-y-6 max-w-7xl mx-auto w-full">
 
-      <!-- Executive Printable Document Header -->
+      <!-- Executive Printable Document Header (Appears at top of PDF) -->
       <div class="signature-card p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-white/5 gap-4">
         <div class="flex items-center space-x-4">
           <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-mono font-bold text-xl shadow-md">
@@ -209,7 +230,7 @@
           <div>
             <div class="flex items-center space-x-2">
               <span class="font-bold text-lg text-gray-900 dark:text-white">FolioTrack</span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold uppercase tracking-wider">Executive Report</span>
+              <span id="reportTypeBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold uppercase tracking-wider">Prospetto Portafogli</span>
             </div>
             <h2 id="reportScopeTitle" class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">
               Prospetto Patrimoniale Consolidato & Schede Portafogli
@@ -224,72 +245,133 @@
         </div>
       </div>
 
-      <!-- Loading Spinner -->
-      <div id="reportLoadingSpinner" class="py-16 flex flex-col items-center justify-center space-y-3">
-        <span class="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></span>
-        <p class="text-xs font-mono text-gray-500">Elaborazione prospetto patrimoniale e calcolo minusvalenze...</p>
-      </div>
-
-      <!-- Report Content Container (Hidden while loading) -->
-      <div id="reportContent" class="hidden space-y-6">
-
-        <!-- 1. Executive Summary KPIs -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <!-- KPI 1: Patrimonio Totale -->
-          <div class="signature-card p-4 space-y-1">
-            <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Patrimonio Totale</span>
-            <div id="kpiTotalValue" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
-            <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
-              <span>Liquidità cassa:</span>
-              <strong id="kpiTotalCash" class="text-gray-700 dark:text-gray-300">-</strong>
-            </div>
-          </div>
-
-          <!-- KPI 2: Capitale Investito -->
-          <div class="signature-card p-4 space-y-1">
-            <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Capitale Investito</span>
-            <div id="kpiInvestedCapital" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
-            <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
-              <span>Totale asset attivi:</span>
-              <strong id="kpiAssetCount" class="text-gray-700 dark:text-gray-300">-</strong>
-            </div>
-          </div>
-
-          <!-- KPI 3: Gain Complessivo -->
-          <div class="signature-card p-4 space-y-1">
-            <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Gain / Rendimento</span>
-            <div id="kpiTotalGain" class="text-2xl font-bold font-mono tabular-nums text-emerald-600">-</div>
-            <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
-              <span>Rendimento %:</span>
-              <strong id="kpiGainPercent" class="font-bold">-</strong>
-            </div>
-          </div>
-
-          <!-- KPI 4: Minusvalenze Fiscali Totali -->
-          <div class="signature-card p-4 space-y-1 bg-amber-500/[0.03] border-amber-500/20">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-mono text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold block">Minusvalenze Totali</span>
-              <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300">Zainetto</span>
-            </div>
-            <div id="kpiTotalMinusvalenze" class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">-</div>
-            <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
-              <span>Risparmio fiscale 26%:</span>
-              <strong id="kpiTaxSavings" class="text-emerald-600 dark:text-emerald-400 font-semibold">-</strong>
-            </div>
-          </div>
+      <!-- ========================================== -->
+      <!-- TAB 1: REPORT PORTAFOGLI & ASSET ATTIVI    -->
+      <!-- ========================================== -->
+      <section id="sectionPortfoliosReport" class="space-y-6">
+        <!-- Loading Spinner -->
+        <div id="reportLoadingSpinner" class="py-16 flex flex-col items-center justify-center space-y-3">
+          <span class="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></span>
+          <p class="text-xs font-mono text-gray-500">Elaborazione prospetto patrimoniale e calcolo minusvalenze...</p>
         </div>
 
-        <!-- 2. Portfolios Breakdown Container -->
-        <div id="portfoliosContainer" class="space-y-6">
-          <!-- Populated dynamically via JS -->
+        <!-- Portfolios Content Container -->
+        <div id="reportContent" class="hidden space-y-6">
+          <!-- Executive Summary KPIs -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- KPI 1: Patrimonio Totale -->
+            <div class="signature-card p-4 space-y-1">
+              <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Patrimonio Totale</span>
+              <div id="kpiTotalValue" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+              <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+                <span>Liquidità cassa:</span>
+                <strong id="kpiTotalCash" class="text-gray-700 dark:text-gray-300">-</strong>
+              </div>
+            </div>
+
+            <!-- KPI 2: Capitale Investito -->
+            <div class="signature-card p-4 space-y-1">
+              <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Capitale Investito</span>
+              <div id="kpiInvestedCapital" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+              <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+                <span>Totale asset attivi:</span>
+                <strong id="kpiAssetCount" class="text-gray-700 dark:text-gray-300">-</strong>
+              </div>
+            </div>
+
+            <!-- KPI 3: Gain Complessivo -->
+            <div class="signature-card p-4 space-y-1">
+              <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Gain / Rendimento</span>
+              <div id="kpiTotalGain" class="text-2xl font-bold font-mono tabular-nums text-emerald-600">-</div>
+              <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+                <span>Rendimento %:</span>
+                <strong id="kpiGainPercent" class="font-bold">-</strong>
+              </div>
+            </div>
+
+            <!-- KPI 4: Minusvalenze Fiscali Totali -->
+            <div class="signature-card p-4 space-y-1 bg-amber-500/[0.03] border-amber-500/20">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-mono text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold block">Minusvalenze Totali</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300">Zainetto</span>
+              </div>
+              <div id="kpiTotalMinusvalenze" class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">-</div>
+              <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+                <span>Risparmio fiscale 26%:</span>
+                <strong id="kpiTaxSavings" class="text-emerald-600 dark:text-emerald-400 font-semibold">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Portfolios Breakdown Container -->
+          <div id="portfoliosContainer" class="space-y-6"></div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 2: OPERAZIONI CHIUSE & STORICO GAIN    -->
+      <!-- ========================================== -->
+      <section id="sectionClosedReport" class="hidden space-y-6">
+        <!-- Loading Spinner -->
+        <div id="closedLoadingSpinner" class="py-16 flex flex-col items-center justify-center space-y-3">
+          <span class="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></span>
+          <p class="text-xs font-mono text-gray-500">Ricostruzione cronologica delle operazioni chiuse e calcolo plusvalenze...</p>
         </div>
 
-      </div>
+        <!-- Closed Content Container -->
+        <div id="closedContent" class="hidden space-y-6">
+          <!-- Executive Summary KPIs for Closed Operations -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- KPI 1: Gain Realizzato Netto -->
+            <div class="signature-card p-4 space-y-1">
+              <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Gain Netto Realizzato</span>
+              <div id="kpiClosedTotalGain" class="text-2xl font-bold font-mono tabular-nums text-emerald-600">-</div>
+              <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+                <span>Rendimento medio:</span>
+                <strong id="kpiClosedGainPct" class="font-bold">-</strong>
+              </div>
+            </div>
+
+            <!-- KPI 2: Plusvalenze Realizzate -->
+            <div class="signature-card p-4 space-y-1 bg-emerald-500/[0.03] border-emerald-500/20">
+              <span class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Plusvalenze Realizzate</span>
+              <div id="kpiClosedProfits" class="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">-</div>
+              <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+                <span>Operazioni in utile:</span>
+                <strong id="kpiClosedWinCount" class="text-emerald-600 dark:text-emerald-400 font-semibold">-</strong>
+              </div>
+            </div>
+
+            <!-- KPI 3: Minusvalenze Realizzate -->
+            <div class="signature-card p-4 space-y-1 bg-red-500/[0.03] border-red-500/20">
+              <span class="text-[11px] font-mono text-red-600 dark:text-red-400 uppercase tracking-wider block">Minusvalenze Realizzate</span>
+              <div id="kpiClosedLosses" class="text-2xl font-bold font-mono tabular-nums text-red-600 dark:text-red-400">-</div>
+              <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+                <span>Operazioni in perdita:</span>
+                <strong id="kpiClosedLossCount" class="text-red-600 dark:text-red-400 font-semibold">-</strong>
+              </div>
+            </div>
+
+            <!-- KPI 4: Statistiche & Win Rate -->
+            <div class="signature-card p-4 space-y-1">
+              <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Win Rate / Trade</span>
+              <div id="kpiClosedWinRate" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+              <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+                <span>Incasso vendite:</span>
+                <strong id="kpiClosedProceeds" class="text-gray-700 dark:text-gray-300">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Closed Operations Grouped by Year -->
+          <div id="closedByYearContainer" class="space-y-6"></div>
+        </div>
+      </section>
 
       <!-- Report Footer / Legal Disclaimer (Always printed) -->
       <footer id="printReportFooter" class="pt-6 border-t border-gray-200 dark:border-white/5 text-[10px] font-mono text-gray-400 text-center leading-relaxed">
         FolioTrack Signature Analytics • Generato da sistema il <span id="reportFooterDate"></span>.
-        I valori degli asset e i prezzi di carico (PMC) sono calcolati secondo il metodo contabile adottato (WAC / FIFO).
+        I prezzi di carico (PMC) e i gain realizzati sono calcolati conformemente al metodo fiscale WAC / FIFO adottato.
         Le minusvalenze fiscali indicate fanno riferimento allo zainetto fiscale ai sensi del D.Lgs. 461/1997 e sono compensabili entro il 4° anno successivo a quello di realizzo.
       </footer>
     </main>
@@ -301,7 +383,9 @@
 
   <script>
     (function () {
-      let reportData = null;
+      let activeTab = 'portfolios'; // 'portfolios' or 'closed'
+      let cachedPortfoliosData = null;
+      let cachedClosedData = null;
 
       // Currency formatter helper
       function formatMoney(amount, currency = 'EUR') {
@@ -321,8 +405,19 @@
         return val.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: maxDec });
       }
 
-      // Fetch Report Data from API
-      async function loadReport(portfolioId = 'all') {
+      function formatDate(dStr) {
+        if (!dStr) return '-';
+        try {
+          const parts = String(dStr).split('T')[0].split('-');
+          if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        } catch {}
+        return dStr;
+      }
+
+      // ==========================================
+      // TAB 1: LOAD & RENDER PORTFOLIOS REPORT
+      // ==========================================
+      async function loadPortfoliosReport(portfolioId = 'all') {
         const spinner = document.getElementById('reportLoadingSpinner');
         const content = document.getElementById('reportContent');
         spinner.classList.remove('hidden');
@@ -335,12 +430,10 @@
 
           const res = await fetch(url);
           const data = await res.json();
-          if (!data.success) {
-            throw new Error(data.error || 'Errore nel caricamento del report.');
-          }
+          if (!data.success) throw new Error(data.error || 'Errore nel caricamento del report.');
 
-          reportData = data;
-          renderReport(data, portfolioId);
+          cachedPortfoliosData = data;
+          renderPortfoliosReport(data, portfolioId);
         } catch (err) {
           console.error('[Reports Error]', err);
           spinner.innerHTML = `
@@ -352,33 +445,15 @@
         }
       }
 
-      // Populate portfolio dropdown options
-      function initDropdown(portfolios, selectedId) {
-        const select = document.getElementById('portfolioSelect');
-        // Keep only 'all' option
-        select.innerHTML = '<option value="all">Tutti i Portafogli (Consolidato)</option>';
-        portfolios.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.textContent = `${p.name} (${p.currency || 'EUR'})`;
-          if (String(p.id) === String(selectedId)) {
-            opt.selected = true;
-          }
-          select.appendChild(opt);
-        });
-      }
-
-      // Render the report view
-      function renderReport(data, selectedId) {
+      function renderPortfoliosReport(data, selectedId) {
         const spinner = document.getElementById('reportLoadingSpinner');
         const content = document.getElementById('reportContent');
 
-        // Document dates
         const dateStr = data.formattedDateTime || new Date().toLocaleString('it-IT');
         document.getElementById('reportDate').textContent = dateStr;
         document.getElementById('reportFooterDate').textContent = dateStr;
+        document.getElementById('reportTypeBadge').textContent = 'Prospetto Portafogli';
 
-        // Title scope
         const scopeTitle = document.getElementById('reportScopeTitle');
         if (selectedId && selectedId !== 'all') {
           const singleP = data.portfolios.find(p => String(p.id) === String(selectedId));
@@ -387,7 +462,6 @@
           scopeTitle.textContent = `Prospetto Patrimoniale Consolidato (${data.totals.portfolioCount} Portafogli)`;
         }
 
-        // Render KPI Totals
         const totals = data.totals;
         document.getElementById('kpiTotalValue').textContent = formatMoney(totals.totalValue);
         document.getElementById('kpiTotalCash').textContent = formatMoney(totals.currentCash);
@@ -410,7 +484,6 @@
         document.getElementById('kpiTotalMinusvalenze').textContent = formatMoney(totals.totalMinusvalenze);
         document.getElementById('kpiTaxSavings').textContent = formatMoney(totals.potentialTaxSaving);
 
-        // Render Portfolios Cards
         const container = document.getElementById('portfoliosContainer');
         container.innerHTML = '';
 
@@ -425,11 +498,9 @@
             const pCard = document.createElement('section');
             pCard.className = 'signature-card portfolio-report-card p-6 space-y-5';
 
-            // Portfolio Header
             const gainColor = p.totalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
             const gainSign = p.totalGain >= 0 ? '+' : '';
 
-            // Holdings rows HTML
             let holdingsHtml = '';
             if (!p.holdings || p.holdings.length === 0) {
               holdingsHtml = `
@@ -447,7 +518,6 @@
 
                 holdingsHtml += `
                   <tr class="${rowBg} hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors border-b border-gray-100/60 dark:border-white/[0.03]">
-                    <!-- Col 1: Asset (Riga 1: Ticker + Tipo | Riga 2: Nome Esteso) -->
                     <td class="py-1.5 px-3 min-w-0">
                       <div class="flex items-center space-x-1.5 leading-tight">
                         <span class="font-mono font-bold text-gray-900 dark:text-white text-xs">${h.ticker}</span>
@@ -460,25 +530,21 @@
                       </div>
                     </td>
 
-                    <!-- Col 2: Q.tà & PMC (Riga 1: Q.tà | Riga 2: PMC) -->
                     <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                       <div class="font-bold text-gray-900 dark:text-white tabular-nums">${formatNumber(h.quantity)}</div>
                       <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">PMC:</span> ${formatMoney(h.pmc, h.currency)}</div>
                     </td>
 
-                    <!-- Col 3: Quotazione & Costo (Riga 1: Prezzo Attuale | Riga 2: Costo di Carico) -->
                     <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                       <div class="font-semibold text-gray-900 dark:text-white tabular-nums">${formatMoney(h.currentPrice, h.currency)}</div>
                       <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">Costo:</span> ${formatMoney(h.bookValue, h.currency)}</div>
                     </td>
 
-                    <!-- Col 4: Valore Attuale & Peso (Riga 1: Valore Attuale | Riga 2: Peso %) -->
                     <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                       <div class="font-bold text-gray-900 dark:text-white tabular-nums text-xs">${formatMoney(h.currentValue, h.currency)}</div>
                       <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">Peso:</span> ${formatNumber(h.weight, 1)}%</div>
                     </td>
 
-                    <!-- Col 5: Gain & Rendimento (Riga 1: Gain € | Riga 2: Rendimento %) -->
                     <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                       <div class="font-bold tabular-nums ${hGainColor}">${hGainSign}${formatMoney(h.gain, h.currency)}</div>
                       <div class="text-[10px] font-bold tabular-nums mt-0.5 ${hGainColor}">${formatPercent(h.gainPercent)}</div>
@@ -488,7 +554,6 @@
               });
             }
 
-            // Minusvalenze section HTML
             const m = p.minusvalenze || { totalResidual: 0, items: [] };
             let minusvalenzeSectionHtml = '';
 
@@ -564,7 +629,6 @@
             }
 
             pCard.innerHTML = `
-              <!-- Portfolio Header -->
               <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-100 dark:border-white/5 pb-4 gap-3">
                 <div class="flex items-center space-x-3">
                   <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-lg">
@@ -583,7 +647,6 @@
                   </div>
                 </div>
 
-                <!-- Portfolio KPI Pill Strip -->
                 <div class="flex flex-wrap items-center gap-2 font-mono text-xs">
                   <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
                     <span class="text-gray-400 text-[10px] block">Valore Attuale</span>
@@ -619,7 +682,6 @@
                   <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
                     ${holdingsHtml}
                   </tbody>
-                  <!-- Table Total Row -->
                   <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
                     <tr>
                       <td colspan="3" class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
@@ -638,7 +700,6 @@
                 </table>
               </div>
 
-              <!-- Minusvalenze / Zainetto Fiscale for this portfolio -->
               ${minusvalenzeSectionHtml}
             `;
 
@@ -650,6 +711,282 @@
         content.classList.remove('hidden');
       }
 
+      // ==========================================
+      // TAB 2: LOAD & RENDER CLOSED POSITIONS
+      // ==========================================
+      async function loadClosedPositionsReport(portfolioId = 'all', year = 'all') {
+        const spinner = document.getElementById('closedLoadingSpinner');
+        const content = document.getElementById('closedContent');
+        spinner.classList.remove('hidden');
+        content.classList.add('hidden');
+
+        try {
+          const params = new URLSearchParams();
+          if (portfolioId && portfolioId !== 'all') params.append('portfolioId', portfolioId);
+          if (year && year !== 'all') params.append('year', year);
+
+          const res = await fetch(`/api/reports/closed-positions?${params.toString()}`);
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Errore');
+
+          cachedClosedData = data;
+          renderClosedReport(data, portfolioId, year);
+        } catch (err) {
+          console.error('[Closed Positions Error]', err);
+          spinner.innerHTML = `
+            <div class="text-center text-red-500 font-mono text-xs space-y-2">
+              <p>Errore nel caricamento delle posizioni chiuse: ${err.message}</p>
+            </div>
+          `;
+        }
+      }
+
+      function updateYearDropdown(years, selectedYear) {
+        const select = document.getElementById('yearSelect');
+        select.innerHTML = '<option value="all">Tutti gli Anni</option>';
+        (years || []).forEach(y => {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.textContent = `Anno ${y}`;
+          if (String(y) === String(selectedYear)) opt.selected = true;
+          select.appendChild(opt);
+        });
+      }
+
+      function renderClosedReport(data, selectedPortfolioId, selectedYear) {
+        const spinner = document.getElementById('closedLoadingSpinner');
+        const content = document.getElementById('closedContent');
+
+        const dateStr = data.formattedDateTime || new Date().toLocaleString('it-IT');
+        document.getElementById('reportDate').textContent = dateStr;
+        document.getElementById('reportFooterDate').textContent = dateStr;
+        document.getElementById('reportTypeBadge').textContent = 'Operazioni Chiuse & Plusvalenze';
+
+        const scopeTitle = document.getElementById('reportScopeTitle');
+        const yearLabel = selectedYear && selectedYear !== 'all' ? `Anno ${selectedYear}` : 'Storico Completo negli Anni';
+        scopeTitle.textContent = `Rendiconto Operazioni Chiuse & Gain Realizzati (${yearLabel})`;
+
+        // Populate Years dropdown if changed
+        if (data.years) {
+          updateYearDropdown(data.years, selectedYear);
+        }
+
+        // Render KPI Totals
+        const t = data.totals;
+        const totalGainEl = document.getElementById('kpiClosedTotalGain');
+        const totalGainPctEl = document.getElementById('kpiClosedGainPct');
+        const isPos = t.totalRealizedGain >= 0;
+        totalGainEl.textContent = (isPos ? '+' : '') + formatMoney(t.totalRealizedGain);
+        totalGainPctEl.textContent = formatPercent(t.gainPercent);
+        totalGainEl.className = 'text-2xl font-bold font-mono tabular-nums ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        totalGainPctEl.className = 'font-bold ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+
+        document.getElementById('kpiClosedProfits').textContent = '+' + formatMoney(t.totalProfits);
+        document.getElementById('kpiClosedWinCount').textContent = `${t.winCount} trade in utile`;
+
+        document.getElementById('kpiClosedLosses').textContent = formatMoney(t.totalLosses);
+        document.getElementById('kpiClosedLossCount').textContent = `${t.lossCount} trade in perdita`;
+
+        document.getElementById('kpiClosedWinRate').textContent = `${formatNumber(t.winRate, 1)}% (${t.operationCount} trade)`;
+        document.getElementById('kpiClosedProceeds').textContent = formatMoney(t.totalProceeds);
+
+        // Render Years Sections
+        const container = document.getElementById('closedByYearContainer');
+        container.innerHTML = '';
+
+        if (!data.byYear || data.byYear.length === 0) {
+          container.innerHTML = `
+            <div class="signature-card p-8 text-center text-gray-500 font-mono text-xs">
+              Nessuna operazione di vendita/chiusura registrata per i filtri selezionati.
+            </div>
+          `;
+        } else {
+          data.byYear.forEach(y => {
+            const yCard = document.createElement('section');
+            yCard.className = 'signature-card portfolio-report-card p-6 space-y-4';
+
+            const yGainPos = y.totalRealizedGain >= 0;
+            const yGainClass = yGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+            const yGainSign = yGainPos ? '+' : '';
+
+            let opRowsHtml = '';
+            y.operations.forEach((op, idx) => {
+              const opGainPos = op.realizedPnl >= 0;
+              const opGainClass = opGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+              const opGainSign = opGainPos ? '+' : '';
+              const rowBg = idx % 2 === 0 ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.01]';
+
+              opRowsHtml += `
+                <tr class="${rowBg} hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors border-b border-gray-100/60 dark:border-white/[0.03]">
+                  <!-- Col 1: Data & Asset -->
+                  <td class="py-1.5 px-3 min-w-0">
+                    <div class="flex items-center space-x-1.5 leading-tight">
+                      <span class="font-mono text-gray-500 dark:text-gray-400 text-[10px] font-semibold">${formatDate(op.date)}</span>
+                      <span class="px-1.5 py-0.2 rounded text-[8px] font-mono uppercase bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 font-bold border border-gray-200/50">
+                        ${op.closeType || 'TOTALE'}
+                      </span>
+                      <span class="text-[9px] font-mono text-gray-400 truncate">[${op.portfolioName}]</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5 mt-0.5 leading-tight">
+                      <span class="font-mono font-bold text-gray-900 dark:text-white text-xs">${op.ticker}</span>
+                      <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]" title="${op.name}">${op.name}</span>
+                    </div>
+                  </td>
+
+                  <!-- Col 2: Quantità & Prezzi -->
+                  <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
+                    <div class="font-bold text-gray-900 dark:text-white tabular-nums">${formatNumber(op.quantity)}</div>
+                    <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5">
+                      <span class="text-gray-400 font-sans text-[9px]">PMC:</span> ${formatMoney(op.pmc, op.currency)} → <span class="text-gray-400 font-sans text-[9px]">Vend:</span> <strong class="text-gray-900 dark:text-white">${formatMoney(op.sellPrice, op.currency)}</strong>
+                    </div>
+                  </td>
+
+                  <!-- Col 3: Controvalori (Costo -> Incasso) -->
+                  <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
+                    <div class="font-bold text-gray-900 dark:text-white tabular-nums">${formatMoney(op.proceeds, op.currency)}</div>
+                    <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5">
+                      <span class="text-gray-400 font-sans text-[9px]">Costo:</span> ${formatMoney(op.costBasis, op.currency)}
+                    </div>
+                  </td>
+
+                  <!-- Col 4: Gain Realizzato & Rendimento -->
+                  <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
+                    <div class="font-bold tabular-nums ${opGainClass}">${opGainSign}${formatMoney(op.realizedPnl, op.currency)}</div>
+                    <div class="text-[10px] font-bold tabular-nums mt-0.5 ${opGainClass}">${opGainSign}${formatPercent(op.realizedPnlPercent)}</div>
+                  </td>
+                </tr>
+              `;
+            });
+
+            yCard.innerHTML = `
+              <!-- Year Header -->
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-100 dark:border-white/5 pb-3 gap-3">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg">
+                    📅
+                  </div>
+                  <div>
+                    <div class="flex items-center space-x-2">
+                      <h3 class="text-base font-bold text-gray-900 dark:text-white">Anno Fiscale ${y.year}</h3>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20">
+                        ${y.tradeCount} Trade
+                      </span>
+                    </div>
+                    <div class="text-xs font-mono text-gray-500 mt-0.5">
+                      Win Rate: <strong>${formatNumber(y.winRate, 1)}%</strong> (${y.winCount} utile / ${y.lossCount} perdita)
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Year KPI Strip -->
+                <div class="flex flex-wrap items-center gap-2 font-mono text-xs">
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Incasso Totale</span>
+                    <strong class="text-gray-900 dark:text-white text-sm">${formatMoney(y.totalProceeds)}</strong>
+                  </div>
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Costo di Carico</span>
+                    <strong class="text-gray-700 dark:text-gray-300 text-sm">${formatMoney(y.totalCostBasis)}</strong>
+                  </div>
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Gain Realizzato ${y.year}</span>
+                    <strong class="text-sm font-bold ${yGainClass}">${yGainSign}${formatMoney(y.totalRealizedGain)} (${formatPercent(y.gainPercent)})</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Table of Closed Operations for this year -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-left table-fixed">
+                  <thead class="text-[10px] font-mono text-gray-400 uppercase border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
+                    <tr>
+                      <th class="py-2 px-3 w-[30%]">Data & Asset</th>
+                      <th class="py-2 px-3 text-right w-[22%]">Quantità & Prezzi</th>
+                      <th class="py-2 px-3 text-right w-[24%]">Incasso / Costo</th>
+                      <th class="py-2 px-3 text-right w-[24%]">Gain / Rend.</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
+                    ${opRowsHtml}
+                  </tbody>
+                  <!-- Table Year Total -->
+                  <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
+                    <tr>
+                      <td class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
+                        Totale Anno ${y.year}
+                      </td>
+                      <td class="py-2 px-3 text-right text-gray-500 text-[10px]">
+                        ${y.tradeCount} Operazioni
+                      </td>
+                      <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-bold">
+                        ${formatMoney(y.totalProceeds)}
+                        <span class="text-[10px] block text-gray-400 font-normal">Costo: ${formatMoney(y.totalCostBasis)}</span>
+                      </td>
+                      <td class="py-2 px-3 text-right ${yGainClass} font-bold">
+                        ${yGainSign}${formatMoney(y.totalRealizedGain)}
+                        <span class="text-[10px] block font-bold">${formatPercent(y.gainPercent)}</span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            `;
+
+            container.appendChild(yCard);
+          });
+        }
+
+        spinner.classList.add('hidden');
+        content.classList.remove('hidden');
+      }
+
+      // ==========================================
+      // TAB SWITCHING LOGIC
+      // ==========================================
+      function switchTab(newTab) {
+        activeTab = newTab;
+        const tabBtnPortfolios = document.getElementById('tabBtnPortfolios');
+        const tabBtnClosed = document.getElementById('tabBtnClosed');
+        const secPortfolios = document.getElementById('sectionPortfoliosReport');
+        const secClosed = document.getElementById('sectionClosedReport');
+        const yearSelect = document.getElementById('yearSelect');
+        const heading = document.getElementById('pageHeading');
+        const subheading = document.getElementById('pageSubheading');
+
+        const pSel = document.getElementById('portfolioSelect').value;
+
+        if (activeTab === 'portfolios') {
+          tabBtnPortfolios.className = 'report-tab-btn px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-2 bg-emerald-600 text-white shadow-sm cursor-pointer';
+          tabBtnClosed.className = 'report-tab-btn px-4 py-2 rounded-xl text-xs font-medium transition flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer';
+
+          secPortfolios.classList.remove('hidden');
+          secClosed.classList.add('hidden');
+          yearSelect.classList.add('hidden');
+
+          heading.textContent = 'Report Portafogli & PDF';
+          subheading.textContent = 'Prospetto patrimoniale con lista asset per portafoglio (q.tà, PMC, valore attuale, gain) e quadro completo minusvalenze';
+
+          if (cachedPortfoliosData) {
+            renderPortfoliosReport(cachedPortfoliosData, pSel);
+          } else {
+            loadPortfoliosReport(pSel);
+          }
+        } else {
+          tabBtnClosed.className = 'report-tab-btn px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-2 bg-emerald-600 text-white shadow-sm cursor-pointer';
+          tabBtnPortfolios.className = 'report-tab-btn px-4 py-2 rounded-xl text-xs font-medium transition flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer';
+
+          secPortfolios.classList.add('hidden');
+          secClosed.classList.remove('hidden');
+          yearSelect.classList.remove('hidden');
+
+          heading.textContent = 'Report Operazioni Chiuse & Gain';
+          subheading.textContent = 'Storico completo delle operazioni chiuse negli anni con prezzi di carico, prezzi di vendita e plusvalenze/minusvalenze realizzate';
+
+          const ySel = yearSelect.value || 'all';
+          loadClosedPositionsReport(pSel, ySel);
+        }
+      }
+
       // Initial load & listeners
       document.addEventListener('DOMContentLoaded', async () => {
         // Init portfolio dropdown
@@ -657,24 +994,57 @@
           const res = await fetch('/api/portfolios');
           const data = await res.json();
           if (data.success && data.portfolios) {
-            initDropdown(data.portfolios, 'all');
+            const select = document.getElementById('portfolioSelect');
+            select.innerHTML = '<option value="all">Tutti i Portafogli (Consolidato)</option>';
+            data.portfolios.forEach(p => {
+              const opt = document.createElement('option');
+              opt.value = p.id;
+              opt.textContent = `${p.name} (${p.currency || 'EUR'})`;
+              select.appendChild(opt);
+            });
           }
         } catch (e) {
           console.warn(e);
         }
 
-        // Load report data
-        await loadReport('all');
+        // Tab click listeners
+        document.getElementById('tabBtnPortfolios').addEventListener('click', () => switchTab('portfolios'));
+        document.getElementById('tabBtnClosed').addEventListener('click', () => switchTab('closed'));
+
+        // Check URL parameters for tab
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialTab = urlParams.get('tab') || urlParams.get('report');
+        if (initialTab === 'closed' || initialTab === 'chiuse') {
+          switchTab('closed');
+        } else {
+          switchTab('portfolios');
+        }
 
         // Portfolio filter change
         document.getElementById('portfolioSelect').addEventListener('change', (e) => {
-          loadReport(e.target.value);
+          if (activeTab === 'portfolios') {
+            loadPortfoliosReport(e.target.value);
+          } else {
+            const y = document.getElementById('yearSelect').value;
+            loadClosedPositionsReport(e.target.value, y);
+          }
+        });
+
+        // Year filter change
+        document.getElementById('yearSelect').addEventListener('change', (e) => {
+          const p = document.getElementById('portfolioSelect').value;
+          loadClosedPositionsReport(p, e.target.value);
         });
 
         // Refresh button
         document.getElementById('refreshReportBtn').addEventListener('click', () => {
-          const currentP = document.getElementById('portfolioSelect').value;
-          loadReport(currentP);
+          const p = document.getElementById('portfolioSelect').value;
+          if (activeTab === 'portfolios') {
+            loadPortfoliosReport(p);
+          } else {
+            const y = document.getElementById('yearSelect').value;
+            loadClosedPositionsReport(p, y);
+          }
         });
 
         // Download / Print PDF button

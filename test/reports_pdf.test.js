@@ -263,5 +263,104 @@ describe('Reports & PDF Section under Strumenti (/reports & /api/reports)', () =
     assert.ok(html.includes('aiRiskScore'));
     assert.ok(html.includes('aiDiversificationScore'));
   });
+
+  test('7. POST /api/transactions records SELL to generate closed positions', async () => {
+    const res = await fetch(`${baseUrl}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: portfolio2Id,
+        type: 'SELL',
+        assetTicker: 'AAPL',
+        date: '2024-08-20',
+        quantity: 5,
+        price: 220.00,
+        commission: 2.00
+      })
+    });
+    assert.strictEqual(res.status, 201);
+  });
+
+  test('8. GET /api/reports/closed-positions returns closed positions grouped by year with gains', async () => {
+    const res = await fetch(`${baseUrl}/api/reports/closed-positions`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.ok(data.totals);
+    assert.strictEqual(data.totals.operationCount, 1);
+    assert.strictEqual(data.totals.winCount, 1);
+    assert.ok(data.totals.totalRealizedGain > 0);
+    assert.strictEqual(data.totals.winRate, 100);
+
+    assert.ok(Array.isArray(data.years));
+    assert.ok(data.years.includes(2024));
+
+    assert.ok(Array.isArray(data.byYear));
+    const y2024 = data.byYear.find(y => y.year === 2024);
+    assert.ok(y2024);
+    assert.strictEqual(y2024.tradeCount, 1);
+    assert.ok(y2024.totalRealizedGain > 0);
+    assert.strictEqual(y2024.operations.length, 1);
+
+    const op = y2024.operations[0];
+    assert.strictEqual(op.ticker, 'AAPL');
+    assert.strictEqual(op.quantity, 5);
+    assert.strictEqual(op.sellPrice, 220.00);
+    assert.strictEqual(op.closeType, 'PARZIALE');
+    assert.ok(op.realizedPnl > 0);
+    assert.ok(op.proceeds > 0);
+  });
+
+  test('9. GET /api/reports/closed-positions supports year and portfolio filtering', async () => {
+    // Filter year 2024 -> returns 1 operation
+    const res2024 = await fetch(`${baseUrl}/api/reports/closed-positions?year=2024`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const d2024 = await res2024.json();
+    assert.strictEqual(d2024.operations.length, 1);
+
+    // Filter year 2020 -> returns 0 operations
+    const res2020 = await fetch(`${baseUrl}/api/reports/closed-positions?year=2020`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const d2020 = await res2020.json();
+    assert.strictEqual(d2020.operations.length, 0);
+
+    // Filter by portfolio 1 (no sells) -> returns 0 operations
+    const resP1 = await fetch(`${baseUrl}/api/reports/closed-positions?portfolioId=${portfolio1Id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const dP1 = await resP1.json();
+    assert.strictEqual(dP1.operations.length, 0);
+
+    // Filter by portfolio 2 (has sell) -> returns 1 operation
+    const resP2 = await fetch(`${baseUrl}/api/reports/closed-positions?portfolioId=${portfolio2Id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const dP2 = await resP2.json();
+    assert.strictEqual(dP2.operations.length, 1);
+  });
+
+  test('10. Desktop and Mobile views render Closed Positions report tab & switcher', async () => {
+    // Desktop
+    const resDesk = await fetch(`${baseUrl}/reports`, {
+      headers: { Cookie: `foliotrack_token=${authToken}` }
+    });
+    const htmlDesk = await resDesk.text();
+    assert.ok(htmlDesk.includes('tabBtnClosed'), 'Desktop has tabBtnClosed');
+    assert.ok(htmlDesk.includes('Operazioni Chiuse & Storico Gain'), 'Desktop has closed tab label');
+    assert.ok(htmlDesk.includes('sectionClosedReport'), 'Desktop has closed report section');
+
+    // Mobile
+    const resMob = await fetch(`${baseUrl}/reports?view=mobile`, {
+      headers: { Cookie: `foliotrack_token=${authToken}` }
+    });
+    const htmlMob = await resMob.text();
+    assert.ok(htmlMob.includes('mTabBtnClosed'), 'Mobile has mTabBtnClosed');
+    assert.ok(htmlMob.includes('Op. Chiuse'), 'Mobile has closed tab button');
+    assert.ok(htmlMob.includes('mSectionClosed'), 'Mobile has closed section');
+  });
 });
 

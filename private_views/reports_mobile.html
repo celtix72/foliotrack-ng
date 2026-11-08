@@ -48,7 +48,9 @@
       main,
       div,
       #mobileReportContent,
-      #mobilePortfoliosContainer {
+      #mobilePortfoliosContainer,
+      #mClosedContent,
+      #mClosedByYearContainer {
         height: auto !important;
         min-height: 0 !important;
         max-height: none !important;
@@ -87,16 +89,19 @@
         FT
       </div>
       <div>
-        <h1 class="text-sm font-bold text-gray-900 dark:text-white leading-tight">Report PDF</h1>
+        <h1 id="mHeaderTitle" class="text-sm font-bold text-gray-900 dark:text-white leading-tight">Report PDF</h1>
         <p class="text-[9px] font-mono text-gray-400">Prospetto Portafogli & Fisco</p>
       </div>
     </div>
 
-    <div class="flex items-center space-x-2">
-      <select id="mobilePortfolioSelect" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[10px] font-mono text-gray-900 dark:text-white max-w-[130px] truncate">
+    <div class="flex items-center space-x-1.5">
+      <select id="mobilePortfolioSelect" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[10px] font-mono text-gray-900 dark:text-white max-w-[110px] truncate">
         <option value="all">Tutti (Consolidato)</option>
       </select>
-      <button id="mobilePrintPdfBtn" type="button" class="btn-pill px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1 shadow-sm">
+      <select id="mobileYearSelect" class="hidden px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[10px] font-mono text-gray-900 dark:text-white max-w-[90px] truncate">
+        <option value="all">Tutti gli Anni</option>
+      </select>
+      <button id="mobilePrintPdfBtn" type="button" class="btn-pill px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1 shadow-sm shrink-0">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
@@ -105,56 +110,116 @@
     </div>
   </header>
 
+  <!-- Mobile Switcher Tabs -->
+  <div class="px-3 pt-2 no-print">
+    <div class="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 dark:bg-white/5 rounded-xl text-xs font-medium">
+      <button id="mTabBtnPortfolios" type="button" class="py-1.5 rounded-lg text-center font-bold bg-white dark:bg-[#1f1f22] text-emerald-600 dark:text-emerald-400 shadow-sm transition">
+        💼 Portafogli
+      </button>
+      <button id="mTabBtnClosed" type="button" class="py-1.5 rounded-lg text-center text-gray-500 dark:text-gray-400 hover:text-gray-900 transition">
+        💰 Op. Chiuse
+      </button>
+    </div>
+  </div>
+
   <!-- Live Market Ticker -->
   <div id="live-ticker-container" class="no-print"></div>
 
   <!-- Mobile Main Content -->
-  <main class="flex-1 px-3 py-3 space-y-3">
+  <main class="flex-1 px-3 py-2 space-y-3">
 
-    <!-- Loading Spinner -->
-    <div id="mobileLoadingSpinner" class="py-12 flex flex-col items-center justify-center space-y-2">
-      <span class="animate-spin w-7 h-7 border-3 border-emerald-500 border-t-transparent rounded-full"></span>
-      <p class="text-[11px] font-mono text-gray-500">Caricamento prospetto e minusvalenze...</p>
+    <!-- ========================================== -->
+    <!-- TAB 1: PORTAFOGLI & ASSET ATTIVI (MOBILE)  -->
+    <!-- ========================================== -->
+    <div id="mSectionPortfolios" class="space-y-3">
+      <!-- Loading Spinner -->
+      <div id="mobileLoadingSpinner" class="py-12 flex flex-col items-center justify-center space-y-2">
+        <span class="animate-spin w-7 h-7 border-3 border-emerald-500 border-t-transparent rounded-full"></span>
+        <p class="text-[11px] font-mono text-gray-500">Caricamento prospetto e minusvalenze...</p>
+      </div>
+
+      <!-- Mobile Portfolios Report Container -->
+      <div id="mobileReportContent" class="hidden space-y-3">
+        <!-- Executive KPI Cards Grid (2x2) -->
+        <div class="grid grid-cols-2 gap-2">
+          <div class="signature-card space-y-0.5">
+            <span class="text-[9px] font-mono uppercase text-gray-400 block">Patrimonio Totale</span>
+            <div id="mKpiTotalValue" class="text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+            <div class="text-[9px] font-mono text-gray-500">Cassa: <span id="mKpiTotalCash">-</span></div>
+          </div>
+
+          <div class="signature-card space-y-0.5">
+            <span class="text-[9px] font-mono uppercase text-gray-400 block">Capitale Investito</span>
+            <div id="mKpiInvested" class="text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+            <div class="text-[9px] font-mono text-gray-500">Asset: <span id="mKpiAssetCount">-</span></div>
+          </div>
+
+          <div class="signature-card space-y-0.5">
+            <span class="text-[9px] font-mono uppercase text-gray-400 block">Gain / Performance</span>
+            <div id="mKpiTotalGain" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">-</div>
+            <div id="mKpiGainPct" class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">-</div>
+          </div>
+
+          <div class="signature-card space-y-0.5 bg-amber-500/[0.03] border-amber-500/20">
+            <span class="text-[9px] font-mono uppercase text-amber-600 dark:text-amber-400 block">Minusvalenze Totali</span>
+            <div id="mKpiMinusvalenze" class="text-base font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">-</div>
+            <div class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400">Recupero: <span id="mKpiTaxSavings">-</span></div>
+          </div>
+        </div>
+
+        <!-- Portfolios List -->
+        <div id="mobilePortfoliosContainer" class="space-y-3"></div>
+      </div>
     </div>
 
-    <!-- Mobile Report Container -->
-    <div id="mobileReportContent" class="hidden space-y-3">
-
-      <!-- Executive KPI Cards Grid (2x2) -->
-      <div class="grid grid-cols-2 gap-2">
-        <div class="signature-card space-y-0.5">
-          <span class="text-[9px] font-mono uppercase text-gray-400 block">Patrimonio Totale</span>
-          <div id="mKpiTotalValue" class="text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
-          <div class="text-[9px] font-mono text-gray-500">Cassa: <span id="mKpiTotalCash">-</span></div>
-        </div>
-
-        <div class="signature-card space-y-0.5">
-          <span class="text-[9px] font-mono uppercase text-gray-400 block">Capitale Investito</span>
-          <div id="mKpiInvested" class="text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
-          <div class="text-[9px] font-mono text-gray-500">Asset: <span id="mKpiAssetCount">-</span></div>
-        </div>
-
-        <div class="signature-card space-y-0.5">
-          <span class="text-[9px] font-mono uppercase text-gray-400 block">Gain / Performance</span>
-          <div id="mKpiTotalGain" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">-</div>
-          <div id="mKpiGainPct" class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">-</div>
-        </div>
-
-        <div class="signature-card space-y-0.5 bg-amber-500/[0.03] border-amber-500/20">
-          <span class="text-[9px] font-mono uppercase text-amber-600 dark:text-amber-400 block">Minusvalenze Totali</span>
-          <div id="mKpiMinusvalenze" class="text-base font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">-</div>
-          <div class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400">Recupero: <span id="mKpiTaxSavings">-</span></div>
-        </div>
+    <!-- ========================================== -->
+    <!-- TAB 2: OPERAZIONI CHIUSE & GAIN (MOBILE)   -->
+    <!-- ========================================== -->
+    <div id="mSectionClosed" class="hidden space-y-3">
+      <!-- Loading Spinner -->
+      <div id="mClosedLoadingSpinner" class="py-12 flex flex-col items-center justify-center space-y-2">
+        <span class="animate-spin w-7 h-7 border-3 border-emerald-500 border-t-transparent rounded-full"></span>
+        <p class="text-[11px] font-mono text-gray-500">Caricamento operazioni chiuse...</p>
       </div>
 
-      <!-- Portfolios List -->
-      <div id="mobilePortfoliosContainer" class="space-y-3"></div>
+      <!-- Closed Operations Content -->
+      <div id="mClosedContent" class="hidden space-y-3">
+        <!-- KPI Cards Grid (2x2) -->
+        <div class="grid grid-cols-2 gap-2">
+          <div class="signature-card space-y-0.5">
+            <span class="text-[9px] font-mono uppercase text-gray-400 block">Gain Netto Realizzato</span>
+            <div id="mKpiClosedTotalGain" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">-</div>
+            <div id="mKpiClosedGainPct" class="text-[9px] font-mono font-bold text-emerald-600">-</div>
+          </div>
 
-      <!-- Report Footer -->
-      <div class="signature-card text-center p-3 text-[9px] font-mono text-gray-400 space-y-1">
-        <div>FolioTrack Signature • Report generato il <span id="mReportDate"></span></div>
-        <div>Minusvalenze compensabili entro il 4° anno ai sensi del D.Lgs. 461/1997.</div>
+          <div class="signature-card space-y-0.5 bg-emerald-500/[0.03] border-emerald-500/20">
+            <span class="text-[9px] font-mono uppercase text-emerald-600 dark:text-emerald-400 block">Plusvalenze Realizzate</span>
+            <div id="mKpiClosedProfits" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">-</div>
+            <div id="mKpiClosedWinCount" class="text-[9px] font-mono text-gray-500">-</div>
+          </div>
+
+          <div class="signature-card space-y-0.5 bg-red-500/[0.03] border-red-500/20">
+            <span class="text-[9px] font-mono uppercase text-red-600 dark:text-red-400 block">Minusvalenze Realizzate</span>
+            <div id="mKpiClosedLosses" class="text-base font-bold font-mono text-red-600 dark:text-red-400 tabular-nums">-</div>
+            <div id="mKpiClosedLossCount" class="text-[9px] font-mono text-gray-500">-</div>
+          </div>
+
+          <div class="signature-card space-y-0.5">
+            <span class="text-[9px] font-mono uppercase text-gray-400 block">Win Rate / Trade</span>
+            <div id="mKpiClosedWinRate" class="text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+            <div class="text-[9px] font-mono text-gray-500">Incasso: <span id="mKpiClosedProceeds">-</span></div>
+          </div>
+        </div>
+
+        <!-- Operations List by Year -->
+        <div id="mClosedByYearContainer" class="space-y-3"></div>
       </div>
+    </div>
+
+    <!-- Mobile Report Footer -->
+    <div class="signature-card text-center p-3 text-[9px] font-mono text-gray-400 space-y-1">
+      <div>FolioTrack Signature • Report generato il <span id="mReportDate"></span></div>
+      <div>Minusvalenze e gain fiscali calcolati ai sensi del D.Lgs. 461/1997.</div>
     </div>
 
   </main>
@@ -164,6 +229,8 @@
 
   <script>
     (function () {
+      let mActiveTab = 'portfolios';
+
       function formatMoney(amount, currency = 'EUR') {
         const num = Number(amount) || 0.0;
         const symbol = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : currency);
@@ -180,6 +247,16 @@
         return (Number(num) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       }
 
+      function formatDate(dStr) {
+        if (!dStr) return '-';
+        try {
+          const parts = String(dStr).split('T')[0].split('-');
+          if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        } catch {}
+        return dStr;
+      }
+
+      // Load Portfolios Report
       async function loadMobileReport(portfolioId = 'all') {
         const spinner = document.getElementById('mobileLoadingSpinner');
         const content = document.getElementById('mobileReportContent');
@@ -315,8 +392,166 @@
         content.classList.remove('hidden');
       }
 
+      // Load Closed Positions Report (Mobile)
+      async function loadMobileClosedReport(portfolioId = 'all', year = 'all') {
+        const spinner = document.getElementById('mClosedLoadingSpinner');
+        const content = document.getElementById('mClosedContent');
+        spinner.classList.remove('hidden');
+        content.classList.add('hidden');
+
+        try {
+          const params = new URLSearchParams();
+          if (portfolioId && portfolioId !== 'all') params.append('portfolioId', portfolioId);
+          if (year && year !== 'all') params.append('year', year);
+
+          const res = await fetch(`/api/reports/closed-positions?${params.toString()}`);
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Errore');
+
+          renderMobileClosedReport(data, year);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      function renderMobileClosedReport(data, selectedYear) {
+        const spinner = document.getElementById('mClosedLoadingSpinner');
+        const content = document.getElementById('mClosedContent');
+
+        // Year dropdown
+        const ySel = document.getElementById('mobileYearSelect');
+        ySel.innerHTML = '<option value="all">Tutti gli Anni</option>';
+        (data.years || []).forEach(y => {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.textContent = `Anno ${y}`;
+          if (String(y) === String(selectedYear)) opt.selected = true;
+          ySel.appendChild(opt);
+        });
+
+        const t = data.totals;
+        const totalGainEl = document.getElementById('mKpiClosedTotalGain');
+        const totalGainPctEl = document.getElementById('mKpiClosedGainPct');
+        const isPos = t.totalRealizedGain >= 0;
+        totalGainEl.textContent = (isPos ? '+' : '') + formatMoney(t.totalRealizedGain);
+        totalGainPctEl.textContent = formatPercent(t.gainPercent);
+        totalGainEl.className = 'text-base font-bold font-mono tabular-nums ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        totalGainPctEl.className = 'text-[9px] font-mono font-bold ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+
+        document.getElementById('mKpiClosedProfits').textContent = '+' + formatMoney(t.totalProfits);
+        document.getElementById('mKpiClosedWinCount').textContent = `${t.winCount} in utile`;
+
+        document.getElementById('mKpiClosedLosses').textContent = formatMoney(t.totalLosses);
+        document.getElementById('mKpiClosedLossCount').textContent = `${t.lossCount} in perdita`;
+
+        document.getElementById('mKpiClosedWinRate').textContent = `${formatNumber(t.winRate, 1)}% (${t.operationCount} trade)`;
+        document.getElementById('mKpiClosedProceeds').textContent = formatMoney(t.totalProceeds);
+
+        const container = document.getElementById('mClosedByYearContainer');
+        container.innerHTML = '';
+
+        if (!data.byYear || data.byYear.length === 0) {
+          container.innerHTML = `
+            <div class="signature-card p-6 text-center text-[11px] font-mono text-gray-500">
+              Nessuna vendita registrata.
+            </div>
+          `;
+        } else {
+          data.byYear.forEach(y => {
+            const card = document.createElement('div');
+            card.className = 'signature-card space-y-2';
+
+            const yGainPos = y.totalRealizedGain >= 0;
+            const yGainClass = yGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+            const yGainSign = yGainPos ? '+' : '';
+
+            let opRows = '';
+            y.operations.forEach(op => {
+              const opGainPos = op.realizedPnl >= 0;
+              const opGainClass = opGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+              const opGainSign = opGainPos ? '+' : '';
+
+              opRows += `
+                <div class="py-1.5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+                  <div class="min-w-0 pr-2">
+                    <div class="flex items-center space-x-1.5 truncate">
+                      <span class="font-bold text-gray-900 dark:text-white">${op.ticker}</span>
+                      <span class="text-[8px] px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-500 font-bold">${op.closeType || 'TOTALE'}</span>
+                      <span class="text-[9px] text-gray-400 truncate">[${op.portfolioName}]</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400 truncate mt-0.5">
+                      ${formatDate(op.date)} • Qta: <strong>${formatNumber(op.quantity)}</strong> • PMC: ${formatMoney(op.pmc, op.currency)} → Vend: ${formatMoney(op.sellPrice, op.currency)}
+                    </div>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <div class="font-bold text-gray-900 dark:text-white">${formatMoney(op.proceeds, op.currency)}</div>
+                    <div class="text-[10px] font-semibold ${opGainClass}">${opGainSign}${formatMoney(op.realizedPnl, op.currency)} (${formatPercent(op.realizedPnlPercent)})</div>
+                  </div>
+                </div>
+              `;
+            });
+
+            card.innerHTML = `
+              <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+                <div>
+                  <div class="flex items-center space-x-1.5">
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">Anno ${y.year}</span>
+                    <span class="px-1.5 py-0.2 rounded text-[8px] font-mono uppercase bg-emerald-500/10 text-emerald-600 font-bold">${y.tradeCount} Trade</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-gray-400">Win Rate: ${formatNumber(y.winRate, 1)}%</span>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm font-bold font-mono ${yGainClass}">${yGainSign}${formatMoney(y.totalRealizedGain)}</div>
+                  <div class="text-[10px] font-mono text-gray-400">Incasso: ${formatMoney(y.totalProceeds)}</div>
+                </div>
+              </div>
+
+              <div class="space-y-0.5">
+                ${opRows}
+              </div>
+            `;
+
+            container.appendChild(card);
+          });
+        }
+
+        spinner.classList.add('hidden');
+        content.classList.remove('hidden');
+      }
+
+      function switchMobileTab(tab) {
+        mActiveTab = tab;
+        const btnP = document.getElementById('mTabBtnPortfolios');
+        const btnC = document.getElementById('mTabBtnClosed');
+        const secP = document.getElementById('mSectionPortfolios');
+        const secC = document.getElementById('mSectionClosed');
+        const ySel = document.getElementById('mobileYearSelect');
+        const title = document.getElementById('mHeaderTitle');
+
+        const pVal = document.getElementById('mobilePortfolioSelect').value;
+
+        if (tab === 'portfolios') {
+          btnP.className = 'py-1.5 rounded-lg text-center font-bold bg-white dark:bg-[#1f1f22] text-emerald-600 dark:text-emerald-400 shadow-sm transition';
+          btnC.className = 'py-1.5 rounded-lg text-center text-gray-500 dark:text-gray-400 hover:text-gray-900 transition';
+          secP.classList.remove('hidden');
+          secC.classList.add('hidden');
+          ySel.classList.add('hidden');
+          title.textContent = 'Report PDF';
+          loadMobileReport(pVal);
+        } else {
+          btnC.className = 'py-1.5 rounded-lg text-center font-bold bg-white dark:bg-[#1f1f22] text-emerald-600 dark:text-emerald-400 shadow-sm transition';
+          btnP.className = 'py-1.5 rounded-lg text-center text-gray-500 dark:text-gray-400 hover:text-gray-900 transition';
+          secP.classList.add('hidden');
+          secC.classList.remove('hidden');
+          ySel.classList.remove('hidden');
+          title.textContent = 'Op. Chiuse PDF';
+          const yVal = ySel.value || 'all';
+          loadMobileClosedReport(pVal, yVal);
+        }
+      }
+
       document.addEventListener('DOMContentLoaded', async () => {
-        // Dropdown
+        // Dropdown portfolios
         try {
           const res = await fetch('/api/portfolios');
           const data = await res.json();
@@ -331,10 +566,23 @@
           }
         } catch (e) {}
 
+        document.getElementById('mTabBtnPortfolios').addEventListener('click', () => switchMobileTab('portfolios'));
+        document.getElementById('mTabBtnClosed').addEventListener('click', () => switchMobileTab('closed'));
+
         await loadMobileReport('all');
 
         document.getElementById('mobilePortfolioSelect').addEventListener('change', (e) => {
-          loadMobileReport(e.target.value);
+          if (mActiveTab === 'portfolios') {
+            loadMobileReport(e.target.value);
+          } else {
+            const y = document.getElementById('mobileYearSelect').value;
+            loadMobileClosedReport(e.target.value, y);
+          }
+        });
+
+        document.getElementById('mobileYearSelect').addEventListener('change', (e) => {
+          const p = document.getElementById('mobilePortfolioSelect').value;
+          loadMobileClosedReport(p, e.target.value);
         });
 
         document.getElementById('mobilePrintPdfBtn').addEventListener('click', () => {
