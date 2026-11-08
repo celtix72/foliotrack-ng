@@ -22,7 +22,16 @@
         size: A4 portrait;
         margin: 10mm 12mm 12mm 12mm;
       }
+      html,
       body {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        overflow-x: visible !important;
+        overflow-y: visible !important;
+        display: block !important;
+        position: static !important;
         background: #ffffff !important;
         color: #111827 !important;
         padding-bottom: 0 !important;
@@ -36,16 +45,35 @@
       button {
         display: none !important;
       }
+      main,
+      div,
+      #mobileReportContent,
+      #mobilePortfoliosContainer {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        display: block !important;
+        position: static !important;
+        float: none !important;
+      }
       .signature-card {
         box-shadow: none !important;
         border: 1px solid #e5e7eb !important;
         background: #ffffff !important;
-        break-inside: avoid !important;
-        margin-bottom: 1rem !important;
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+        margin-bottom: 0.75rem !important;
       }
       table {
         width: 100% !important;
         font-size: 10px !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+      tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
     }
   </style>
