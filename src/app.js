@@ -158,6 +158,10 @@ app.get(['/history', '/dividends'], requireViewAuth, (req, res) => {
   serveWithSidebar(req, res, 'history');
 });
 
+app.get(['/tools', '/strumenti'], requireViewAuth, (req, res) => {
+  serveWithSidebar(req, res, 'tools');
+});
+
 app.get(['/reports', '/goals', '/ai-advisor'], requireViewAuth, (req, res) => {
   serveWithSidebar(req, res, 'reports');
 });

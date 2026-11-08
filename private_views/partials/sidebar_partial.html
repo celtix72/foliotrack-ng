@@ -44,19 +44,36 @@
         <span>Flussi & Dividendi</span>
       </a>
 
-      <a href="/rebalance" data-page="rebalance" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5">
-        <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l9-4 9 4M4 10l5 9m11-9l-5 9M12 2v20M6 19h12" />
-        </svg>
-        <span>Ribilanciamento</span>
-      </a>
+      <!-- Strumenti (Menu unificato con sottomenu comprimibile) -->
+      <div class="nav-group pt-0.5" id="nav-tools-group">
+        <button type="button" id="btn-toggle-tools" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5 cursor-pointer">
+          <div class="flex items-center space-x-3">
+            <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span>Strumenti</span>
+          </div>
+          <svg id="tools-chevron" class="w-4 h-4 text-gray-400 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
 
-      <a href="/ai-advisor" data-page="ai-advisor" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5">
-        <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        <span>AI Advisor</span>
-      </a>
+        <!-- Sub-items per sezioni consultate saltuariamente -->
+        <div id="nav-tools-sub" class="mt-1 pl-4 pr-1 space-y-0.5 transition-all duration-200">
+          <a href="/tools" data-subpage="tools" class="nav-sub-item flex items-center space-x-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/70 dark:hover:bg-white/5 transition">
+            <span class="text-sm">🧰</span>
+            <span>Tutti gli Strumenti</span>
+          </a>
+          <a href="/rebalance" data-subpage="rebalance" class="nav-sub-item flex items-center space-x-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/70 dark:hover:bg-white/5 transition">
+            <span class="text-sm">⚖️</span>
+            <span>Ribilanciamento</span>
+          </a>
+          <a href="/ai-advisor" data-subpage="ai-advisor" class="nav-sub-item flex items-center space-x-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/70 dark:hover:bg-white/5 transition">
+            <span class="text-sm">🤖</span>
+            <span>AI Advisor</span>
+          </a>
+        </div>
+      </div>
 
       <a href="/settings" data-page="settings" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5">
         <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,7 +139,7 @@
     const navItems = document.querySelectorAll('#sidebar-nav .nav-item');
     navItems.forEach(item => {
       const href = item.getAttribute('href');
-      if (currentPath === href || (href !== '/' && currentPath.startsWith(href))) {
+      if (href && (currentPath === href || (href !== '/' && currentPath.startsWith(href)))) {
         item.classList.add('bg-emerald-500/10', 'text-emerald-600', 'dark:text-emerald-400', 'font-semibold');
         item.classList.remove('text-gray-700', 'dark:text-gray-300');
         const icon = item.querySelector('svg');
@@ -130,6 +147,65 @@
           icon.classList.add('text-emerald-600', 'dark:text-emerald-400');
           icon.classList.remove('text-gray-400');
         }
+      }
+    });
+
+    // Check if on tools route (rebalance, ai-advisor, reports, goals, tools)
+    const isToolsPage = currentPath.startsWith('/tools') ||
+                        currentPath.startsWith('/strumenti') ||
+                        currentPath.startsWith('/rebalance') ||
+                        currentPath.startsWith('/ai-advisor') ||
+                        currentPath.startsWith('/reports') ||
+                        currentPath.startsWith('/goals');
+
+    const toolsBtn = document.getElementById('btn-toggle-tools');
+    const toolsSub = document.getElementById('nav-tools-sub');
+    const toolsChevron = document.getElementById('tools-chevron');
+
+    // Default open if on any tools page or if previously left open
+    let toolsOpen = isToolsPage || localStorage.getItem('foliotrack_tools_menu_open') === 'true';
+    function updateToolsAccordion() {
+      if (!toolsSub || !toolsChevron) return;
+      if (toolsOpen) {
+        toolsSub.classList.remove('hidden');
+        toolsChevron.classList.add('rotate-180');
+      } else {
+        toolsSub.classList.add('hidden');
+        toolsChevron.classList.remove('rotate-180');
+      }
+    }
+    updateToolsAccordion();
+
+    if (toolsBtn) {
+      toolsBtn.addEventListener('click', () => {
+        toolsOpen = !toolsOpen;
+        localStorage.setItem('foliotrack_tools_menu_open', toolsOpen);
+        updateToolsAccordion();
+      });
+
+      if (isToolsPage) {
+        toolsBtn.classList.add('bg-emerald-500/10', 'text-emerald-600', 'dark:text-emerald-400', 'font-semibold');
+        toolsBtn.classList.remove('text-gray-700', 'dark:text-gray-300');
+        const icon = toolsBtn.querySelector('svg');
+        if (icon) {
+          icon.classList.add('text-emerald-600', 'dark:text-emerald-400');
+          icon.classList.remove('text-gray-400');
+        }
+      }
+    }
+
+    // Highlight specific sub-item
+    const subItems = document.querySelectorAll('#nav-tools-sub .nav-sub-item');
+    subItems.forEach(item => {
+      const href = item.getAttribute('href');
+      let isSubActive = false;
+      if (href === '/tools' && (currentPath === '/tools' || currentPath === '/strumenti')) isSubActive = true;
+      else if (href === '/rebalance' && currentPath.startsWith('/rebalance')) isSubActive = true;
+      else if (href === '/ai-advisor' && (currentPath.startsWith('/ai-advisor') || currentPath.startsWith('/reports') || currentPath.startsWith('/goals'))) isSubActive = true;
+
+      if (isSubActive) {
+        item.classList.add('bg-emerald-500/15', 'text-emerald-700', 'dark:text-emerald-300', 'font-bold');
+        item.classList.remove('text-gray-600', 'dark:text-gray-400');
       }
     });
 
