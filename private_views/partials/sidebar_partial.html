@@ -37,13 +37,6 @@
         <span>Transazioni</span>
       </a>
 
-      <a href="/dividends" data-page="dividends" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5">
-        <svg class="w-5 h-5 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>Flussi & Dividendi</span>
-      </a>
-
       <!-- Strumenti (Menu unificato con sottomenu comprimibile) -->
       <div class="nav-group pt-0.5" id="nav-tools-group">
         <button type="button" id="btn-toggle-tools" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5 cursor-pointer">
@@ -71,6 +64,10 @@
           <a href="/ai-advisor" data-subpage="ai-advisor" class="nav-sub-item flex items-center space-x-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/70 dark:hover:bg-white/5 transition">
             <span class="text-sm">🤖</span>
             <span>AI Advisor</span>
+          </a>
+          <a href="/dividends" data-subpage="dividends" class="nav-sub-item flex items-center space-x-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/70 dark:hover:bg-white/5 transition">
+            <span class="text-sm">📈</span>
+            <span>Flussi & Fisco</span>
           </a>
         </div>
       </div>
@@ -150,13 +147,15 @@
       }
     });
 
-    // Check if on tools route (rebalance, ai-advisor, reports, goals, tools)
+    // Check if on tools route (rebalance, ai-advisor, reports, goals, tools, dividends, history)
     const isToolsPage = currentPath.startsWith('/tools') ||
                         currentPath.startsWith('/strumenti') ||
                         currentPath.startsWith('/rebalance') ||
                         currentPath.startsWith('/ai-advisor') ||
                         currentPath.startsWith('/reports') ||
-                        currentPath.startsWith('/goals');
+                        currentPath.startsWith('/goals') ||
+                        currentPath.startsWith('/dividends') ||
+                        currentPath.startsWith('/history');
 
     const toolsBtn = document.getElementById('btn-toggle-tools');
     const toolsSub = document.getElementById('nav-tools-sub');
@@ -202,6 +201,7 @@
       if (href === '/tools' && (currentPath === '/tools' || currentPath === '/strumenti')) isSubActive = true;
       else if (href === '/rebalance' && currentPath.startsWith('/rebalance')) isSubActive = true;
       else if (href === '/ai-advisor' && (currentPath.startsWith('/ai-advisor') || currentPath.startsWith('/reports') || currentPath.startsWith('/goals'))) isSubActive = true;
+      else if (href === '/dividends' && (currentPath.startsWith('/dividends') || currentPath.startsWith('/history'))) isSubActive = true;
 
       if (isSubActive) {
         item.classList.add('bg-emerald-500/15', 'text-emerald-700', 'dark:text-emerald-300', 'font-bold');

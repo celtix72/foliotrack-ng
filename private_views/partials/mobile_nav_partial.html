@@ -21,13 +21,6 @@
     <span class="text-[9px] tracking-tight truncate w-full text-center px-0.5">Movimenti</span>
   </a>
 
-  <a href="/dividends" data-mobile-page="dividends" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-    <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-    <span class="text-[9px] tracking-tight truncate w-full text-center px-0.5">Flussi</span>
-  </a>
-
   <a href="/tools" data-mobile-page="tools" class="flex flex-col items-center justify-center flex-1 py-1 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
     <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -54,8 +47,7 @@
       if (page === 'dashboard' && (p === '/' || p === '/dashboard')) isActive = true;
       else if (page === 'portfolios' && p.startsWith('/portfolio')) isActive = true;
       else if (page === 'transactions' && p.startsWith('/transactions')) isActive = true;
-      else if (page === 'dividends' && (p.startsWith('/dividends') || p.startsWith('/history'))) isActive = true;
-      else if (page === 'tools' && (p.startsWith('/tools') || p.startsWith('/strumenti') || p.startsWith('/rebalance') || p.startsWith('/ai-advisor') || p.startsWith('/reports') || p.startsWith('/goals'))) isActive = true;
+      else if (page === 'tools' && (p.startsWith('/tools') || p.startsWith('/strumenti') || p.startsWith('/rebalance') || p.startsWith('/ai-advisor') || p.startsWith('/reports') || p.startsWith('/goals') || p.startsWith('/dividends') || p.startsWith('/history'))) isActive = true;
       else if (page === 'settings' && p.startsWith('/settings')) isActive = true;
 
       if (isActive) {

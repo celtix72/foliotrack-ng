@@ -84,12 +84,13 @@ describe('Navigation: Unified Strumenti (Tools) Hub & Submenu', () => {
     assert.ok(text.includes('id="mobile-bottom-nav"'), 'Should contain mobile bottom nav partial');
     assert.ok(text.includes('data-mobile-page="tools"'), 'Mobile bottom nav should contain data-mobile-page="tools"');
     assert.ok(text.includes('>Strumenti</span>'), 'Mobile bottom nav should show Strumenti');
-    // Ensure no standalone rebalance or ai-advisor in mobile bottom nav
+    // Ensure no standalone rebalance, ai-advisor or dividends in mobile bottom nav
     assert.ok(!text.includes('data-mobile-page="rebalance"'), 'Mobile bottom nav should NOT contain standalone rebalance page');
     assert.ok(!text.includes('data-mobile-page="ai-advisor"'), 'Mobile bottom nav should NOT contain standalone ai-advisor page');
+    assert.ok(!text.includes('data-mobile-page="dividends"'), 'Mobile bottom nav should NOT contain standalone dividends page');
   });
 
-  test('Existing routes /rebalance and /ai-advisor remain accessible', async () => {
+  test('Existing routes /rebalance, /ai-advisor and /dividends remain accessible', async () => {
     const rebRes = await fetch(`${baseUrl}/rebalance`, {
       headers: { Cookie: authCookie }
     });
@@ -99,9 +100,14 @@ describe('Navigation: Unified Strumenti (Tools) Hub & Submenu', () => {
       headers: { Cookie: authCookie }
     });
     assert.equal(aiRes.status, 200);
+
+    const divRes = await fetch(`${baseUrl}/dividends`, {
+      headers: { Cookie: authCookie }
+    });
+    assert.equal(divRes.status, 200);
   });
 
-  test('sidebar_partial.html has unified Strumenti accordion and sub-items', () => {
+  test('sidebar_partial.html has unified Strumenti accordion and sub-items including Flussi & Fisco', () => {
     const sidebarHtml = fs.readFileSync(path.join(__dirname, '../private_views/partials/sidebar_partial.html'), 'utf8');
     assert.ok(sidebarHtml.includes('id="nav-tools-group"'));
     assert.ok(sidebarHtml.includes('id="btn-toggle-tools"'));
@@ -109,18 +115,22 @@ describe('Navigation: Unified Strumenti (Tools) Hub & Submenu', () => {
     assert.ok(sidebarHtml.includes('href="/rebalance"'));
     assert.ok(sidebarHtml.includes('href="/ai-advisor"'));
     assert.ok(sidebarHtml.includes('href="/tools"'));
+    assert.ok(sidebarHtml.includes('href="/dividends"'));
+    assert.ok(sidebarHtml.includes('data-subpage="dividends"'));
+    assert.ok(!sidebarHtml.includes('data-page="dividends"'), 'Sidebar should not have dividends as top-level data-page');
     assert.ok(sidebarHtml.includes('foliotrack_tools_menu_open'));
   });
 
-  test('mobile_nav_partial.html has 6 unified items and tools route highlight logic', () => {
+  test('mobile_nav_partial.html has 5 unified items and tools route highlight logic', () => {
     const mobileHtml = fs.readFileSync(path.join(__dirname, '../private_views/partials/mobile_nav_partial.html'), 'utf8');
     assert.ok(mobileHtml.includes('data-mobile-page="tools"'));
     assert.ok(mobileHtml.includes('>Strumenti</span>'));
     assert.ok(!mobileHtml.includes('data-mobile-page="rebalance"'));
     assert.ok(!mobileHtml.includes('data-mobile-page="ai-advisor"'));
+    assert.ok(!mobileHtml.includes('data-mobile-page="dividends"'));
     assert.ok(mobileHtml.includes("page === 'tools'"));
-    // Count navigation items in mobile bottom nav
+    // Count navigation items in mobile bottom nav: exactly 5 items
     const linkMatches = mobileHtml.match(/<a href="[^"]+" data-mobile-page="/g);
-    assert.equal(linkMatches.length, 6, 'Should have exactly 6 mobile navigation items');
+    assert.equal(linkMatches.length, 5, 'Should have exactly 5 mobile navigation items');
   });
 });
