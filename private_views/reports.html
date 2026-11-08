@@ -3,191 +3,606 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Advisor | FolioTrack</title>
+  <title>Report Portafogli & PDF | FolioTrack</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  
+  <!-- Anti-FOUC Theme Script -->
   <script src="/theme.js"></script>
+
+  <!-- Google Fonts & Compiled Signature CSS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dist/style.css">
+
+  <style>
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm 12mm 12mm 12mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #111827 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      #app-sidebar,
+      #live-ticker-container,
+      .no-print,
+      nav,
+      button,
+      select {
+        display: none !important;
+      }
+      .signature-card {
+        box-shadow: none !important;
+        border: 1px solid #e5e7eb !important;
+        background: #ffffff !important;
+        break-inside: avoid !important;
+        margin-bottom: 1rem !important;
+      }
+      .portfolio-report-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin-bottom: 1.5rem !important;
+      }
+      table {
+        width: 100% !important;
+        font-size: 11px !important;
+        border-collapse: collapse !important;
+      }
+      th, td {
+        border-bottom: 1px solid #e5e7eb !important;
+        padding: 5px 8px !important;
+      }
+      th {
+        background-color: #f9fafb !important;
+        color: #374151 !important;
+      }
+      .print-badge {
+        border: 1px solid currentColor !important;
+      }
+      #printReportFooter {
+        display: block !important;
+      }
+    }
+  </style>
 </head>
 <body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
 
   <!-- SIDEBAR_PARTIAL -->
 
+  <!-- Main Content Wrapper -->
   <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
     <div id="live-ticker-container" class="no-print"></div>
 
-    <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full">
+    <!-- Header Actions Bar (Screen Only) -->
+    <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full no-print">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">AI Portfolio Advisor</h1>
-        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">Analisi quantitativa e qualitativa dell'asset allocation con intelligenza artificiale</p>
+        <div class="flex items-center space-x-2">
+          <a href="/tools" class="text-xs font-mono text-gray-400 hover:text-emerald-500 transition-colors flex items-center space-x-1">
+            <span>Strumenti</span>
+            <span>/</span>
+          </a>
+          <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Report Portafogli & PDF</h1>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            Export
+          </span>
+        </div>
+        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">
+          Prospetto patrimoniale con lista asset per portafoglio (q.tà, PMC, valore attuale, gain) e quadro completo minusvalenze
+        </p>
       </div>
 
-      <div class="flex items-center space-x-3 no-print">
-        <select id="reportPortfolioSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
-          <option value="all">Tutti i Portafogli (Aggregato)</option>
+      <div class="flex items-center space-x-3">
+        <!-- Portfolio selector -->
+        <select id="portfolioSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="all">Tutti i Portafogli (Consolidato)</option>
         </select>
-        <button id="printReportBtn" class="btn-pill px-3.5 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-          <span>Stampa / PDF</span>
+
+        <!-- Refresh Button -->
+        <button id="refreshReportBtn" type="button" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5" title="Aggiorna dati">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Aggiorna</span>
+        </button>
+
+        <!-- Download PDF / Print Button -->
+        <button id="downloadPdfBtn" type="button" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span>Scarica Report PDF</span>
         </button>
       </div>
     </header>
 
-    <main class="flex-1 px-8 pb-16 space-y-8 max-w-7xl mx-auto w-full">
-      <!-- AI Advisor Assessment -->
-      <section class="space-y-4">
-        <div class="signature-card p-6 space-y-5">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-white/5 pb-3 gap-2">
-            <div>
-              <h2 class="text-base font-bold text-gray-900 dark:text-white">AI Portfolio Advisor</h2>
-              <p class="text-xs text-gray-500 font-mono">Analisi qualitativa e quantitativa con Google Gemini, OpenAI o motore euristico</p>
+    <!-- Printable Report Area -->
+    <main id="printableReportArea" class="flex-1 px-8 pb-16 space-y-6 max-w-7xl mx-auto w-full">
+
+      <!-- Executive Printable Document Header -->
+      <div class="signature-card p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-white/5 gap-4">
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-mono font-bold text-xl shadow-md">
+            FT
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-bold text-lg text-gray-900 dark:text-white">FolioTrack</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold uppercase tracking-wider">Executive Report</span>
             </div>
-            <div class="flex items-center space-x-3 no-print">
-              <select id="aiProviderSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white">
-                <option value="auto">Auto (Gemini / OpenAI / Heuristic)</option>
-                <option value="gemini">Google Gemini (gemini-2.0-flash)</option>
-                <option value="openai">OpenAI (gpt-4o-mini)</option>
-                <option value="openrouter">OpenRouter</option>
-                <option value="heuristic">Motore Euristico Offline</option>
-              </select>
-              <button id="runAiBtn" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20">
-                Genera Analisi con AI Advisor
-              </button>
+            <h2 id="reportScopeTitle" class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">
+              Prospetto Patrimoniale Consolidato & Schede Portafogli
+            </h2>
+          </div>
+        </div>
+
+        <div class="text-right font-mono text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+          <div>Data emissione: <strong id="reportDate" class="text-gray-900 dark:text-white">-</strong></div>
+          <div>Valuta di riferimento: <strong class="text-gray-900 dark:text-white">EUR (€)</strong></div>
+          <div>Stato: <span class="text-emerald-600 dark:text-emerald-400 font-semibold">Ufficiale / Sincronizzato</span></div>
+        </div>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div id="reportLoadingSpinner" class="py-16 flex flex-col items-center justify-center space-y-3">
+        <span class="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></span>
+        <p class="text-xs font-mono text-gray-500">Elaborazione prospetto patrimoniale e calcolo minusvalenze...</p>
+      </div>
+
+      <!-- Report Content Container (Hidden while loading) -->
+      <div id="reportContent" class="hidden space-y-6">
+
+        <!-- 1. Executive Summary KPIs -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- KPI 1: Patrimonio Totale -->
+          <div class="signature-card p-4 space-y-1">
+            <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Patrimonio Totale</span>
+            <div id="kpiTotalValue" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+            <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+              <span>Liquidità cassa:</span>
+              <strong id="kpiTotalCash" class="text-gray-700 dark:text-gray-300">-</strong>
             </div>
           </div>
 
-          <!-- Loading Spinner -->
-          <div id="aiLoadingSpinner" class="hidden py-10 flex flex-col items-center justify-center space-y-3">
-            <span class="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></span>
-            <p class="text-xs font-mono text-gray-500">Analisi quantitativa dell'asset allocation in corso...</p>
+          <!-- KPI 2: Capitale Investito -->
+          <div class="signature-card p-4 space-y-1">
+            <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Capitale Investito</span>
+            <div id="kpiInvestedCapital" class="text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+            <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+              <span>Totale asset attivi:</span>
+              <strong id="kpiAssetCount" class="text-gray-700 dark:text-gray-300">-</strong>
+            </div>
           </div>
 
-          <!-- AI Results Container -->
-          <div id="aiResultsContainer" class="hidden space-y-6">
-            <div class="flex items-center justify-between text-xs font-mono pb-2 border-b border-gray-100 dark:border-white/5">
-              <span class="text-gray-500">Provider utilizzato: <strong id="aiProviderBadge" class="text-emerald-600 dark:text-emerald-400">-</strong></span>
-              <span class="px-2.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" id="aiQualityBadge">Buona</span>
+          <!-- KPI 3: Gain Complessivo -->
+          <div class="signature-card p-4 space-y-1">
+            <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Gain / Rendimento</span>
+            <div id="kpiTotalGain" class="text-2xl font-bold font-mono tabular-nums text-emerald-600">-</div>
+            <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+              <span>Rendimento %:</span>
+              <strong id="kpiGainPercent" class="font-bold">-</strong>
             </div>
+          </div>
 
-            <!-- Scorecards -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="signature-card p-4 bg-gray-50/70 dark:bg-white/[0.02] flex items-center justify-between">
-                <div>
-                  <span class="text-xs text-gray-500 font-medium">Punteggio di Rischio</span>
-                  <div id="aiRiskScore" class="text-2xl font-bold font-mono text-amber-500 tabular-nums">0/100</div>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 font-mono font-bold text-xs">
-                  Risk
-                </div>
-              </div>
-
-              <div class="signature-card p-4 bg-gray-50/70 dark:bg-white/[0.02] flex items-center justify-between">
-                <div>
-                  <span class="text-xs text-gray-500 font-medium">Punteggio di Diversificazione</span>
-                  <div id="aiDiversificationScore" class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">0/100</div>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs">
-                  Div
-                </div>
-              </div>
+          <!-- KPI 4: Minusvalenze Fiscali Totali -->
+          <div class="signature-card p-4 space-y-1 bg-amber-500/[0.03] border-amber-500/20">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-mono text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold block">Minusvalenze Totali</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300">Zainetto</span>
             </div>
-
-            <!-- Detailed Grid: Strengths, Weaknesses, Tactical & Strategic -->
-            <div id="aiAnalysisContent" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Strengths -->
-              <div class="signature-card p-4 space-y-2 bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-500/20">
-                <h4 class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  <span>Punti di Forza</span>
-                </h4>
-                <ul id="aiStrengthsList" class="space-y-1.5"></ul>
-              </div>
-
-              <!-- Weaknesses / Concentration -->
-              <div class="signature-card p-4 space-y-2 bg-amber-50/30 dark:bg-amber-950/10 border-amber-500/20">
-                <h4 class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  <span>Aree di Attenzione & Concentrazione</span>
-                </h4>
-                <ul id="aiWeaknessesList" class="space-y-1.5"></ul>
-              </div>
-
-              <!-- Tactical Recommendations -->
-              <div class="signature-card p-4 space-y-2 bg-blue-50/30 dark:bg-blue-950/10 border-blue-500/20">
-                <h4 class="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider flex items-center space-x-1.5">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  <span>Raccomandazioni Tattiche (Breve Termine)</span>
-                </h4>
-                <ul id="aiTacticalList" class="space-y-1.5"></ul>
-              </div>
-
-              <!-- Strategic Recommendations -->
-              <div class="signature-card p-4 space-y-2 bg-purple-50/30 dark:bg-purple-950/10 border-purple-500/20">
-                <h4 class="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider flex items-center space-x-1.5">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                  <span>Raccomandazioni Strategiche (Lungo Termine)</span>
-                </h4>
-                <ul id="aiStrategicList" class="space-y-1.5"></ul>
-              </div>
-            </div>
-
-            <!-- Market Context & News Synthesis -->
-            <div class="signature-card p-4 bg-gray-50/50 dark:bg-white/[0.02] text-xs font-mono space-y-1">
-              <span class="text-gray-400 font-semibold uppercase text-[10px]">Contesto di Mercato & Sintesi Notizie</span>
-              <p id="aiMarketContext" class="text-gray-600 dark:text-gray-300">-</p>
+            <div id="kpiTotalMinusvalenze" class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">-</div>
+            <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
+              <span>Risparmio fiscale 26%:</span>
+              <strong id="kpiTaxSavings" class="text-emerald-600 dark:text-emerald-400 font-semibold">-</strong>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- Print Disclaimer Footer -->
-      <footer id="printDisclaimer" class="pt-6 border-t border-gray-200 dark:border-white/5 text-[10px] font-mono text-gray-400 text-center leading-relaxed">
-        FolioTrack Signature Analytics • Generato il <span id="reportGenDate"></span>. Le analisi dell'AI Advisor hanno finalità puramente illustrative ed educative e non costituiscono consulenza finanziaria personalizzata o sollecitazione al pubblico risparmio.
+        <!-- 2. Portfolios Breakdown Container -->
+        <div id="portfoliosContainer" class="space-y-6">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+      </div>
+
+      <!-- Report Footer / Legal Disclaimer (Always printed) -->
+      <footer id="printReportFooter" class="pt-6 border-t border-gray-200 dark:border-white/5 text-[10px] font-mono text-gray-400 text-center leading-relaxed">
+        FolioTrack Signature Analytics • Generato da sistema il <span id="reportFooterDate"></span>.
+        I valori degli asset e i prezzi di carico (PMC) sono calcolati secondo il metodo contabile adottato (WAC / FIFO).
+        Le minusvalenze fiscali indicate fanno riferimento allo zainetto fiscale ai sensi del D.Lgs. 461/1997 e sono compensabili entro il 4° anno successivo a quello di realizzo.
       </footer>
     </main>
   </div>
 
-  <!-- Vendors & Component Scripts -->
-  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <!-- Component Scripts -->
   <script src="/header_indices.js"></script>
-  <script src="/ai_reports.js"></script>
   <script src="/pdf_report.js"></script>
 
   <script>
-    document.getElementById('reportGenDate').textContent = new Date().toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    (function () {
+      let reportData = null;
 
-    async function initPortfoliosDropdown() {
-      try {
-        const res = await fetch('/api/portfolios');
-        const data = await res.json();
-        if (data.success && data.portfolios) {
-          const sel = document.getElementById('reportPortfolioSelect');
-          data.portfolios.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = `${p.name} (${p.currency})`;
-            sel.appendChild(opt);
-          });
-
-          const urlParams = new URLSearchParams(window.location.search);
-          const initialP = urlParams.get('portfolioId') || localStorage.getItem('foliotrack_selected_portfolio');
-          if (initialP && (initialP === 'all' || sel.querySelector(`option[value="${initialP}"]`))) {
-            sel.value = initialP;
-          }
-        }
-      } catch (err) {
-        console.warn(err);
+      // Currency formatter helper
+      function formatMoney(amount, currency = 'EUR') {
+        const num = Number(amount) || 0.0;
+        const symbol = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : currency);
+        return num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + symbol;
       }
-    }
 
-    document.getElementById('reportPortfolioSelect').addEventListener('change', (e) => {
-      localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
-    });
+      function formatPercent(pct) {
+        const num = Number(pct) || 0.0;
+        const sign = num > 0 ? '+' : '';
+        return sign + num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+      }
 
-    document.addEventListener('DOMContentLoaded', initPortfoliosDropdown);
+      function formatNumber(num, maxDec = 4) {
+        const val = Number(num) || 0.0;
+        return val.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: maxDec });
+      }
+
+      // Fetch Report Data from API
+      async function loadReport(portfolioId = 'all') {
+        const spinner = document.getElementById('reportLoadingSpinner');
+        const content = document.getElementById('reportContent');
+        spinner.classList.remove('hidden');
+        content.classList.add('hidden');
+
+        try {
+          const url = portfolioId && portfolioId !== 'all'
+            ? `/api/reports/portfolio-data?portfolioId=${portfolioId}`
+            : '/api/reports/portfolio-data';
+
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data.success) {
+            throw new Error(data.error || 'Errore nel caricamento del report.');
+          }
+
+          reportData = data;
+          renderReport(data, portfolioId);
+        } catch (err) {
+          console.error('[Reports Error]', err);
+          spinner.innerHTML = `
+            <div class="text-center text-red-500 font-mono text-xs space-y-2">
+              <p>Si è verificato un errore nel caricamento dei dati: ${err.message}</p>
+              <button onclick="location.reload()" class="btn-pill px-3 py-1 bg-red-500/10 text-red-600 border border-red-500/20">Riprova</button>
+            </div>
+          `;
+        }
+      }
+
+      // Populate portfolio dropdown options
+      function initDropdown(portfolios, selectedId) {
+        const select = document.getElementById('portfolioSelect');
+        // Keep only 'all' option
+        select.innerHTML = '<option value="all">Tutti i Portafogli (Consolidato)</option>';
+        portfolios.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} (${p.currency || 'EUR'})`;
+          if (String(p.id) === String(selectedId)) {
+            opt.selected = true;
+          }
+          select.appendChild(opt);
+        });
+      }
+
+      // Render the report view
+      function renderReport(data, selectedId) {
+        const spinner = document.getElementById('reportLoadingSpinner');
+        const content = document.getElementById('reportContent');
+
+        // Document dates
+        const dateStr = data.formattedDateTime || new Date().toLocaleString('it-IT');
+        document.getElementById('reportDate').textContent = dateStr;
+        document.getElementById('reportFooterDate').textContent = dateStr;
+
+        // Title scope
+        const scopeTitle = document.getElementById('reportScopeTitle');
+        if (selectedId && selectedId !== 'all') {
+          const singleP = data.portfolios.find(p => String(p.id) === String(selectedId));
+          scopeTitle.textContent = singleP ? `Prospetto Patrimoniale: ${singleP.name} (${singleP.type})` : 'Prospetto Portafoglio';
+        } else {
+          scopeTitle.textContent = `Prospetto Patrimoniale Consolidato (${data.totals.portfolioCount} Portafogli)`;
+        }
+
+        // Render KPI Totals
+        const totals = data.totals;
+        document.getElementById('kpiTotalValue').textContent = formatMoney(totals.totalValue);
+        document.getElementById('kpiTotalCash').textContent = formatMoney(totals.currentCash);
+        document.getElementById('kpiInvestedCapital').textContent = formatMoney(totals.investedCapital);
+        document.getElementById('kpiAssetCount').textContent = totals.assetCount + ' asset';
+
+        const gainEl = document.getElementById('kpiTotalGain');
+        const gainPctEl = document.getElementById('kpiGainPercent');
+        gainEl.textContent = (totals.totalGain >= 0 ? '+' : '') + formatMoney(totals.totalGain);
+        gainPctEl.textContent = formatPercent(totals.gainPercent);
+
+        if (totals.totalGain >= 0) {
+          gainEl.className = 'text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400';
+          gainPctEl.className = 'text-emerald-600 dark:text-emerald-400 font-bold';
+        } else {
+          gainEl.className = 'text-2xl font-bold font-mono tabular-nums text-red-600 dark:text-red-400';
+          gainPctEl.className = 'text-red-600 dark:text-red-400 font-bold';
+        }
+
+        document.getElementById('kpiTotalMinusvalenze').textContent = formatMoney(totals.totalMinusvalenze);
+        document.getElementById('kpiTaxSavings').textContent = formatMoney(totals.potentialTaxSaving);
+
+        // Render Portfolios Cards
+        const container = document.getElementById('portfoliosContainer');
+        container.innerHTML = '';
+
+        if (!data.portfolios || data.portfolios.length === 0) {
+          container.innerHTML = `
+            <div class="signature-card p-8 text-center text-gray-500 font-mono text-xs">
+              Nessun portafoglio o asset registrato.
+            </div>
+          `;
+        } else {
+          data.portfolios.forEach(p => {
+            const pCard = document.createElement('section');
+            pCard.className = 'signature-card portfolio-report-card p-6 space-y-5';
+
+            // Portfolio Header
+            const gainColor = p.totalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+            const gainSign = p.totalGain >= 0 ? '+' : '';
+
+            // Holdings rows HTML
+            let holdingsHtml = '';
+            if (!p.holdings || p.holdings.length === 0) {
+              holdingsHtml = `
+                <tr>
+                  <td colspan="8" class="text-center py-6 text-xs text-gray-400 font-mono">
+                    Nessuna posizione attiva in questo portafoglio (solo liquidità).
+                  </td>
+                </tr>
+              `;
+            } else {
+              p.holdings.forEach((h, idx) => {
+                const hGainColor = h.gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+                const hGainSign = h.gain >= 0 ? '+' : '';
+                const rowBg = idx % 2 === 0 ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.01]';
+
+                holdingsHtml += `
+                  <tr class="${rowBg} hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                    <td class="py-2 px-3 font-medium text-xs">
+                      <div class="flex items-center space-x-2">
+                        <span class="font-mono font-bold text-gray-900 dark:text-white">${h.ticker}</span>
+                        <span class="text-gray-500 dark:text-gray-400 truncate max-w-[200px]" title="${h.name}">${h.name}</span>
+                      </div>
+                    </td>
+                    <td class="py-2 px-2 text-center">
+                      <span class="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300">
+                        ${h.type}
+                      </span>
+                    </td>
+                    <td class="py-2 px-3 text-right font-mono text-xs tabular-nums text-gray-900 dark:text-white">
+                      ${formatNumber(h.quantity)}
+                    </td>
+                    <td class="py-2 px-3 text-right font-mono text-xs tabular-nums text-gray-700 dark:text-gray-300">
+                      ${formatMoney(h.pmc, h.currency)}
+                    </td>
+                    <td class="py-2 px-3 text-right font-mono text-xs tabular-nums text-gray-900 dark:text-white font-medium">
+                      ${formatMoney(h.currentPrice, h.currency)}
+                    </td>
+                    <td class="py-2 px-3 text-right font-mono text-xs tabular-nums font-bold text-gray-900 dark:text-white">
+                      ${formatMoney(h.currentValue, h.currency)}
+                    </td>
+                    <td class="py-2 px-3 text-right font-mono text-xs tabular-nums font-semibold ${hGainColor}">
+                      ${hGainSign}${formatMoney(h.gain, h.currency)}
+                      <span class="text-[10px] block opacity-85">${formatPercent(h.gainPercent)}</span>
+                    </td>
+                    <td class="py-2 px-3 text-right font-mono text-xs tabular-nums text-gray-500">
+                      ${formatNumber(h.weight, 1)}%
+                    </td>
+                  </tr>
+                `;
+              });
+            }
+
+            // Minusvalenze section HTML
+            const m = p.minusvalenze || { totalResidual: 0, items: [] };
+            let minusvalenzeSectionHtml = '';
+
+            if (m.items && m.items.length > 0 && m.totalResidual > 0) {
+              let rowsLossHtml = '';
+              m.items.forEach(l => {
+                rowsLossHtml += `
+                  <tr class="border-b border-gray-100 dark:border-white/5">
+                    <td class="py-1.5 px-3 font-mono text-xs text-gray-900 dark:text-white">${l.year}</td>
+                    <td class="py-1.5 px-3 text-right font-mono text-xs text-gray-500">${formatMoney(l.amount, p.currency)}</td>
+                    <td class="py-1.5 px-3 text-right font-mono text-xs font-bold text-amber-600 dark:text-amber-400">${formatMoney(l.residualAmount, p.currency)}</td>
+                    <td class="py-1.5 px-3 font-mono text-xs text-center text-gray-700 dark:text-gray-300">${l.expiryDate}</td>
+                    <td class="py-1.5 px-3 text-right font-mono text-xs ${l.isExpiringThisYear ? 'text-red-500 font-bold' : 'text-gray-500'}">
+                      ${l.daysRemaining} gg ${l.isExpiringThisYear ? '⚠️ Scade quest\'anno' : ''}
+                    </td>
+                    <td class="py-1.5 px-3 text-right font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      ${formatMoney(l.potentialTaxSaving, p.currency)}
+                    </td>
+                    <td class="py-1.5 px-3 text-xs text-gray-400 truncate max-w-[150px]">${l.notes || '-'}</td>
+                  </tr>
+                `;
+              });
+
+              minusvalenzeSectionHtml = `
+                <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-xs font-bold font-mono text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
+                        <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Zainetto Fiscale & Minusvalenze Registrate</span>
+                      </span>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                        ${formatMoney(m.totalResidual, p.currency)}
+                      </span>
+                    </div>
+                    <div class="text-xs font-mono text-gray-500">
+                      Potenziale recupero 26%: <strong class="text-emerald-600 dark:text-emerald-400">${formatMoney(m.potentialTaxSaving, p.currency)}</strong>
+                    </div>
+                  </div>
+
+                  <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-white/5">
+                    <table class="w-full text-left">
+                      <thead class="bg-amber-500/[0.04] text-[10px] font-mono text-gray-500 uppercase">
+                        <tr>
+                          <th class="py-1.5 px-3">Anno</th>
+                          <th class="py-1.5 px-3 text-right">Originario</th>
+                          <th class="py-1.5 px-3 text-right">Residuo</th>
+                          <th class="py-1.5 px-3 text-center">Scadenza</th>
+                          <th class="py-1.5 px-3 text-right">Giorni Rimanenti</th>
+                          <th class="py-1.5 px-3 text-right">Risparmio 26%</th>
+                          <th class="py-1.5 px-3">Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${rowsLossHtml}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              `;
+            } else {
+              minusvalenzeSectionHtml = `
+                <div class="mt-4 pt-3 border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs font-mono text-gray-500 gap-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-emerald-500">✓</span>
+                    <span>Zainetto Fiscale: <strong>0,00 €</strong> (Nessuna minusvalenza pregressa registrata)</span>
+                  </div>
+                  ${m.latentLosses > 0 ? `<div class="text-amber-600 dark:text-amber-400">Minusvalenze latenti su asset in perdita: <strong>-${formatMoney(m.latentLosses, p.currency)}</strong></div>` : ''}
+                </div>
+              `;
+            }
+
+            pCard.innerHTML = `
+              <!-- Portfolio Header -->
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-100 dark:border-white/5 pb-4 gap-3">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-lg">
+                    💼
+                  </div>
+                  <div>
+                    <div class="flex items-center space-x-2">
+                      <h3 class="text-base font-bold text-gray-900 dark:text-white">${p.name}</h3>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-600 font-semibold border border-emerald-500/20">
+                        ${p.type}
+                      </span>
+                    </div>
+                    <div class="text-xs font-mono text-gray-500 mt-0.5">
+                      Valuta: <strong>${p.currency}</strong> • Posizioni attive: <strong>${p.assetCount}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Portfolio KPI Pill Strip -->
+                <div class="flex flex-wrap items-center gap-2 font-mono text-xs">
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Valore Attuale</span>
+                    <strong class="text-gray-900 dark:text-white text-sm">${formatMoney(p.totalValue, p.currency)}</strong>
+                  </div>
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Capitale Investito</span>
+                    <strong class="text-gray-700 dark:text-gray-300 text-sm">${formatMoney(p.investedCapital, p.currency)}</strong>
+                  </div>
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Liquidità Cassa</span>
+                    <strong class="text-gray-700 dark:text-gray-300 text-sm">${formatMoney(p.currentCash, p.currency)}</strong>
+                  </div>
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Gain Complessivo</span>
+                    <strong class="text-sm font-bold ${gainColor}">${gainSign}${formatMoney(p.totalGain, p.currency)} (${formatPercent(p.gainPercent)})</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Holdings Table -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                  <thead class="text-[10px] font-mono text-gray-400 uppercase border-b border-gray-100 dark:border-white/5">
+                    <tr>
+                      <th class="py-2 px-3">Asset</th>
+                      <th class="py-2 px-2 text-center">Tipo</th>
+                      <th class="py-2 px-3 text-right">Q.tà</th>
+                      <th class="py-2 px-3 text-right">PMC</th>
+                      <th class="py-2 px-3 text-right">Prezzo Att.</th>
+                      <th class="py-2 px-3 text-right">Valore Attuale</th>
+                      <th class="py-2 px-3 text-right">Gain (€ / %)</th>
+                      <th class="py-2 px-3 text-right">Peso</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
+                    ${holdingsHtml}
+                  </tbody>
+                  <!-- Table Total Row -->
+                  <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
+                    <tr>
+                      <td colspan="5" class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
+                        Totale Portafoglio ${p.name}
+                      </td>
+                      <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-bold">
+                        ${formatMoney(p.totalValue, p.currency)}
+                      </td>
+                      <td class="py-2 px-3 text-right ${gainColor} font-bold">
+                        ${gainSign}${formatMoney(p.totalGain, p.currency)}
+                      </td>
+                      <td class="py-2 px-3 text-right text-gray-500">
+                        100%
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <!-- Minusvalenze / Zainetto Fiscale for this portfolio -->
+              ${minusvalenzeSectionHtml}
+            `;
+
+            container.appendChild(pCard);
+          });
+        }
+
+        spinner.classList.add('hidden');
+        content.classList.remove('hidden');
+      }
+
+      // Initial load & listeners
+      document.addEventListener('DOMContentLoaded', async () => {
+        // Init portfolio dropdown
+        try {
+          const res = await fetch('/api/portfolios');
+          const data = await res.json();
+          if (data.success && data.portfolios) {
+            initDropdown(data.portfolios, 'all');
+          }
+        } catch (e) {
+          console.warn(e);
+        }
+
+        // Load report data
+        await loadReport('all');
+
+        // Portfolio filter change
+        document.getElementById('portfolioSelect').addEventListener('change', (e) => {
+          loadReport(e.target.value);
+        });
+
+        // Refresh button
+        document.getElementById('refreshReportBtn').addEventListener('click', () => {
+          const currentP = document.getElementById('portfolioSelect').value;
+          loadReport(currentP);
+        });
+
+        // Download / Print PDF button
+        document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+          window.print();
+        });
+      });
+    })();
   </script>
 </body>
 </html>
-

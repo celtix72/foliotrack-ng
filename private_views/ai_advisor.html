@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Advisor | FolioTrack</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+</head>
+<body class="signature-bg h-full flex overflow-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+  <!-- SIDEBAR_PARTIAL -->
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <div id="live-ticker-container" class="no-print"></div>
+
+    <header class="px-8 pt-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-7xl mx-auto w-full">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">AI Portfolio Advisor</h1>
+        <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">Analisi quantitativa e qualitativa dell'asset allocation con intelligenza artificiale</p>
+      </div>
+
+      <div class="flex items-center space-x-3 no-print">
+        <select id="reportPortfolioSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="all">Tutti i Portafogli (Aggregato)</option>
+        </select>
+        <button id="printReportBtn" class="btn-pill px-3.5 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium transition flex items-center space-x-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+          <span>Stampa / PDF</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 px-8 pb-16 space-y-8 max-w-7xl mx-auto w-full">
+      <!-- AI Advisor Assessment -->
+      <section class="space-y-4">
+        <div class="signature-card p-6 space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-white/5 pb-3 gap-2">
+            <div>
+              <h2 class="text-base font-bold text-gray-900 dark:text-white">AI Portfolio Advisor</h2>
+              <p class="text-xs text-gray-500 font-mono">Analisi qualitativa e quantitativa con Google Gemini, OpenAI o motore euristico</p>
+            </div>
+            <div class="flex items-center space-x-3 no-print">
+              <select id="aiProviderSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white">
+                <option value="auto">Auto (Gemini / OpenAI / Heuristic)</option>
+                <option value="gemini">Google Gemini (gemini-2.0-flash)</option>
+                <option value="openai">OpenAI (gpt-4o-mini)</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="heuristic">Motore Euristico Offline</option>
+              </select>
+              <button id="runAiBtn" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20">
+                Genera Analisi con AI Advisor
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading Spinner -->
+          <div id="aiLoadingSpinner" class="hidden py-10 flex flex-col items-center justify-center space-y-3">
+            <span class="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></span>
+            <p class="text-xs font-mono text-gray-500">Analisi quantitativa dell'asset allocation in corso...</p>
+          </div>
+
+          <!-- AI Results Container -->
+          <div id="aiResultsContainer" class="hidden space-y-6">
+            <div class="flex items-center justify-between text-xs font-mono pb-2 border-b border-gray-100 dark:border-white/5">
+              <span class="text-gray-500">Provider utilizzato: <strong id="aiProviderBadge" class="text-emerald-600 dark:text-emerald-400">-</strong></span>
+              <span class="px-2.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" id="aiQualityBadge">Buona</span>
+            </div>
+
+            <!-- Scorecards -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="signature-card p-4 bg-gray-50/70 dark:bg-white/[0.02] flex items-center justify-between">
+                <div>
+                  <span class="text-xs text-gray-500 font-medium">Punteggio di Rischio</span>
+                  <div id="aiRiskScore" class="text-2xl font-bold font-mono text-amber-500 tabular-nums">0/100</div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 font-mono font-bold text-xs">
+                  Risk
+                </div>
+              </div>
+
+              <div class="signature-card p-4 bg-gray-50/70 dark:bg-white/[0.02] flex items-center justify-between">
+                <div>
+                  <span class="text-xs text-gray-500 font-medium">Punteggio di Diversificazione</span>
+                  <div id="aiDiversificationScore" class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">0/100</div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs">
+                  Div
+                </div>
+              </div>
+            </div>
+
+            <!-- Detailed Grid: Strengths, Weaknesses, Tactical & Strategic -->
+            <div id="aiAnalysisContent" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Strengths -->
+              <div class="signature-card p-4 space-y-2 bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-500/20">
+                <h4 class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                  <span>Punti di Forza</span>
+                </h4>
+                <ul id="aiStrengthsList" class="space-y-1.5"></ul>
+              </div>
+
+              <!-- Weaknesses / Concentration -->
+              <div class="signature-card p-4 space-y-2 bg-amber-50/30 dark:bg-amber-950/10 border-amber-500/20">
+                <h4 class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  <span>Aree di Attenzione & Concentrazione</span>
+                </h4>
+                <ul id="aiWeaknessesList" class="space-y-1.5"></ul>
+              </div>
+
+              <!-- Tactical Recommendations -->
+              <div class="signature-card p-4 space-y-2 bg-blue-50/30 dark:bg-blue-950/10 border-blue-500/20">
+                <h4 class="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  <span>Raccomandazioni Tattiche (Breve Termine)</span>
+                </h4>
+                <ul id="aiTacticalList" class="space-y-1.5"></ul>
+              </div>
+
+              <!-- Strategic Recommendations -->
+              <div class="signature-card p-4 space-y-2 bg-purple-50/30 dark:bg-purple-950/10 border-purple-500/20">
+                <h4 class="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                  <span>Raccomandazioni Strategiche (Lungo Termine)</span>
+                </h4>
+                <ul id="aiStrategicList" class="space-y-1.5"></ul>
+              </div>
+            </div>
+
+            <!-- Market Context & News Synthesis -->
+            <div class="signature-card p-4 bg-gray-50/50 dark:bg-white/[0.02] text-xs font-mono space-y-1">
+              <span class="text-gray-400 font-semibold uppercase text-[10px]">Contesto di Mercato & Sintesi Notizie</span>
+              <p id="aiMarketContext" class="text-gray-600 dark:text-gray-300">-</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Print Disclaimer Footer -->
+      <footer id="printDisclaimer" class="pt-6 border-t border-gray-200 dark:border-white/5 text-[10px] font-mono text-gray-400 text-center leading-relaxed">
+        FolioTrack Signature Analytics • Generato il <span id="reportGenDate"></span>. Le analisi dell'AI Advisor hanno finalità puramente illustrative ed educative e non costituiscono consulenza finanziaria personalizzata o sollecitazione al pubblico risparmio.
+      </footer>
+    </main>
+  </div>
+
+  <!-- Vendors & Component Scripts -->
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/header_indices.js"></script>
+  <script src="/ai_reports.js"></script>
+  <script src="/pdf_report.js"></script>
+
+  <script>
+    document.getElementById('reportGenDate').textContent = new Date().toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    async function initPortfoliosDropdown() {
+      try {
+        const res = await fetch('/api/portfolios');
+        const data = await res.json();
+        if (data.success && data.portfolios) {
+          const sel = document.getElementById('reportPortfolioSelect');
+          data.portfolios.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.name} (${p.currency})`;
+            sel.appendChild(opt);
+          });
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const initialP = urlParams.get('portfolioId') || localStorage.getItem('foliotrack_selected_portfolio');
+          if (initialP && (initialP === 'all' || sel.querySelector(`option[value="${initialP}"]`))) {
+            sel.value = initialP;
+          }
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+
+    document.getElementById('reportPortfolioSelect').addEventListener('change', (e) => {
+      localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
+    });
+
+    document.addEventListener('DOMContentLoaded', initPortfoliosDropdown);
+  </script>
+</body>
+</html>
+

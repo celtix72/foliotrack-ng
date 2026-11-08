@@ -76,6 +76,10 @@
             <span class="text-sm">📈</span>
             <span>Flussi & Fisco</span>
           </a>
+          <a href="/reports" data-subpage="reports" class="nav-sub-item flex items-center space-x-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/70 dark:hover:bg-white/5 transition">
+            <span class="text-sm">📑</span>
+            <span>Report PDF</span>
+          </a>
         </div>
       </div>
 
@@ -207,8 +211,9 @@
       let isSubActive = false;
       if (href === '/tools' && (currentPath === '/tools' || currentPath === '/strumenti')) isSubActive = true;
       else if (href === '/rebalance' && currentPath.startsWith('/rebalance')) isSubActive = true;
-      else if (href === '/ai-advisor' && (currentPath.startsWith('/ai-advisor') || currentPath.startsWith('/reports') || currentPath.startsWith('/goals'))) isSubActive = true;
+      else if (href === '/ai-advisor' && (currentPath.startsWith('/ai-advisor') || currentPath.startsWith('/goals'))) isSubActive = true;
       else if (href === '/dividends' && (currentPath.startsWith('/dividends') || currentPath.startsWith('/history'))) isSubActive = true;
+      else if (href === '/reports' && currentPath.startsWith('/reports')) isSubActive = true;
 
       if (isSubActive) {
         item.classList.add('bg-emerald-500/15', 'text-emerald-700', 'dark:text-emerald-300', 'font-bold');

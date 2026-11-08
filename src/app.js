@@ -21,6 +21,7 @@ const currenciesRouter = require('./routes/currencies');
 const rebalancingRouter = require('./routes/rebalancing');
 const newsRouter = require('./routes/news');
 const analysisRouter = require('./routes/analysis');
+const reportsRouter = require('./routes/reports');
 const { db } = require('./db');
 const { serveWithSidebar, isMobile } = require('./utils/viewRenderer');
 
@@ -101,6 +102,7 @@ app.use('/api/currencies', currenciesRouter);
 app.use('/api/rebalancing', rebalancingRouter);
 app.use('/api/analysis', analysisRouter);
 app.use('/api/news', newsRouter);
+app.use('/api/reports', reportsRouter);
 
 // 404 handler for unmatched API routes
 app.use('/api', (req, res) => {
@@ -168,8 +170,12 @@ app.get(['/tools', '/strumenti'], requireViewAuth, (req, res) => {
   serveWithSidebar(req, res, 'tools');
 });
 
-app.get(['/reports', '/goals', '/ai-advisor'], requireViewAuth, (req, res) => {
+app.get(['/reports', '/report'], requireViewAuth, (req, res) => {
   serveWithSidebar(req, res, 'reports');
+});
+
+app.get(['/ai-advisor', '/goals'], requireViewAuth, (req, res) => {
+  serveWithSidebar(req, res, 'ai_advisor');
 });
 
 app.get(['/rebalance', '/rebalancing'], requireViewAuth, (req, res) => {

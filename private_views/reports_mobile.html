@@ -2,129 +2,318 @@
 <html lang="it" class="h-full">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>AI Advisor | FolioTrack Mobile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Report Portafogli & PDF | FolioTrack Mobile</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
   <script src="/theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dist/style.css">
   <style>
     .signature-card {
-      padding: 0.75rem 0.65rem !important;
-      border-radius: 0.75rem !important;
+      padding: 0.85rem 0.75rem !important;
+      border-radius: 0.85rem !important;
+    }
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm 12mm 12mm 12mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #111827 !important;
+        padding-bottom: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      header,
+      #mobile-bottom-nav,
+      .no-print,
+      select,
+      button {
+        display: none !important;
+      }
+      .signature-card {
+        box-shadow: none !important;
+        border: 1px solid #e5e7eb !important;
+        background: #ffffff !important;
+        break-inside: avoid !important;
+        margin-bottom: 1rem !important;
+      }
+      table {
+        width: 100% !important;
+        font-size: 10px !important;
+      }
     }
   </style>
 </head>
-<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+<body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24 select-none">
 
-  <!-- Mobile Top Header Bar -->
-  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
-    <div>
-      <h1 class="text-base font-bold text-gray-900 dark:text-white">AI Advisor</h1>
-      <span class="text-[10px] font-mono text-gray-400">Analisi Portafoglio</span>
+  <!-- Mobile Top Header -->
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-[#131315]/90 backdrop-blur-md border-b border-gray-200/50 dark:border-white/5 px-3 py-2.5 flex items-center justify-between no-print">
+    <div class="flex items-center space-x-2">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-md text-white font-mono font-bold text-sm">
+        FT
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-gray-900 dark:text-white leading-tight">Report PDF</h1>
+        <p class="text-[9px] font-mono text-gray-400">Prospetto Portafogli & Fisco</p>
+      </div>
     </div>
-    <select id="reportPortfolioSelect" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono">
-      <option value="all">Tutti i portafogli</option>
-    </select>
+
+    <div class="flex items-center space-x-2">
+      <select id="mobilePortfolioSelect" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[10px] font-mono text-gray-900 dark:text-white max-w-[130px] truncate">
+        <option value="all">Tutti (Consolidato)</option>
+      </select>
+      <button id="mobilePrintPdfBtn" type="button" class="btn-pill px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1 shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <span>PDF</span>
+      </button>
+    </div>
   </header>
 
-  <div id="live-ticker-container"></div>
+  <!-- Live Market Ticker -->
+  <div id="live-ticker-container" class="no-print"></div>
 
   <!-- Mobile Main Content -->
-  <main class="flex-1 px-1.5 py-2 space-y-2">
-    <!-- AI Advisor Trigger Card -->
-    <div class="signature-card p-4 space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="font-bold text-xs uppercase tracking-wider text-gray-500">AI Advisor</span>
-        <button id="runAiBtn" class="btn-pill px-3 py-1 bg-emerald-600 text-white text-[11px] font-semibold">
-          Analizza con AI
-        </button>
+  <main class="flex-1 px-3 py-3 space-y-3">
+
+    <!-- Loading Spinner -->
+    <div id="mobileLoadingSpinner" class="py-12 flex flex-col items-center justify-center space-y-2">
+      <span class="animate-spin w-7 h-7 border-3 border-emerald-500 border-t-transparent rounded-full"></span>
+      <p class="text-[11px] font-mono text-gray-500">Caricamento prospetto e minusvalenze...</p>
+    </div>
+
+    <!-- Mobile Report Container -->
+    <div id="mobileReportContent" class="hidden space-y-3">
+
+      <!-- Executive KPI Cards Grid (2x2) -->
+      <div class="grid grid-cols-2 gap-2">
+        <div class="signature-card space-y-0.5">
+          <span class="text-[9px] font-mono uppercase text-gray-400 block">Patrimonio Totale</span>
+          <div id="mKpiTotalValue" class="text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+          <div class="text-[9px] font-mono text-gray-500">Cassa: <span id="mKpiTotalCash">-</span></div>
+        </div>
+
+        <div class="signature-card space-y-0.5">
+          <span class="text-[9px] font-mono uppercase text-gray-400 block">Capitale Investito</span>
+          <div id="mKpiInvested" class="text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">-</div>
+          <div class="text-[9px] font-mono text-gray-500">Asset: <span id="mKpiAssetCount">-</span></div>
+        </div>
+
+        <div class="signature-card space-y-0.5">
+          <span class="text-[9px] font-mono uppercase text-gray-400 block">Gain / Performance</span>
+          <div id="mKpiTotalGain" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">-</div>
+          <div id="mKpiGainPct" class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">-</div>
+        </div>
+
+        <div class="signature-card space-y-0.5 bg-amber-500/[0.03] border-amber-500/20">
+          <span class="text-[9px] font-mono uppercase text-amber-600 dark:text-amber-400 block">Minusvalenze Totali</span>
+          <div id="mKpiMinusvalenze" class="text-base font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">-</div>
+          <div class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400">Recupero: <span id="mKpiTaxSavings">-</span></div>
+        </div>
       </div>
-      <select id="aiProviderSelect" class="w-full px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono">
-        <option value="auto">Auto (Gemini / OpenAI / Euristico)</option>
-        <option value="gemini">Google Gemini</option>
-        <option value="openai">OpenAI</option>
-        <option value="heuristic">Motore Euristico Offline</option>
-      </select>
 
-      <div id="aiLoadingSpinner" class="hidden py-4 text-center text-xs font-mono text-gray-500">
-        Analisi AI in corso...
-      </div>
+      <!-- Portfolios List -->
+      <div id="mobilePortfoliosContainer" class="space-y-3"></div>
 
-      <div id="aiResultsContainer" class="hidden space-y-3 pt-2 border-t border-gray-100 dark:border-white/5 text-xs font-mono">
-        <div class="flex items-center justify-between">
-          <span>Provider: <strong id="aiProviderBadge" class="text-emerald-500">-</strong></span>
-          <span id="aiQualityBadge" class="px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-800 text-[10px]">Buona</span>
-        </div>
-        <div class="grid grid-cols-2 gap-2 text-center">
-          <div class="p-2 rounded-lg bg-gray-50 dark:bg-white/5">
-            <span class="text-[10px] text-gray-400 block">Rischio</span>
-            <strong id="aiRiskScore" class="text-amber-500 text-sm">0/100</strong>
-          </div>
-          <div class="p-2 rounded-lg bg-gray-50 dark:bg-white/5">
-            <span class="text-[10px] text-gray-400 block">Diversificazione</span>
-            <strong id="aiDiversificationScore" class="text-emerald-500 text-sm">0/100</strong>
-          </div>
-        </div>
-
-        <div id="aiAnalysisContent" class="space-y-3">
-          <div class="p-2.5 rounded-lg bg-emerald-50/40 dark:bg-emerald-950/20 text-xs">
-            <strong class="text-emerald-600 dark:text-emerald-400 block mb-1">Punti di Forza:</strong>
-            <ul id="aiStrengthsList" class="space-y-1"></ul>
-          </div>
-          <div class="p-2.5 rounded-lg bg-amber-50/40 dark:bg-amber-950/20 text-xs">
-            <strong class="text-amber-600 dark:text-amber-400 block mb-1">Criticità / Concentrazione:</strong>
-            <ul id="aiWeaknessesList" class="space-y-1"></ul>
-          </div>
-          <div class="p-2.5 rounded-lg bg-blue-50/40 dark:bg-blue-950/20 text-xs">
-            <strong class="text-blue-600 dark:text-blue-400 block mb-1">Consigli Tattici:</strong>
-            <ul id="aiTacticalList" class="space-y-1"></ul>
-          </div>
-        </div>
+      <!-- Report Footer -->
+      <div class="signature-card text-center p-3 text-[9px] font-mono text-gray-400 space-y-1">
+        <div>FolioTrack Signature • Report generato il <span id="mReportDate"></span></div>
+        <div>Minusvalenze compensabili entro il 4° anno ai sensi del D.Lgs. 461/1997.</div>
       </div>
     </div>
+
   </main>
 
-  <!-- Mobile Bottom Navigation Bar -->
   <!-- MOBILE_NAV_PARTIAL -->
-
-  <!-- Vendors & Scripts -->
-  <script src="/vendor/chartjs/chart.umd.min.js"></script>
   <script src="/header_indices.js"></script>
-  <script src="/ai_reports.js"></script>
 
   <script>
-    async function initMobilePortfolios() {
-      try {
-        const res = await fetch('/api/portfolios');
-        const data = await res.json();
-        if (data.success && data.portfolios) {
-          const sel = document.getElementById('reportPortfolioSelect');
-          data.portfolios.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = p.name;
-            sel.appendChild(opt);
-          });
+    (function () {
+      function formatMoney(amount, currency = 'EUR') {
+        const num = Number(amount) || 0.0;
+        const symbol = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : currency);
+        return num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + symbol;
+      }
 
-          const urlParams = new URLSearchParams(window.location.search);
-          const initialP = urlParams.get('portfolioId') || localStorage.getItem('foliotrack_selected_portfolio');
-          if (initialP && (initialP === 'all' || sel.querySelector(`option[value="${initialP}"]`))) {
-            sel.value = initialP;
+      function formatPercent(pct) {
+        const num = Number(pct) || 0.0;
+        const sign = num > 0 ? '+' : '';
+        return sign + num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+      }
+
+      function formatNumber(num) {
+        return (Number(num) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+
+      async function loadMobileReport(portfolioId = 'all') {
+        const spinner = document.getElementById('mobileLoadingSpinner');
+        const content = document.getElementById('mobileReportContent');
+        spinner.classList.remove('hidden');
+        content.classList.add('hidden');
+
+        try {
+          const url = portfolioId && portfolioId !== 'all'
+            ? `/api/reports/portfolio-data?portfolioId=${portfolioId}`
+            : '/api/reports/portfolio-data';
+
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Errore');
+
+          renderMobileReport(data);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      function renderMobileReport(data) {
+        const spinner = document.getElementById('mobileLoadingSpinner');
+        const content = document.getElementById('mobileReportContent');
+
+        document.getElementById('mReportDate').textContent = data.formattedDateTime || new Date().toLocaleDateString('it-IT');
+
+        const totals = data.totals;
+        document.getElementById('mKpiTotalValue').textContent = formatMoney(totals.totalValue);
+        document.getElementById('mKpiTotalCash').textContent = formatMoney(totals.currentCash);
+        document.getElementById('mKpiInvested').textContent = formatMoney(totals.investedCapital);
+        document.getElementById('mKpiAssetCount').textContent = totals.assetCount;
+
+        const gainEl = document.getElementById('mKpiTotalGain');
+        const gainPctEl = document.getElementById('mKpiGainPct');
+        const isPos = totals.totalGain >= 0;
+        gainEl.textContent = (isPos ? '+' : '') + formatMoney(totals.totalGain);
+        gainPctEl.textContent = formatPercent(totals.gainPercent);
+        gainEl.className = 'text-base font-bold font-mono tabular-nums ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        gainPctEl.className = 'text-[9px] font-mono font-bold ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+
+        document.getElementById('mKpiMinusvalenze').textContent = formatMoney(totals.totalMinusvalenze);
+        document.getElementById('mKpiTaxSavings').textContent = formatMoney(totals.potentialTaxSaving);
+
+        const container = document.getElementById('mobilePortfoliosContainer');
+        container.innerHTML = '';
+
+        (data.portfolios || []).forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'signature-card space-y-2.5';
+
+          const pGainPos = p.totalGain >= 0;
+          const pGainClass = pGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+          const pGainSign = pGainPos ? '+' : '';
+
+          let holdingsRows = '';
+          if (!p.holdings || p.holdings.length === 0) {
+            holdingsRows = '<div class="text-[10px] text-gray-400 font-mono py-2 text-center">Nessun asset (solo liquidità).</div>';
+          } else {
+            p.holdings.forEach(h => {
+              const hGainPos = h.gain >= 0;
+              const hGainClass = hGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+              const hGainSign = hGainPos ? '+' : '';
+
+              holdingsRows += `
+                <div class="py-1.5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+                  <div class="min-w-0 pr-2">
+                    <div class="flex items-center space-x-1.5 truncate">
+                      <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
+                      <span class="text-[9px] px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-500">${h.type}</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400 truncate mt-0.5">
+                      Qta: <strong>${formatNumber(h.quantity)}</strong> • PMC: ${formatMoney(h.pmc, h.currency)}
+                    </div>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <div class="font-bold text-gray-900 dark:text-white">${formatMoney(h.currentValue, h.currency)}</div>
+                    <div class="text-[10px] font-semibold ${hGainClass}">${hGainSign}${formatMoney(h.gain, h.currency)} (${formatPercent(h.gainPercent)})</div>
+                  </div>
+                </div>
+              `;
+            });
           }
 
-          sel.addEventListener('change', (e) => {
-            localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
-          });
-        }
-      } catch (err) {
-        console.warn(err);
+          const m = p.minusvalenze || { totalResidual: 0, items: [] };
+          let minusHtml = '';
+          if (m.totalResidual > 0) {
+            minusHtml = `
+              <div class="p-2 rounded-lg bg-amber-500/[0.05] border border-amber-500/20 text-[10px] font-mono text-amber-600 dark:text-amber-400 flex items-center justify-between">
+                <span>Minusvalenze attive: <strong>${formatMoney(m.totalResidual, p.currency)}</strong></span>
+                <span>Recupero 26%: <strong class="text-emerald-600">${formatMoney(m.potentialTaxSaving, p.currency)}</strong></span>
+              </div>
+            `;
+          } else {
+            minusHtml = `
+              <div class="text-[10px] font-mono text-gray-400 flex items-center space-x-1">
+                <span class="text-emerald-500">✓</span>
+                <span>Zainetto Fiscale: 0,00 € (nessuna minusvalenza)</span>
+              </div>
+            `;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+              <div>
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-sm font-bold text-gray-900 dark:text-white truncate">${p.name}</span>
+                  <span class="px-1.5 py-0.2 rounded text-[8px] font-mono uppercase bg-emerald-500/10 text-emerald-600 font-bold">${p.type}</span>
+                </div>
+                <span class="text-[10px] font-mono text-gray-400">${p.assetCount} asset • Cassa: ${formatMoney(p.currentCash, p.currency)}</span>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold font-mono text-gray-900 dark:text-white">${formatMoney(p.totalValue, p.currency)}</div>
+                <div class="text-[10px] font-mono font-bold ${pGainClass}">${pGainSign}${formatMoney(p.totalGain, p.currency)} (${formatPercent(p.gainPercent)})</div>
+              </div>
+            </div>
+
+            <!-- Holdings List -->
+            <div class="space-y-0.5">
+              ${holdingsRows}
+            </div>
+
+            <!-- Minusvalenze -->
+            <div class="pt-1">
+              ${minusHtml}
+            </div>
+          `;
+
+          container.appendChild(card);
+        });
+
+        spinner.classList.add('hidden');
+        content.classList.remove('hidden');
       }
-    }
-    document.addEventListener('DOMContentLoaded', initMobilePortfolios);
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        // Dropdown
+        try {
+          const res = await fetch('/api/portfolios');
+          const data = await res.json();
+          if (data.success && data.portfolios) {
+            const sel = document.getElementById('mobilePortfolioSelect');
+            data.portfolios.forEach(p => {
+              const opt = document.createElement('option');
+              opt.value = p.id;
+              opt.textContent = `${p.name} (${p.currency || 'EUR'})`;
+              sel.appendChild(opt);
+            });
+          }
+        } catch (e) {}
+
+        await loadMobileReport('all');
+
+        document.getElementById('mobilePortfolioSelect').addEventListener('change', (e) => {
+          loadMobileReport(e.target.value);
+        });
+
+        document.getElementById('mobilePrintPdfBtn').addEventListener('click', () => {
+          window.print();
+        });
+      });
+    })();
   </script>
 </body>
 </html>
-

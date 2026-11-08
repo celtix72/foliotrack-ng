@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AI Advisor | FolioTrack Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23357941'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <script src="/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dist/style.css">
+  <style>
+    .signature-card {
+      padding: 0.75rem 0.65rem !important;
+      border-radius: 0.75rem !important;
+    }
+  </style>
+</head>
+<body class="signature-bg h-full flex flex-col overflow-x-hidden text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24">
+
+  <!-- Mobile Top Header Bar -->
+  <header class="px-4 py-3 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-bold text-gray-900 dark:text-white">AI Advisor</h1>
+      <span class="text-[10px] font-mono text-gray-400">Analisi Portafoglio</span>
+    </div>
+    <select id="reportPortfolioSelect" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono">
+      <option value="all">Tutti i portafogli</option>
+    </select>
+  </header>
+
+  <div id="live-ticker-container"></div>
+
+  <!-- Mobile Main Content -->
+  <main class="flex-1 px-1.5 py-2 space-y-2">
+    <!-- AI Advisor Trigger Card -->
+    <div class="signature-card p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-xs uppercase tracking-wider text-gray-500">AI Advisor</span>
+        <button id="runAiBtn" class="btn-pill px-3 py-1 bg-emerald-600 text-white text-[11px] font-semibold">
+          Analizza con AI
+        </button>
+      </div>
+      <select id="aiProviderSelect" class="w-full px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[11px] font-mono">
+        <option value="auto">Auto (Gemini / OpenAI / Euristico)</option>
+        <option value="gemini">Google Gemini</option>
+        <option value="openai">OpenAI</option>
+        <option value="heuristic">Motore Euristico Offline</option>
+      </select>
+
+      <div id="aiLoadingSpinner" class="hidden py-4 text-center text-xs font-mono text-gray-500">
+        Analisi AI in corso...
+      </div>
+
+      <div id="aiResultsContainer" class="hidden space-y-3 pt-2 border-t border-gray-100 dark:border-white/5 text-xs font-mono">
+        <div class="flex items-center justify-between">
+          <span>Provider: <strong id="aiProviderBadge" class="text-emerald-500">-</strong></span>
+          <span id="aiQualityBadge" class="px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-800 text-[10px]">Buona</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="p-2 rounded-lg bg-gray-50 dark:bg-white/5">
+            <span class="text-[10px] text-gray-400 block">Rischio</span>
+            <strong id="aiRiskScore" class="text-amber-500 text-sm">0/100</strong>
+          </div>
+          <div class="p-2 rounded-lg bg-gray-50 dark:bg-white/5">
+            <span class="text-[10px] text-gray-400 block">Diversificazione</span>
+            <strong id="aiDiversificationScore" class="text-emerald-500 text-sm">0/100</strong>
+          </div>
+        </div>
+
+        <div id="aiAnalysisContent" class="space-y-3">
+          <div class="p-2.5 rounded-lg bg-emerald-50/40 dark:bg-emerald-950/20 text-xs">
+            <strong class="text-emerald-600 dark:text-emerald-400 block mb-1">Punti di Forza:</strong>
+            <ul id="aiStrengthsList" class="space-y-1"></ul>
+          </div>
+          <div class="p-2.5 rounded-lg bg-amber-50/40 dark:bg-amber-950/20 text-xs">
+            <strong class="text-amber-600 dark:text-amber-400 block mb-1">Criticità / Concentrazione:</strong>
+            <ul id="aiWeaknessesList" class="space-y-1"></ul>
+          </div>
+          <div class="p-2.5 rounded-lg bg-blue-50/40 dark:bg-blue-950/20 text-xs">
+            <strong class="text-blue-600 dark:text-blue-400 block mb-1">Consigli Tattici:</strong>
+            <ul id="aiTacticalList" class="space-y-1"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <!-- MOBILE_NAV_PARTIAL -->
+
+  <!-- Vendors & Scripts -->
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/header_indices.js"></script>
+  <script src="/ai_reports.js"></script>
+
+  <script>
+    async function initMobilePortfolios() {
+      try {
+        const res = await fetch('/api/portfolios');
+        const data = await res.json();
+        if (data.success && data.portfolios) {
+          const sel = document.getElementById('reportPortfolioSelect');
+          data.portfolios.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            sel.appendChild(opt);
+          });
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const initialP = urlParams.get('portfolioId') || localStorage.getItem('foliotrack_selected_portfolio');
+          if (initialP && (initialP === 'all' || sel.querySelector(`option[value="${initialP}"]`))) {
+            sel.value = initialP;
+          }
+
+          sel.addEventListener('change', (e) => {
+            localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
+          });
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', initMobilePortfolios);
+  </script>
+</body>
+</html>
+
