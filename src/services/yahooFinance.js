@@ -207,7 +207,10 @@ async function getFundamentals(symbol) {
         'defaultKeyStatistics',
         'financialData',
         'assetProfile',
-        'recommendationTrend'
+        'recommendationTrend',
+        'earnings',
+        'earningsHistory',
+        'calendarEvents'
       ]
     });
 
@@ -218,10 +221,107 @@ async function getFundamentals(symbol) {
     const fd = summary.financialData || {};
     const ap = summary.assetProfile || {};
     const rt = summary.recommendationTrend || {};
+    const earn = summary.earnings || {};
+    const cal = summary.calendarEvents || {};
 
     let dividendYield = 0.0;
     if (sd.dividendYield !== undefined && sd.dividendYield !== null) {
       dividendYield = sd.dividendYield < 0.2 ? sd.dividendYield * 100 : sd.dividendYield;
+    }
+
+    // 1. Dati Ultima Trimestrale (Latest Earnings & Quarterly Financials)
+    const qEarnings = earn.earningsChart?.quarterly || [];
+    const qFinancials = earn.financialsChart?.quarterly || [];
+    const lastQEarnings = qEarnings.length ? qEarnings[qEarnings.length - 1] : null;
+    const lastQFin = qFinancials.length ? qFinancials[qFinancials.length - 1] : null;
+
+    let latestQuarter = null;
+    if (lastQEarnings || lastQFin) {
+      const epsActual = lastQEarnings?.actual !== undefined ? lastQEarnings.actual : null;
+      const epsEstimate = lastQEarnings?.estimate !== undefined ? lastQEarnings.estimate : null;
+      let surprisePct = null;
+      if (lastQEarnings?.surprisePct !== undefined && lastQEarnings.surprisePct !== null) {
+        surprisePct = Number(lastQEarnings.surprisePct);
+      } else if (epsActual !== null && epsEstimate !== null && epsEstimate !== 0) {
+        surprisePct = Number((((epsActual - epsEstimate) / Math.abs(epsEstimate)) * 100).toFixed(2));
+      }
+
+      const nextEarningsDates = earn.earningsChart?.earningsDate || cal.earnings?.earningsDate || [];
+      const nextEarningsDate = nextEarningsDates.length ? nextEarningsDates[0] : null;
+
+      latestQuarter = {
+        quarter: lastQEarnings?.date || lastQFin?.date || 'N/D',
+        fiscalQuarter: lastQEarnings?.fiscalQuarter || lastQFin?.fiscalQuarter || null,
+        periodEndDate: lastQEarnings?.periodEndDate || null,
+        reportedDate: lastQEarnings?.reportedDate || null,
+        epsActual,
+        epsEstimate,
+        epsDifference: lastQEarnings?.difference !== undefined ? Number(lastQEarnings.difference) : (epsActual !== null && epsEstimate !== null ? Number((epsActual - epsEstimate).toFixed(3)) : null),
+        surprisePercent: surprisePct,
+        revenue: lastQFin?.revenue || null,
+        earnings: lastQFin?.earnings || null,
+        profitMargin: lastQFin?.profitMargin ? Number((lastQFin.profitMargin * 100).toFixed(2)) : null,
+        nextEarningsDate,
+        isNextEarningsEstimate: earn.earningsChart?.isEarningsDateEstimate ?? true
+      };
+    }
+
+    // 2. Storico 5 Anni Fatturato (Revenue & Earnings)
+    const yearlyFin = earn.financialsChart?.yearly || [];
+    const revenueHistory = [];
+    yearlyFin.forEach(y => {
+      revenueHistory.push({
+        year: y.date,
+        revenue: y.revenue || 0,
+        earnings: y.earnings || 0,
+        profitMargin: y.profitMargin ? Number((y.profitMargin * 100).toFixed(2)) : null
+      });
+    });
+
+    // 3. Storico 5 Anni Andamento P/E
+    let chartQuotes = [];
+    try {
+      const fiveYearsAgo = new Date();
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+      const chartRes = await yahooFinance.chart(cleanSymbol, {
+        period1: fiveYearsAgo.toISOString().split('T')[0],
+        interval: '1mo'
+      });
+      chartQuotes = chartRes?.quotes || [];
+    } catch (chartErr) {
+      // Graceful fallback if chart is not available
+    }
+
+    const peHistory = [];
+    const shares = ks.sharesOutstanding || null;
+    yearlyFin.forEach(y => {
+      const match = chartQuotes.find(q => {
+        const d = new Date(q.date);
+        return d.getFullYear() === y.date && (d.getMonth() === 11 || d.getMonth() === 10 || d.getMonth() === 9);
+      }) || chartQuotes.find(q => new Date(q.date).getFullYear() === y.date);
+
+      if (match && shares && y.earnings && y.earnings > 0) {
+        const eps = y.earnings / shares;
+        if (eps > 0) {
+          const pe = Number((match.close / eps).toFixed(1));
+          peHistory.push({
+            year: String(y.date),
+            price: Number(match.close.toFixed(2)),
+            eps: Number(eps.toFixed(2)),
+            pe
+          });
+        }
+      }
+    });
+
+    const curPE = sd.trailingPE || ks.trailingPE || null;
+    if (curPE && curPE > 0) {
+      peHistory.push({
+        year: 'Attuale',
+        price: fd.currentPrice || sd.regularMarketPrice || null,
+        eps: ks.trailingEps || null,
+        pe: Number(Number(curPE).toFixed(1))
+      });
     }
 
     return {
@@ -287,7 +387,12 @@ async function getFundamentals(symbol) {
       targetMedianPrice: fd.targetMedianPrice || null,
       recommendationKey: fd.recommendationKey || null,
       numberOfAnalystOpinions: fd.numberOfAnalystOpinions || null,
-      recommendationTrend: rt.trend || []
+      recommendationTrend: rt.trend || [],
+
+      // Latest Quarter Data & 5-Year Historical Performance
+      latestQuarter,
+      revenueHistory,
+      peHistory
     };
   } catch (err) {
     console.warn(`[YahooFinance Fundamentals Error] Symbol "${cleanSymbol}":`, err.message);

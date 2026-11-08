@@ -11,6 +11,8 @@
   let activeFilter = 'all';
   let searchQuery = '';
   let currentTargetTicker = null;
+  let activeRevenueChart = null;
+  let activePEChart = null;
 
   // Formatting helpers
   function fmtCurrencySymbol(cur) {
@@ -82,6 +84,172 @@
       return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white">SELL</span>';
     }
     return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 uppercase">${recKey || 'N/D'}</span>`;
+  }
+
+  /**
+   * Evaluates the health/quality of fundamental indicators.
+   * Conforms to Modern Web Guidance on color accessibility:
+   * never relies solely on color; includes text labels and status icons with high contrast.
+   */
+  function scoreIndicator(type, val, extra = {}) {
+    if (val === null || val === undefined || isNaN(Number(val))) {
+      return {
+        score: 'none',
+        label: 'N/D',
+        icon: '•',
+        bgClass: 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10',
+        textClass: 'text-gray-500 dark:text-gray-400'
+      };
+    }
+    const n = Number(val);
+
+    switch (type) {
+      case 'peg': {
+        // PEG Ratio: < 1.0 (Undervalued vs growth), 1.0-1.5 (Fair), > 1.5 (Overvalued), <= 0 (Negative growth)
+        if (n <= 0) {
+          return { score: 'bad', label: 'Crescita Negativa', icon: '⚠', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        } else if (n < 1.0) {
+          return { score: 'good', label: 'Sottovalutato vs Crescita (< 1.0)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n <= 1.5) {
+          return { score: 'neutral', label: 'Valutazione Equilibrata (1.0-1.5)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'bad', label: 'Sopravvalutato vs Crescita (> 1.5)', icon: '▲', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        }
+      }
+      case 'pe': {
+        // P/E Ratio: <= 18 (Low/Attractive), 18-28 (Moderate/Fair), > 28 (High), <= 0 (Loss)
+        if (n <= 0) {
+          return { score: 'bad', label: 'In Perdita (EPS < 0)', icon: '⚠', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        } else if (n <= 18) {
+          return { score: 'good', label: 'Conveniente (≤ 18x)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n <= 28) {
+          return { score: 'neutral', label: 'Equilibrato (18-28x)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'bad', label: 'Multiplo Elevato (> 28x)', icon: '▲', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        }
+      }
+      case 'pb': {
+        // Price to Book: <= 1.5 (Low), 1.5-3.5 (Normal), > 3.5 (High)
+        if (n <= 0) {
+          return { score: 'bad', label: 'Patrimonio Negativo', icon: '⚠', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        } else if (n <= 1.5) {
+          return { score: 'good', label: 'Basso Multiplo Contabile (≤ 1.5x)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n <= 3.5) {
+          return { score: 'neutral', label: 'Moderato (1.5-3.5x)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'bad', label: 'Elevato (> 3.5x)', icon: '▲', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        }
+      }
+      case 'ps': {
+        // Price to Sales: <= 2.0 (Good), 2-5 (Neutral), > 5 (High)
+        if (n <= 0) {
+          return { score: 'neutral', label: 'N/D', icon: '•', bgClass: 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10', textClass: 'text-gray-500' };
+        } else if (n <= 2.0) {
+          return { score: 'good', label: 'Conveniente vs Fatturato (≤ 2x)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n <= 5.0) {
+          return { score: 'neutral', label: 'Allineato (2-5x)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'bad', label: 'Elevato (> 5x)', icon: '▲', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        }
+      }
+      case 'evEbitda': {
+        // EV/EBITDA: <= 10 (Good), 10-16 (Neutral), > 16 (High)
+        if (n <= 0) {
+          return { score: 'bad', label: 'EBITDA Negativo', icon: '⚠', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        } else if (n <= 10.0) {
+          return { score: 'good', label: 'Basso Multiplo Operativo (≤ 10x)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n <= 16.0) {
+          return { score: 'neutral', label: 'Allineato (10-16x)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'bad', label: 'Elevato (> 16x)', icon: '▲', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        }
+      }
+      case 'margin': {
+        // Margins: >= 15% (Good), 5-15% (Neutral), < 5% (Bad)
+        if (n >= 0.15) {
+          return { score: 'good', label: 'Elevata Marginalità (≥ 15%)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n >= 0.05) {
+          return { score: 'neutral', label: 'Margine Moderato (5-15%)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'bad', label: 'Margine Ridotto / Negativo', icon: '▼', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        }
+      }
+      case 'roe': {
+        // ROE: >= 15% (Good), 8-15% (Neutral), < 8% (Bad)
+        if (n >= 0.15) {
+          return { score: 'good', label: 'Forte Resa Capitale (≥ 15%)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n >= 0.08) {
+          return { score: 'neutral', label: 'Resa Discreta (8-15%)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'bad', label: 'Resa Bassa (< 8%)', icon: '▼', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        }
+      }
+      case 'roa': {
+        // ROA: >= 7% (Good), 3-7% (Neutral), < 3% (Bad)
+        if (n >= 0.07) {
+          return { score: 'good', label: 'Alta Efficienza Asset (≥ 7%)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n >= 0.03) {
+          return { score: 'neutral', label: 'Efficienza Media (3-7%)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'bad', label: 'Bassa Efficienza (< 3%)', icon: '▼', bgClass: 'bg-rose-50 dark:bg-rose-950/40 border-rose-500/30', textClass: 'text-rose-700 dark:text-rose-300' };
+        }
+      }
+      case 'cashDebt': {
+        const cash = Number(extra.cash || 0);
+        const debt = Number(extra.debt || 0);
+        if (cash >= debt) {
+          return { score: 'good', label: 'Cassa Netta Positiva (Cash Rich)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else {
+          const ratio = cash > 0 ? (debt / cash).toFixed(1) + 'x' : 'Alto';
+          return { score: 'neutral', label: `Debito Netto (${ratio} della cassa)`, icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        }
+      }
+      case 'dividend': {
+        if (n >= 3.0) {
+          return { score: 'good', label: 'Cedola Generosa (≥ 3%)', icon: '✓', bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30', textClass: 'text-emerald-700 dark:text-emerald-300' };
+        } else if (n >= 1.5) {
+          return { score: 'neutral', label: 'Cedola Media (1.5-3%)', icon: '•', bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-500/30', textClass: 'text-amber-700 dark:text-amber-300' };
+        } else {
+          return { score: 'none', label: 'Cedola Bassa o Assente', icon: '•', bgClass: 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10', textClass: 'text-gray-500' };
+        }
+      }
+      default:
+        return { score: 'none', label: '', icon: '', bgClass: '', textClass: '' };
+    }
+  }
+
+  function renderScoredMetric(label, valueFormatted, scoreObj, tooltip = '') {
+    let badgeHtml = '';
+    if (scoreObj && scoreObj.label && scoreObj.label !== 'N/D') {
+      badgeHtml = `
+        <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-semibold border ${scoreObj.bgClass} ${scoreObj.textClass}" title="${scoreObj.label}">
+          <span class="mr-0.5 text-[8px]" aria-hidden="true">${scoreObj.icon}</span>
+          <span>${scoreObj.label}</span>
+        </span>
+      `;
+    }
+
+    return `
+      <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between" ${tooltip ? `title="${tooltip}"` : ''}>
+        <span class="text-gray-400 text-[10px] block truncate">${label}</span>
+        <div class="mt-1 flex items-baseline justify-between flex-wrap gap-1">
+          <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums">${valueFormatted}</strong>
+          ${badgeHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPegTableBadge(val) {
+    if (val === null || val === undefined || isNaN(Number(val))) {
+      return '<span class="text-gray-400 font-mono text-[11px]">-</span>';
+    }
+    const score = scoreIndicator('peg', val);
+    return `
+      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold font-mono border ${score.bgClass} ${score.textClass}" title="PEG Ratio: ${Number(val).toFixed(2)} (${score.label})">
+        <span class="mr-0.5 text-[8px]" aria-hidden="true">${score.icon}</span>${Number(val).toFixed(2)}x
+      </span>
+    `;
   }
 
   // Filter items
@@ -173,7 +341,7 @@
     if (items.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="11" class="px-6 py-10 text-center text-gray-400 font-mono text-xs">
+          <td colspan="12" class="px-6 py-10 text-center text-gray-400 font-mono text-xs">
             Nessun titolo azionario trovato per i filtri selezionati.
           </td>
         </tr>
@@ -206,13 +374,16 @@
       let tpHtml = '<span class="text-gray-400 font-mono text-xs">-</span>';
       if (a.takeProfit !== null && a.takeProfit > 0) {
         if (a.tpStatus === 'REACHED') {
-          slHtml = `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white" title="Target raggiunto o superato">🎯 TP: ${fmtPrice(a.takeProfit, cur)}</span>`;
+          tpHtml = `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white" title="Target raggiunto o superato">🎯 TP: ${fmtPrice(a.takeProfit, cur)}</span>`;
         } else if (a.tpStatus === 'NEAR') {
           tpHtml = `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/80 text-white" title="Prezzo vicino al Take Profit">🎯 TP: ${fmtPrice(a.takeProfit, cur)}</span>`;
         } else {
           tpHtml = `<span class="font-mono text-xs text-gray-700 dark:text-gray-300">${fmtPrice(a.takeProfit, cur)}</span>`;
         }
       }
+
+      // PEG Ratio rendering (Highlighted)
+      const pegHtml = renderPegTableBadge(a.pegRatio);
 
       return `
         <tr data-ticker="${a.ticker}" class="hover:bg-gray-50/80 dark:hover:bg-white/5 transition group cursor-pointer">
@@ -229,6 +400,7 @@
           <td class="px-2 py-1.5 whitespace-nowrap text-right">${renderVariationBadge(vars['3M'])}</td>
           <td class="px-2 py-1.5 whitespace-nowrap text-right">${renderVariationBadge(vars['1Y'])}</td>
           <td class="px-2 py-1.5 whitespace-nowrap text-right">${renderVariationBadge(vars['3Y'])}</td>
+          <td class="px-2 py-1.5 whitespace-nowrap text-right font-mono">${pegHtml}</td>
           <td class="px-2.5 py-1.5 whitespace-nowrap text-right">${slHtml}</td>
           <td class="px-2.5 py-1.5 whitespace-nowrap text-right">${tpHtml}</td>
           <td class="px-2 py-1.5 whitespace-nowrap text-center" onclick="event.stopPropagation()">
@@ -328,8 +500,9 @@
               ${originBadge}
               <span class="text-[10px] text-gray-400 truncate max-w-[120px] font-sans">${a.name}</span>
             </div>
-            <div class="font-bold font-mono text-xs tabular-nums text-gray-900 dark:text-white flex-shrink-0 ml-1">
-              ${fmtPrice(a.currentPrice, cur)}
+            <div class="flex items-center space-x-1 tabular-nums flex-shrink-0 ml-1">
+              ${a.pegRatio !== null && a.pegRatio !== undefined ? renderPegTableBadge(a.pegRatio) : ''}
+              <span class="font-bold font-mono text-xs text-gray-900 dark:text-white">${fmtPrice(a.currentPrice, cur)}</span>
             </div>
           </div>
 
@@ -452,77 +625,262 @@
         modalSource.textContent = `Fonte: Yahoo Finance API (${data.source === 'CACHE' ? 'Cache' : 'Dati Live'})`;
       }
 
+      // Scores for indicators
+      const pegScore = scoreIndicator('peg', f.pegRatio);
+      const peScore = scoreIndicator('pe', f.trailingPE);
+      const fwdPeScore = scoreIndicator('pe', f.forwardPE);
+      const pbScore = scoreIndicator('pb', f.priceToBook);
+      const psScore = scoreIndicator('ps', f.priceToSales);
+      const evEbitdaScore = scoreIndicator('evEbitda', f.enterpriseToEbitda);
+      const profitMarginScore = scoreIndicator('margin', f.profitMargins);
+      const opMarginScore = scoreIndicator('margin', f.operatingMargins);
+      const roeScore = scoreIndicator('roe', f.returnOnEquity);
+      const roaScore = scoreIndicator('roa', f.returnOnAssets);
+      const cashDebtScore = scoreIndicator('cashDebt', f.totalCash, { cash: f.totalCash, debt: f.totalDebt });
+      const divYieldScore = scoreIndicator('dividend', f.dividendYield);
+
       // Render Rich Fundamental Report
       modalBody.innerHTML = `
         <!-- Top Metrics KPI Grid -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div class="signature-card p-2.5 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
-            <div class="text-[9px] uppercase font-bold text-gray-400">Market Cap</div>
-            <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${fmtLargeNumber(f.marketCap, f.currency)}</div>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono">
+          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+            <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Market Cap</span>
+            <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">${fmtLargeNumber(f.marketCap, f.currency)}</div>
           </div>
-          <div class="signature-card p-2.5 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
-            <div class="text-[9px] uppercase font-bold text-gray-400">P/E (Trailing / Fwd)</div>
-            <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
+          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+            <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">P/E (Trail / Fwd)</span>
+            <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
               ${f.trailingPE ? f.trailingPE.toFixed(1) + 'x' : '-'} / ${f.forwardPE ? f.forwardPE.toFixed(1) + 'x' : '-'}
             </div>
           </div>
-          <div class="signature-card p-2.5 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
-            <div class="text-[9px] uppercase font-bold text-gray-400">Dividend Yield</div>
-            <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+          <div class="signature-card p-2 bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/30 dark:border-emerald-500/20">
+            <span class="text-[9px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block truncate">PEG Ratio</span>
+            <div class="text-xs font-bold text-emerald-800 dark:text-emerald-300 mt-0.5 flex items-center justify-between">
+              <span>${f.pegRatio ? f.pegRatio.toFixed(2) + 'x' : '-'}</span>
+              <span class="text-[9px] font-sans font-semibold">${pegScore.label ? pegScore.label.split(' ')[0] : ''}</span>
+            </div>
+          </div>
+          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+            <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Dividend Yield</span>
+            <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
               ${f.dividendYield ? f.dividendYield.toFixed(2) + '%' : '0.00%'}
             </div>
           </div>
-          <div class="signature-card p-2.5 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
-            <div class="text-[9px] uppercase font-bold text-gray-400">Consenso Analisti</div>
-            <div class="mt-0.5 flex items-center space-x-1.5">
+          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 col-span-2 sm:col-span-1">
+            <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Consenso Analisti</span>
+            <div class="mt-0.5">
               ${getRecommendationBadge(f.recommendationKey)}
             </div>
           </div>
         </div>
 
-        <!-- Section 1: Multipli di Valutazione -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
-          <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
-            <span>📈 Multipli di Mercato & Valutazione</span>
-            <span class="text-[10px] text-gray-400 font-normal">yfinance statistics</span>
+        <!-- SPOTLIGHT: PEG RATIO (Peter Lynch Growth Metric) -->
+        <div class="signature-card p-3 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 dark:border-emerald-500/20 rounded-xl space-y-2">
+          <div class="flex items-center justify-between flex-wrap gap-1">
+            <div class="flex items-center space-x-2">
+              <span class="text-base" aria-hidden="true">💎</span>
+              <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono">
+                PEG Ratio (Price / Earnings-to-Growth) - Regola di Peter Lynch
+              </h3>
+            </div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${pegScore.bgClass} ${pegScore.textClass}">
+              <span class="mr-1" aria-hidden="true">${pegScore.icon}</span>
+              <span>${pegScore.label}</span>
+            </span>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-            <div><span class="text-gray-400">P/E Ratio (Trailing):</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtMultiple(f.trailingPE)}</strong></div>
-            <div><span class="text-gray-400">P/E Forward:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtMultiple(f.forwardPE)}</strong></div>
-            <div><span class="text-gray-400">PEG Ratio:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtMultiple(f.pegRatio)}</strong></div>
-            <div><span class="text-gray-400">Price to Book (P/B):</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtMultiple(f.priceToBook)}</strong></div>
-            <div><span class="text-gray-400">Price to Sales (P/S):</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtMultiple(f.priceToSales)}</strong></div>
-            <div><span class="text-gray-400">Enterprise Value:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtLargeNumber(f.enterpriseValue, f.currency)}</strong></div>
-            <div><span class="text-gray-400">EV / EBITDA:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtMultiple(f.enterpriseToEbitda)}</strong></div>
-            <div><span class="text-gray-400">EV / Revenue:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtMultiple(f.enterpriseToRevenue)}</strong></div>
-            <div><span class="text-gray-400">Beta (Volatilità):</span> <strong class="text-gray-900 dark:text-white font-mono">${f.beta ? Number(f.beta).toFixed(2) : '-'}</strong></div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div class="flex items-baseline space-x-2">
+              <span class="text-2xl font-extrabold font-mono text-gray-900 dark:text-white">${f.pegRatio ? f.pegRatio.toFixed(2) + 'x' : 'N/D'}</span>
+              <span class="text-[11px] text-gray-500 dark:text-gray-400 font-sans leading-tight">
+                ${f.pegRatio && f.pegRatio > 0 && f.pegRatio < 1.0
+                  ? 'Il titolo tratta a sconto rispetto alla crescita attesa degli utili (Buy Zone).'
+                  : f.pegRatio && f.pegRatio <= 1.5
+                    ? 'Il prezzo attuale incorpora una valutazione equilibrata rispetto alla crescita prevista.'
+                    : 'Il multiplo riflette un prezzo elevato rispetto al tasso di crescita degli utili.'}
+              </span>
+            </div>
+
+            <!-- Visual Scale Reference -->
+            <div class="flex items-center space-x-1.5 text-[9px] font-mono shrink-0">
+              <span class="px-1.5 py-0.5 rounded ${f.pegRatio > 0 && f.pegRatio < 1.0 ? 'bg-emerald-600 text-white font-bold ring-2 ring-emerald-400' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'} border border-emerald-500/30">&lt; 1.0 Sottovalutato</span>
+              <span class="px-1.5 py-0.5 rounded ${f.pegRatio >= 1.0 && f.pegRatio <= 1.5 ? 'bg-amber-600 text-white font-bold ring-2 ring-amber-400' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'} border border-amber-500/30">1.0 - 1.5 Fair</span>
+              <span class="px-1.5 py-0.5 rounded ${f.pegRatio > 1.5 ? 'bg-rose-600 text-white font-bold ring-2 ring-rose-400' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400'} border border-rose-500/30">&gt; 1.5 Sopravvalutato</span>
+            </div>
           </div>
         </div>
 
-        <!-- Section 2: Redditività & Conto Economico -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+        <!-- ULTIMA TRIMESTRALE (Latest Quarter Financials & EPS Surprise) -->
+        ${f.latestQuarter ? `
+          <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono">
+            <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1.5">
+              <div class="flex items-center space-x-2">
+                <span>📅 Ultima Trimestrale (${f.latestQuarter.quarter})</span>
+                ${f.latestQuarter.reportedDate ? `<span class="text-[10px] text-gray-400 font-normal">Riportata il ${new Date(f.latestQuarter.reportedDate).toLocaleDateString('it-IT')}</span>` : ''}
+              </div>
+              <div>
+                ${(() => {
+                  const sp = f.latestQuarter.surprisePercent;
+                  if (sp !== null && sp !== undefined) {
+                    const isBeat = sp >= 0;
+                    const cl = isBeat
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-500/30'
+                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-500/30';
+                    const icon = isBeat ? '🚀 Beat' : '🔻 Miss';
+                    return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${cl}"><span class="mr-1">${icon}</span>${isBeat ? '+' : ''}${sp.toFixed(2)}% vs stime</span>`;
+                  }
+                  return '';
+                })()}
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">EPS Effettivo vs Stima</span>
+                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+                  ${f.latestQuarter.epsActual !== null ? f.latestQuarter.epsActual.toFixed(2) : '-'} / ${f.latestQuarter.epsEstimate !== null ? f.latestQuarter.epsEstimate.toFixed(2) : '-'}
+                </div>
+                <span class="text-[9px] text-gray-400">Diff: ${f.latestQuarter.epsDifference !== null ? (f.latestQuarter.epsDifference >= 0 ? '+' : '') + f.latestQuarter.epsDifference.toFixed(3) : '-'}</span>
+              </div>
+
+              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Ricavi Trimestrali</span>
+                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+                  ${fmtLargeNumber(f.latestQuarter.revenue, f.currency)}
+                </div>
+                <span class="text-[9px] text-gray-400">Fatturato 3M</span>
+              </div>
+
+              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Utile Netto Trimestre</span>
+                <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  ${fmtLargeNumber(f.latestQuarter.earnings, f.currency)}
+                </div>
+                <span class="text-[9px] text-gray-400">Net Income 3M</span>
+              </div>
+
+              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Margine Trimestrale</span>
+                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+                  ${f.latestQuarter.profitMargin !== null ? f.latestQuarter.profitMargin.toFixed(1) + '%' : '-'}
+                </div>
+                <span class="text-[9px] text-gray-400">${f.latestQuarter.nextEarningsDate ? `Prossima: ${new Date(f.latestQuarter.nextEarningsDate).toLocaleDateString('it-IT')}` : 'Prossima: N/D'}</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- STORICO 5 ANNI: GRAFICI FATTURATO E P/E -->
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono">
+          <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1.5">
+            <div class="flex items-center space-x-1.5">
+              <span>📊 Storico Ultimi 5 Anni: Fatturato & Multiplo P/E</span>
+            </div>
+            <span class="text-[10px] text-gray-400 font-normal">Dati storici yfinance</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <!-- Chart 1: Fatturato e Utili Annuali -->
+            <div class="p-2 rounded-lg bg-white dark:bg-[#121214] border border-gray-200/60 dark:border-white/5 flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-1 text-[10px] font-mono">
+                <span class="font-bold text-gray-700 dark:text-gray-300">Fatturato & Utili Annuali</span>
+                <div class="flex items-center space-x-2 text-[9px]">
+                  <span class="inline-flex items-center"><span class="w-2 h-2 rounded-sm bg-emerald-500 mr-1" aria-hidden="true"></span>Fatturato</span>
+                  <span class="inline-flex items-center"><span class="w-2 h-2 rounded-sm bg-purple-500 mr-1" aria-hidden="true"></span>Utile</span>
+                </div>
+              </div>
+              <div class="h-40 w-full relative">
+                <canvas id="modalRevenueChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 2: Andamento Multiplo P/E -->
+            <div class="p-2 rounded-lg bg-white dark:bg-[#121214] border border-gray-200/60 dark:border-white/5 flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-1 text-[10px] font-mono">
+                <span class="font-bold text-gray-700 dark:text-gray-300">Andamento P/E Storico</span>
+                <div class="flex items-center space-x-2 text-[9px]">
+                  <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-blue-500 mr-1" aria-hidden="true"></span>P/E Storico</span>
+                  <span class="text-gray-400">(Ref. 20x)</span>
+                </div>
+              </div>
+              <div class="h-40 w-full relative">
+                <canvas id="modalPEChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Multipli di Valutazione Evidenziati -->
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
           <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
-            <span>💰 Redditività, Margini & Dati Finanziari</span>
+            <span>📈 Multipli di Mercato & Valutazione</span>
+            <span class="text-[10px] text-gray-400 font-normal">Evidenziati per congruità del valore</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            ${renderScoredMetric('P/E Ratio (Trailing)', fmtMultiple(f.trailingPE), peScore, 'Multiplo prezzo/utili ultimi 12 mesi')}
+            ${renderScoredMetric('P/E Forward', fmtMultiple(f.forwardPE), fwdPeScore, 'Multiplo prezzo/utili attesi a 1 anno')}
+            ${renderScoredMetric('PEG Ratio', fmtMultiple(f.pegRatio), pegScore, 'Rapporto tra P/E e crescita stimata')}
+            ${renderScoredMetric('Price to Book (P/B)', fmtMultiple(f.priceToBook), pbScore, 'Prezzo diviso valore contabile per azione')}
+            ${renderScoredMetric('Price to Sales (P/S)', fmtMultiple(f.priceToSales), psScore, 'Prezzo diviso fatturato per azione')}
+            ${renderScoredMetric('EV / EBITDA', fmtMultiple(f.enterpriseToEbitda), evEbitdaScore, 'Enterprise Value diviso margine EBITDA')}
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">Enterprise Value</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.enterpriseValue, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">EV / Revenue</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtMultiple(f.enterpriseToRevenue)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">Beta (Volatilità)</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${f.beta ? Number(f.beta).toFixed(2) : '-'}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Redditività & Conto Economico Evidenziati -->
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
+          <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
+            <span>💰 Redditività, Margini & Solidità Patrimoniale</span>
             <span class="text-[10px] text-gray-400 font-normal">Income & Balance Sheet</span>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-            <div><span class="text-gray-400">Fatturato Totale:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtLargeNumber(f.totalRevenue, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Utile Netto (Net Income):</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtLargeNumber(f.netIncome, f.currency)}</strong></div>
-            <div><span class="text-gray-400">EBITDA:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtLargeNumber(f.ebitda, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Margine Utile Netto:</span> <strong class="text-emerald-600 dark:text-emerald-400 font-mono">${f.profitMargins ? (f.profitMargins * 100).toFixed(2) + '%' : '-'}</strong></div>
-            <div><span class="text-gray-400">Margine Operativo:</span> <strong class="text-gray-900 dark:text-white font-mono">${f.operatingMargins ? (f.operatingMargins * 100).toFixed(2) + '%' : '-'}</strong></div>
-            <div><span class="text-gray-400">Margine Lordo:</span> <strong class="text-gray-900 dark:text-white font-mono">${f.grossMargins ? (f.grossMargins * 100).toFixed(2) + '%' : '-'}</strong></div>
-            <div><span class="text-gray-400">Return on Equity (ROE):</span> <strong class="text-emerald-600 dark:text-emerald-400 font-mono">${f.returnOnEquity ? (f.returnOnEquity * 100).toFixed(2) + '%' : '-'}</strong></div>
-            <div><span class="text-gray-400">Return on Assets (ROA):</span> <strong class="text-gray-900 dark:text-white font-mono">${f.returnOnAssets ? (f.returnOnAssets * 100).toFixed(2) + '%' : '-'}</strong></div>
-            <div><span class="text-gray-400">Free Cash Flow (FCF):</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtLargeNumber(f.freeCashflow, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Cassa Totale:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtLargeNumber(f.totalCash, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Debito Totale:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtLargeNumber(f.totalDebt, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Debt to Equity:</span> <strong class="text-gray-900 dark:text-white font-mono">${f.debtToEquity ? Number(f.debtToEquity).toFixed(1) + '%' : '-'}</strong></div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            ${renderScoredMetric('Margine Utile Netto', f.profitMargins ? (f.profitMargins * 100).toFixed(2) + '%' : '-', profitMarginScore, 'Percentuale di utile netto sui ricavi totali')}
+            ${renderScoredMetric('Margine Operativo', f.operatingMargins ? (f.operatingMargins * 100).toFixed(2) + '%' : '-', opMarginScore, 'Redditività dell attività core')}
+            ${renderScoredMetric('Return on Equity (ROE)', f.returnOnEquity ? (f.returnOnEquity * 100).toFixed(2) + '%' : '-', roeScore, 'Rendimento del patrimonio netto degli azionisti')}
+            ${renderScoredMetric('Return on Assets (ROA)', f.returnOnAssets ? (f.returnOnAssets * 100).toFixed(2) + '%' : '-', roaScore, 'Efficienza nell impiego del totale attivo')}
+            ${renderScoredMetric('Posizione Cassa vs Debito', f.totalCash && f.totalDebt ? fmtLargeNumber(f.totalCash - f.totalDebt, f.currency) : '-', cashDebtScore, 'Differenza tra cassa totale disponibile e debito')}
+            ${renderScoredMetric('Dividend Yield', f.dividendYield ? f.dividendYield.toFixed(2) + '%' : '0.00%', divYieldScore, 'Rendimento cedolare annuo')}
+
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">Fatturato Totale 12M</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.totalRevenue, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">Utile Netto 12M</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.netIncome, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">EBITDA 12M</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.ebitda, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">Free Cash Flow (FCF)</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.freeCashflow, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">Cassa Disponibile</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.totalCash, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <span class="text-gray-400 text-[10px] block truncate">Debito Totale</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.totalDebt, f.currency)}</strong>
+            </div>
           </div>
         </div>
 
         <!-- Section 3: Target Prezzo & Consenso Analisti -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
           <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
             <span>🎯 Target Price & Opinioni Analisti</span>
             <span class="text-[10px] text-gray-400 font-normal">${f.numberOfAnalystOpinions || 0} analisti censiti</span>
@@ -546,7 +904,7 @@
         </div>
 
         <!-- Section 4: Range 52 Settimane & Medie Mobili -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
           <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
             <span>📊 Range 52 Settimane & Medie Mobili</span>
             <span class="text-[10px] text-gray-400 font-normal">Technical Moving Averages</span>
@@ -561,7 +919,7 @@
 
         <!-- Section 5: Profilo Aziendale & Descrizione -->
         ${f.description ? `
-          <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+          <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
             <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
               <span>🏢 Profilo Societario</span>
               ${f.website ? `<a href="${f.website}" target="_blank" rel="noopener noreferrer" class="text-emerald-600 hover:underline text-[10px] font-sans">Sito Web Ufficiale &nearr;</a>` : ''}
@@ -577,6 +935,11 @@
         ` : ''}
       `;
 
+      // Render 5-year interactive charts on next frame
+      requestAnimationFrame(() => {
+        renderModalCharts(f);
+      });
+
     } catch (err) {
       console.error('[Fundamentals Dialog Error]', err);
       modalBody.innerHTML = `
@@ -584,6 +947,146 @@
           Errore durante il caricamento dei dati: ${err.message}
         </div>
       `;
+    }
+  }
+
+  // Render Chart.js charts for Revenue & P/E 5-Year History
+  function renderModalCharts(f) {
+    if (typeof Chart === 'undefined') return;
+
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#9ca3af' : '#4b5563';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+
+    // 1. Revenue & Earnings History Chart
+    const revCanvas = document.getElementById('modalRevenueChart');
+    if (revCanvas) {
+      if (activeRevenueChart) {
+        activeRevenueChart.destroy();
+        activeRevenueChart = null;
+      }
+
+      const revData = (f.revenueHistory && f.revenueHistory.length) ? f.revenueHistory : [];
+      const labels = revData.map(d => String(d.year));
+      const revenues = revData.map(d => d.revenue ? Number((d.revenue / 1e9).toFixed(2)) : 0);
+      const earnings = revData.map(d => d.earnings ? Number((d.earnings / 1e9).toFixed(2)) : 0);
+
+      activeRevenueChart = new Chart(revCanvas, {
+        type: 'bar',
+        data: {
+          labels: labels.length ? labels : ['N/D'],
+          datasets: [
+            {
+              label: 'Fatturato (B)',
+              data: revenues,
+              backgroundColor: 'rgba(16, 185, 129, 0.75)',
+              borderColor: '#10b981',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Utili Netti (B)',
+              data: earnings,
+              backgroundColor: 'rgba(168, 85, 247, 0.75)',
+              borderColor: '#a855f7',
+              borderWidth: 1,
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.raw} Mrd`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: textColor, font: { size: 10, family: 'JetBrains Mono' } }
+            },
+            y: {
+              grid: { color: gridColor },
+              ticks: {
+                color: textColor,
+                font: { size: 9, family: 'JetBrains Mono' },
+                callback: (v) => v + ' B'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. PE Trend Chart
+    const peCanvas = document.getElementById('modalPEChart');
+    if (peCanvas) {
+      if (activePEChart) {
+        activePEChart.destroy();
+        activePEChart = null;
+      }
+
+      const peData = (f.peHistory && f.peHistory.length) ? f.peHistory : [];
+      const labels = peData.map(d => String(d.year));
+      const peValues = peData.map(d => Number(d.pe));
+
+      activePEChart = new Chart(peCanvas, {
+        type: 'line',
+        data: {
+          labels: labels.length ? labels : ['N/D'],
+          datasets: [
+            {
+              label: 'P/E Storico',
+              data: peValues,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              fill: true,
+              tension: 0.25,
+              pointBackgroundColor: '#3b82f6',
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const item = peData[ctx.dataIndex];
+                  if (item && item.price && item.eps) {
+                    return `P/E: ${ctx.raw}x (Prezzo: ${item.price}, EPS: ${item.eps})`;
+                  }
+                  return `P/E: ${ctx.raw}x`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: textColor, font: { size: 10, family: 'JetBrains Mono' } }
+            },
+            y: {
+              grid: { color: gridColor },
+              ticks: {
+                color: textColor,
+                font: { size: 9, family: 'JetBrains Mono' },
+                callback: (v) => v + 'x'
+              }
+            }
+          }
+        }
+      });
     }
   }
 
@@ -789,6 +1292,22 @@
         }
       });
     });
+
+    // Cleanup Chart.js instances when fundamentals modal closes
+    const fundModal = document.getElementById('fundamentalsModal');
+    if (fundModal) {
+      fundModal.addEventListener('close', () => {
+        if (activeRevenueChart) {
+          activeRevenueChart.destroy();
+          activeRevenueChart = null;
+        }
+        if (activePEChart) {
+          activePEChart.destroy();
+          activePEChart = null;
+        }
+      });
+    }
   });
 
 })();
+

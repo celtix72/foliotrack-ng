@@ -132,6 +132,7 @@
                 <th class="px-2 py-1.5 text-right whitespace-nowrap" title="Variazione 3 Mesi">3M</th>
                 <th class="px-2 py-1.5 text-right whitespace-nowrap" title="Variazione 1 Anno">1Y</th>
                 <th class="px-2 py-1.5 text-right whitespace-nowrap" title="Variazione 3 Anni">3Y</th>
+                <th class="px-2 py-1.5 text-right whitespace-nowrap" title="PEG Ratio (Peter Lynch): < 1.0 Sottovalutato, 1-1.5 Fair, > 1.5 Caro">PEG</th>
                 <th class="px-2.5 py-1.5 text-right whitespace-nowrap" title="Livello Stop Loss">Stop Loss (SL)</th>
                 <th class="px-2.5 py-1.5 text-right whitespace-nowrap" title="Livello Take Profit">Take Profit (TP)</th>
                 <th class="px-2 py-1.5 text-center whitespace-nowrap">Azioni</th>
@@ -139,7 +140,7 @@
             </thead>
             <tbody id="analysisTableBody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums">
               <tr>
-                <td colspan="11" class="px-4 py-8 text-center text-gray-400 text-xs">Caricamento analisi asset in corso...</td>
+                <td colspan="12" class="px-4 py-8 text-center text-gray-400 text-xs">Caricamento analisi asset in corso...</td>
               </tr>
             </tbody>
           </table>
@@ -153,7 +154,7 @@
   </div>
 
   <!-- Fundamentals Analysis Modal Dialog (Native <dialog> conforming to modern-web-guidance) -->
-  <dialog id="fundamentalsModal" aria-labelledby="modalStockTitle" class="signature-card p-0 rounded-2xl w-full max-w-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/60 font-sans">
+  <dialog id="fundamentalsModal" aria-labelledby="modalStockTitle" class="signature-card p-0 rounded-2xl w-full max-w-4xl lg:max-w-5xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/60 font-sans">
     <div class="flex flex-col max-h-[90vh]">
       <!-- Modal Header -->
       <div class="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-gray-50/70 dark:bg-white/[0.02]">
@@ -304,7 +305,9 @@
   </dialog>
 
   <!-- Client Script for Analysis & Fundamentals -->
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
   <script src="/header_indices.js"></script>
   <script src="/analysis.js"></script>
 </body>
 </html>
+

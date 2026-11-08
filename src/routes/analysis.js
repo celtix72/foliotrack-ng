@@ -105,12 +105,25 @@ router.get('/', async (req, res) => {
       watchlistMap.set(w.ticker.toUpperCase(), w);
     }
 
+    // Lookup cached fundamentals (PEG ratio, P/E) for instant display in table
+    const fundamentalsCacheMap = new Map();
+    try {
+      const cacheRows = db.prepare(`SELECT ticker, data FROM analysis_fundamentals_cache`).all();
+      for (const row of cacheRows) {
+        try {
+          const parsed = JSON.parse(row.data);
+          fundamentalsCacheMap.set(row.ticker.toUpperCase(), parsed);
+        } catch {}
+      }
+    } catch {}
+
     const itemsMap = new Map();
 
     // Add portfolio equities
     for (const eq of portfolioEquities) {
       const sym = eq.ticker.toUpperCase();
       const w = watchlistMap.get(sym);
+      const fund = fundamentalsCacheMap.get(sym);
       itemsMap.set(sym, {
         ticker: sym,
         name: eq.name,
@@ -122,7 +135,9 @@ router.get('/', async (req, res) => {
         isMonitored: Boolean(w && w.isMonitored),
         stopLoss: w && w.stopLoss !== null ? Number(w.stopLoss) : null,
         takeProfit: w && w.takeProfit !== null ? Number(w.takeProfit) : null,
-        notes: w ? w.notes : null
+        notes: w ? w.notes : null,
+        pegRatio: fund && fund.pegRatio !== undefined ? fund.pegRatio : null,
+        trailingPE: fund && fund.trailingPE !== undefined ? fund.trailingPE : null
       });
     }
 
@@ -130,6 +145,7 @@ router.get('/', async (req, res) => {
     for (const w of watchlistRows) {
       const sym = w.ticker.toUpperCase();
       if (!itemsMap.has(sym) && w.isMonitored) {
+        const fund = fundamentalsCacheMap.get(sym);
         itemsMap.set(sym, {
           ticker: sym,
           name: w.assetName || w.watchlistName || sym,
@@ -141,7 +157,9 @@ router.get('/', async (req, res) => {
           isMonitored: true,
           stopLoss: w.stopLoss !== null ? Number(w.stopLoss) : null,
           takeProfit: w.takeProfit !== null ? Number(w.takeProfit) : null,
-          notes: w.notes || null
+          notes: w.notes || null,
+          pegRatio: fund && fund.pegRatio !== undefined ? fund.pegRatio : null,
+          trailingPE: fund && fund.trailingPE !== undefined ? fund.trailingPE : null
         });
       }
     }
@@ -444,3 +462,4 @@ router.delete('/watchlist/:ticker', async (req, res) => {
 });
 
 module.exports = router;
+

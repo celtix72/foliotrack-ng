@@ -102,6 +102,8 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     assert.ok(html.includes('dialog id="editTargetsModal"'), 'Must include native dialog for editing SL/TP');
     assert.ok(html.includes('Stop Loss (SL)'), 'Must include Stop Loss column');
     assert.ok(html.includes('Take Profit (TP)'), 'Must include Take Profit column');
+    assert.ok(html.includes('PEG'), 'Must include PEG column');
+    assert.ok(html.includes('chart.umd.min.js'), 'Must include Chart.js vendor script');
   });
 
   test('GET /analysis?view=mobile serves Mobile HTML with bottom nav item and compact layout', async () => {
@@ -232,7 +234,25 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
       dividendYield: 0.55,
       targetMeanPrice: 210.0,
       recommendationKey: 'buy',
-      numberOfAnalystOpinions: 38
+      numberOfAnalystOpinions: 38,
+      latestQuarter: {
+        quarter: '3Q2026',
+        epsActual: 2.10,
+        epsEstimate: 1.98,
+        surprisePercent: 6.06,
+        revenue: 114000000000,
+        earnings: 30000000000,
+        profitMargin: 26.3
+      },
+      revenueHistory: [
+        { year: 2023, revenue: 383000000000, earnings: 96000000000 },
+        { year: 2024, revenue: 391000000000, earnings: 93000000000 }
+      ],
+      peHistory: [
+        { year: '2023', pe: 25.6 },
+        { year: '2024', pe: 35.0 },
+        { year: 'Attuale', pe: 28.5 }
+      ]
     };
 
     db.prepare(`
@@ -251,7 +271,15 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     assert.ok(data.fundamentals, 'Must return fundamentals');
     assert.equal(data.fundamentals.sector, 'Technology');
     assert.equal(data.fundamentals.trailingPE, 28.5);
+    assert.equal(data.fundamentals.pegRatio, 2.1);
     assert.equal(data.fundamentals.recommendationKey, 'buy');
+    assert.ok(data.fundamentals.latestQuarter, 'Must return latestQuarter data');
+    assert.equal(data.fundamentals.latestQuarter.quarter, '3Q2026');
+    assert.equal(data.fundamentals.latestQuarter.surprisePercent, 6.06);
+    assert.ok(Array.isArray(data.fundamentals.revenueHistory), 'Must return revenueHistory array');
+    assert.equal(data.fundamentals.revenueHistory.length, 2);
+    assert.ok(Array.isArray(data.fundamentals.peHistory), 'Must return peHistory array');
+    assert.equal(data.fundamentals.peHistory.length, 3);
     assert.equal(data.source, 'CACHE');
   });
 
