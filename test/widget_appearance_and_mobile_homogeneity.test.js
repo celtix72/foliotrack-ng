@@ -244,9 +244,19 @@ describe('Widget Appearance, Typography Scaling & Mobile Homogeneity', () => {
       const WIDGET_RENDERERS = {
         ${renderersMatch[1]}
       };
+      this.formatEur = formatEur;
+      this.formatEurSigned = formatEurSigned;
       this.renderDayChange = WIDGET_RENDERERS.dayChange;
       this.renderPnl = WIDGET_RENDERERS.pnl;
     `, evalEnv);
+
+    // Verify formatEur and formatEurSigned format thousands as k (e.g. 410532 -> 410,5k, 1500 -> 1,5k)
+    assert.equal(evalEnv.formatEur(410532), '410,5k', '410532 must format as 410,5k');
+    assert.equal(evalEnv.formatEur(1500), '1,5k', '1500 must format as 1,5k');
+    assert.equal(evalEnv.formatEur(24356), '24,4k', '24356 must format with 1 decimal k');
+    assert.equal(evalEnv.formatEur(96), '€ 96', 'Values < 1000 must keep normal euro format');
+    assert.equal(evalEnv.formatEurSigned(1500), '+1,5k', 'Positive 1500 signed must be +1,5k');
+    assert.equal(evalEnv.formatEurSigned(-1500), '-1,5k', 'Negative 1500 signed must be -1,5k');
 
     const mockData = {
       totals: {
@@ -262,12 +272,14 @@ describe('Widget Appearance, Typography Scaling & Mobile Homogeneity', () => {
     const dayHtml = evalEnv.renderDayChange(mockData);
     const pnlHtml = evalEnv.renderPnl(mockData);
 
-    assert.ok(dayHtml.includes('Variazione Oggi'), 'dayChange must have title');
+    assert.ok(dayHtml.includes('Var. Oggi') || dayHtml.includes('Variazione Oggi'), 'dayChange must have title');
     assert.ok(dayHtml.includes('1,5') || dayHtml.includes('1.5'), 'dayChange must render % badge');
+    assert.ok(dayHtml.includes('+1,5k'), 'dayChange must format thousands with k (+1,5k)');
     assert.ok(dayHtml.includes('text-emerald-600 dark:text-emerald-400'), 'dayChange must use unified emerald text');
 
     assert.ok(pnlHtml.includes('P&L Totale'), 'pnl must have title');
     assert.ok(pnlHtml.includes('12') || dayHtml.includes('12.0%'), 'pnl must render % badge');
+    assert.ok(pnlHtml.includes('12,0k'), 'pnl must format thousands with k (12,0k)');
     assert.ok(pnlHtml.includes('text-emerald-600 dark:text-emerald-400'), 'pnl must use unified emerald text');
   });
 });

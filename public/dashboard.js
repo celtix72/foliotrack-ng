@@ -135,22 +135,36 @@
   let autoSaveTimer = null;
 
   function formatEur(val) {
-    return '€ ' + Math.round(Number(val) || 0).toLocaleString('it-IT', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    });
+    const num = Number(val) || 0;
+    const kVal = formatKValue(num, false);
+    if (kVal !== null) return kVal;
+    const sign = num < 0 ? '-' : '';
+    return `${sign}€ ${Math.abs(Math.round(num)).toLocaleString('it-IT')}`;
   }
 
   function formatEurSigned(val) {
     const num = Number(val) || 0;
+    const kVal = formatKValue(num, true);
+    if (kVal !== null) return kVal;
     const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
     return `${sign}€ ${Math.abs(Math.round(num)).toLocaleString('it-IT')}`;
   }
 
   function formatEurSignedDec(val, decimals = 0) {
-    const num = Math.round(Number(val) || 0);
+    const num = Number(val) || 0;
+    const kVal = formatKValue(num, true);
+    if (kVal !== null) return kVal;
     const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
-    return `${sign}€ ${Math.abs(num).toLocaleString('it-IT')}`;
+    return `${sign}€ ${Math.abs(Math.round(num)).toLocaleString('it-IT')}`;
+  }
+
+  function formatKValue(num, withSign = false) {
+    const abs = Math.abs(num);
+    if (abs >= 1000) {
+      const sign = num > 0 ? (withSign ? '+' : '') : (num < 0 ? '-' : '');
+      return `${sign}${(abs / 1000).toFixed(1).replace('.', ',')}k`;
+    }
+    return null;
   }
 
   function formatPriceEur(val, curr = '€') {
@@ -871,19 +885,19 @@
       const t = data.totals || {};
       const pct = Number(t.unrealizedPnlPercent) || 0;
       const isPos = pct >= 0;
-      const label = data.isAggregate ? 'Patrimonio (NAV)' : (data.selectedPortfolio?.name || 'NAV Portafoglio');
+      const label = data.isAggregate ? 'Patrimonio' : (data.selectedPortfolio?.name || 'Patrimonio');
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate max-w-[200px]">${label}</span>
-            <span class="badge-profit text-[10px] uppercase font-mono">${data.isAggregate ? 'Aggregato' : 'Conto'}</span>
+            <span class="badge-profit text-[10px] uppercase font-mono">${data.isAggregate ? 'Aggr.' : 'Conto'}</span>
           </div>
           <div class="my-2">
             <div class="text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">${formatEur(t.totalValue)}</div>
           </div>
           <div class="flex items-center space-x-2 text-xs">
             <span class="${isPos ? 'badge-profit' : 'badge-loss'} tabular-nums">${formatPct(pct)}</span>
-            <span class="text-gray-400 font-mono text-[11px]">${formatEur(t.unrealizedPnl)} non real.</span>
+            <span class="text-gray-400 font-mono text-[11px]">${formatEur(t.unrealizedPnl)} lat.</span>
           </div>
         </div>
       `;
@@ -901,12 +915,12 @@
 
       const isPos = dayVal >= 0;
       const isAgg = data.isAggregate;
-      const subtitle = isAgg ? 'Aggregato globale' : (data.selectedPortfolio?.name || 'Conto');
+      const subtitle = isAgg ? 'Aggr.' : (data.selectedPortfolio?.name || 'Conto');
 
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate max-w-[150px]">Variazione Oggi</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate max-w-[150px]">Var. Oggi</span>
             <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${isPos ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'}">
               ${formatPct(dayPct)}
             </span>
@@ -932,12 +946,12 @@
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Liquidità</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold">${cashPct.toFixed(1)}% tot.</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold">${cashPct.toFixed(1)}%</span>
           </div>
           <div class="my-2 text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">${formatEur(t.currentCash)}</div>
           <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
-            <span>Disponibilità</span>
-            <span>c/c attivo</span>
+            <span>Disponibile</span>
+            <span>c/c</span>
           </div>
         </div>
       `;
@@ -954,8 +968,8 @@
           </div>
           <div class="my-2 text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">${formatEur(t.investedCapital)}</div>
           <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
-            <span>Capitale apportato</span>
-            <span>Depositi</span>
+            <span>Depositi netti</span>
+            <span>Capitale</span>
           </div>
         </div>
       `;
@@ -969,12 +983,12 @@
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Carico (PMC)</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold">Fiscale</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold">PMC</span>
           </div>
           <div class="my-2 text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">${formatEur(Math.max(0, costBasis))}</div>
           <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
-            <span>Costo titoli</span>
-            <span>Prezzo carico</span>
+            <span>Costo carico</span>
+            <span>Fiscale</span>
           </div>
         </div>
       `;
@@ -996,8 +1010,8 @@
           </div>
           <div class="my-2 text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${formatEur(pnl)}</div>
           <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
-            <span>Plus/Minusvalenza</span>
-            <span>su titoli</span>
+            <span>Plus/Minus</span>
+            <span>Titoli</span>
           </div>
         </div>
       `;
@@ -1006,7 +1020,7 @@
     // 6. Performance & Net Worth History Chart
     performanceChart: (data) => {
       const isAgg = data.isAggregate;
-      const subtitle = isAgg ? 'Tutti i portafogli attivi' : (data.selectedPortfolio?.name || 'Portafoglio');
+      const subtitle = isAgg ? 'Tutti i conti' : (data.selectedPortfolio?.name || 'Conto');
       const timeframes = ['1M', '3M', '6M', '1Y', '3Y', '5Y', 'ALL'];
 
       const tfButtons = timeframes.map(tf => `
@@ -1024,8 +1038,8 @@
             <div class="flex items-center space-x-3">
               <div>
                 <div class="flex items-center space-x-2">
-                  <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Andamento Patrimonio & Performance</span>
-                  <span class="badge-profit text-[10px] uppercase font-mono">${isAgg ? 'Aggregato' : 'Conto'}</span>
+                  <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Performance</span>
+                  <span class="badge-profit text-[10px] uppercase font-mono">${isAgg ? 'Aggr.' : 'Conto'}</span>
                 </div>
                 <div class="text-[11px] font-mono text-gray-400 truncate max-w-[220px]">${subtitle}</div>
               </div>
@@ -1036,10 +1050,10 @@
               <!-- Metric Toggle -->
               <div class="inline-flex rounded-lg bg-gray-100 dark:bg-white/5 p-0.5 text-xs font-mono">
                 <button type="button" data-perf-metric="NAV" class="perf-metric-btn px-2.5 py-1 rounded-md transition text-[11px] ${activeHistoryMetric === 'NAV' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}">
-                  Valore (€)
+                  Valore
                 </button>
                 <button type="button" data-perf-metric="RETURN" class="perf-metric-btn px-2.5 py-1 rounded-md transition text-[11px] ${activeHistoryMetric === 'RETURN' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}">
-                  Rendimento (%)
+                  Rendimento
                 </button>
               </div>
 
@@ -1065,7 +1079,7 @@
               <span id="perf-display-badge" class="badge-profit text-xs font-mono font-semibold">--</span>
             </div>
             <div class="flex items-center space-x-4 text-[11px] font-mono text-gray-400">
-              <span id="perf-display-range-lbl">Periodo: ${activeHistoryRange}</span>
+              <span id="perf-display-range-lbl">Per.: ${activeHistoryRange}</span>
               <span id="perf-display-dd" class="hidden sm:inline">Max DD: --</span>
             </div>
           </div>
@@ -1074,7 +1088,7 @@
           <div class="flex-1 relative min-h-[160px] w-full">
             <canvas id="chart-performance"></canvas>
             <div id="chart-perf-loading" class="hidden absolute inset-0 bg-white/50 dark:bg-black/40 backdrop-blur-xs flex items-center justify-center text-xs font-mono text-gray-500">
-              Caricamento serie storica...
+              Caricamento...
             </div>
           </div>
         </div>
@@ -1086,7 +1100,7 @@
       <div class="h-full flex flex-col">
         <div class="flex items-center justify-between mb-2">
           <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Conti</span>
-          <span class="text-[10px] font-mono text-gray-400">${data.isAggregate ? 'Ripartizione' : 'Asset vs Cash'}</span>
+          <span class="text-[10px] font-mono text-gray-400">${data.isAggregate ? 'Ripart.' : 'Asset/Cash'}</span>
         </div>
         <div class="flex-1 relative min-h-[140px]">
           <canvas id="chart-accounts"></canvas>
@@ -1107,7 +1121,7 @@
     // 8. Geographic Regions Donut
     regions: () => `
       <div class="h-full flex flex-col">
-        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Aree Geografiche</span>
+        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Aree Geo</span>
         <div class="flex-1 relative min-h-[140px]">
           <canvas id="chart-regions"></canvas>
         </div>
@@ -1117,7 +1131,7 @@
     // 9. GICS 11 Sectors
     sectors: () => `
       <div class="h-full flex flex-col">
-        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Settori GICS</span>
+        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Settori</span>
         <div class="flex-1 relative min-h-[140px]">
           <canvas id="chart-sectors"></canvas>
         </div>
@@ -1175,8 +1189,8 @@
         <div class="h-full flex flex-col">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div class="flex items-center space-x-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Titoli</span>
-              <span class="text-xs font-mono text-gray-400">${sortedHoldings.length} posizioni</span>
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Composizione</span>
+              <span class="text-xs font-mono text-gray-400">${sortedHoldings.length} pos.</span>
               ${closedCount > 0 ? `
                 <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold border border-amber-500/20" title="${closedCount} titoli in mercati chiusi o senza contrattazioni negli ultimi 5m (posizionati a fine elenco)">
                   ${closedCount} Chiusi
@@ -1261,17 +1275,26 @@
               const totEur = Number(h.unrealizedPnl || 0);
               const isTotPos = totPct >= 0;
 
-              // Native currency formatters (0 decimals for monetary market values and deltas)
+              // Native currency formatters (thousands abbreviated with k)
               const fmtNative = (v) => {
-                const num = Math.round(Number(v) || 0);
-                const s = num.toLocaleString('it-IT');
-                return isUSD ? `${s} USD` : (isNonEur ? `${s} ${curr}` : `€ ${s}`);
+                const num = Number(v) || 0;
+                const abs = Math.abs(num);
+                const sign = num < 0 ? '-' : '';
+                if (abs >= 1000) {
+                  return `${sign}${(abs / 1000).toFixed(1).replace('.', ',')}k`;
+                }
+                const s = Math.round(abs).toLocaleString('it-IT');
+                return isUSD ? `${sign}${s} USD` : (isNonEur ? `${sign}${s} ${curr}` : `${sign}€ ${s}`);
               };
 
               const fmtNativeSigned = (v) => {
-                const num = Math.round(Number(v) || 0);
+                const num = Number(v) || 0;
+                const abs = Math.abs(num);
                 const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
-                const s = Math.abs(num).toLocaleString('it-IT');
+                if (abs >= 1000) {
+                  return `${sign}${(abs / 1000).toFixed(1).replace('.', ',')}k`;
+                }
+                const s = Math.abs(Math.round(num)).toLocaleString('it-IT');
                 return isUSD ? `${sign}${s} USD` : (isNonEur ? `${sign}${s} ${curr}` : `${sign}€ ${s}`);
               };
 
@@ -1282,7 +1305,7 @@
                 <div class="pt-5 pb-4 px-5 rounded-2xl border ${isClosed ? 'border-amber-400/40 dark:border-amber-500/30 bg-amber-50/[0.12] dark:bg-[#1a1917]' : 'border-gray-200/70 dark:border-white/10 bg-white dark:bg-[#18181a]'} flex flex-col justify-between transition hover:shadow-xl hover:border-emerald-500/60 dark:hover:border-emerald-500/60 shadow-sm cursor-pointer group"
                      style="border-top: 3px solid ${isClosed ? '#f59e0b' : bgCol};"
                      data-open-asset="${h.ticker}">
-                  <!-- Header Titolo con Ticker, Tipo, Valuta nativa, Stato Mercato e Dettagli ↗ -->
+                  <!-- Header Titolo con Ticker, Tipo, Valuta nativa, Stato Mercato e Info ↗ -->
                   <div class="space-y-1.5 mb-1">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center space-x-1.5 truncate">
@@ -1303,7 +1326,7 @@
                       </div>
                       <div class="flex items-center space-x-1 shrink-0">
                         <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/40 transition flex items-center space-x-0.5" title="Espandi scheda dettagliata asset">
-                          <span>Dettagli</span>
+                          <span>Info</span>
                           <span>↗</span>
                         </span>
                         <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 font-bold text-gray-700 dark:text-gray-300">${weightPct.toFixed(1)}%</span>
@@ -1326,7 +1349,7 @@
                   <!-- Mini Grafico Storico -->
                   <div class="my-3 pt-2 border-t border-gray-100 dark:border-white/5">
                     <div class="flex items-center justify-between text-[10px] font-mono text-gray-400 mb-1.5">
-                      <span>Storico ${activeSparklinePeriod}</span>
+                      <span>Trend ${activeSparklinePeriod}</span>
                       <span class="${sparkData.periodPct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} font-semibold tabular-nums">
                         ${formatPct(sparkData.periodPct)}
                       </span>
@@ -1341,7 +1364,7 @@
                     <div class="p-2 sm:p-2.5 rounded-xl border transition-all shadow-2xs"
                          style="${dayStyle.style}">
                       <div class="text-[9px] uppercase tracking-wider ${dayStyle.titleCls} flex items-center justify-between">
-                        <span>Var. DAY</span>
+                        <span>DAY</span>
                         ${isClosed ? `<span class="text-[8px] font-bold text-amber-600 dark:text-amber-400">CHIUSO</span>` : `<span class="text-[8px] font-semibold text-emerald-600 dark:text-emerald-400">LIVE</span>`}
                       </div>
                       <div class="text-[11px] leading-tight mt-0.5 ${dayStyle.valCls}">
@@ -1353,7 +1376,7 @@
                     </div>
 
                     <div class="p-2 sm:p-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                      <div class="text-[9px] font-bold uppercase text-gray-400 tracking-wider">Complessiva</div>
+                      <div class="text-[9px] font-bold uppercase text-gray-400 tracking-wider">Totale</div>
                       <div class="text-[11px] font-bold ${isTotPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} leading-tight mt-0.5">
                         ${formatPct(totPct)}
                       </div>
@@ -1524,6 +1547,14 @@
               }
 
               let valGiornoHtml = '';
+              const absDayVal = Math.abs(dayVal);
+              let formattedDayVal = '';
+              if (absDayVal >= 1000) {
+                formattedDayVal = (absDayVal / 1000).toFixed(1).replace('.', ',') + 'k';
+              } else {
+                formattedDayVal = Math.abs(Math.round(dayVal)).toLocaleString('it-IT') + ' ' + currSym;
+              }
+
               if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
                 valGiornoHtml = `
                   <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
@@ -1533,13 +1564,13 @@
               } else if (dayVal > 0) {
                 valGiornoHtml = `
                   <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;">
-                    +${Math.abs(Math.round(dayVal)).toLocaleString('it-IT')} ${currSym}
+                    +${formattedDayVal}
                   </span>
                 `;
               } else {
                 valGiornoHtml = `
                   <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;">
-                    -${Math.abs(Math.round(dayVal)).toLocaleString('it-IT')} ${currSym}
+                    -${formattedDayVal}
                   </span>
                 `;
               }
@@ -1590,10 +1621,10 @@
         <div class="h-full flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rebalancing</span>
-              <span class="badge-profit text-[9px] uppercase font-mono">Target</span>
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Asset Target</span>
+              <span class="badge-profit text-[9px] uppercase font-mono">Tgt</span>
             </div>
-            <p class="text-[11px] text-gray-400 font-mono mb-2">Peso reale vs target.</p>
+            <p class="text-[11px] text-gray-400 font-mono mb-2">Reale vs target</p>
           </div>
           <div class="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar">
             ${holdings.slice(0, 6).map(h => {
@@ -1606,7 +1637,7 @@
                 <div class="p-2.5 rounded-xl bg-gray-50/70 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-xs font-mono">
                   <div class="flex items-center justify-between">
                     <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
-                    <span class="text-[11px] text-gray-400">Target: ${targetPct.toFixed(1)}%</span>
+                    <span class="text-[11px] text-gray-400">Tgt: ${targetPct.toFixed(1)}%</span>
                   </div>
                   <div class="w-full bg-gray-200 dark:bg-white/10 h-1.5 rounded-full mt-2 overflow-hidden">
                     <div class="bg-emerald-500 h-full rounded-full" style="width: ${Math.min(100, actualPct * 2)}%"></div>
@@ -1623,7 +1654,7 @@
           </div>
           <div class="pt-3 border-t border-gray-100 dark:border-white/5 text-center">
             <a href="/rebalancing" class="btn-pill w-full py-1.5 text-xs font-medium border border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5">
-              Simula Rebalancing →
+              Simula →
             </a>
           </div>
         </div>
@@ -1652,13 +1683,17 @@
               const daySign = dayNum > 0 ? '+' : (dayNum < 0 ? '-' : '+');
               const dayStyleColor = dayNum > 0 ? '#15803D' : (dayNum < 0 ? '#DC2626' : '#78350F');
               const dayColor = dayNum > 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : (dayNum < 0 ? 'text-[#E11D48] dark:text-[#FB7185]' : 'text-[#6B7280] dark:text-gray-400');
-              const dayStr = `${daySign}${Math.abs(dayNum).toLocaleString('it-IT')} ${cat.currSym}`;
+              const dayStr = Math.abs(dayNum) >= 1000
+                ? `${daySign}${(Math.abs(dayNum) / 1000).toFixed(1).replace('.', ',')}k`
+                : `${daySign}${Math.abs(dayNum).toLocaleString('it-IT')} ${cat.currSym}`;
 
               const totNum = Math.round(cat.totUnrealizedPnl);
               const totSign = totNum > 0 ? '+' : (totNum < 0 ? '-' : '');
               const totStyleColor = totNum >= 0 ? '#15803D' : '#DC2626';
               const totColor = totNum >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]';
-              const totStr = `${totSign}${Math.abs(totNum).toLocaleString('it-IT')} ${cat.currSym}`;
+              const totStr = Math.abs(totNum) >= 1000
+                ? `${totSign}${(Math.abs(totNum) / 1000).toFixed(1).replace('.', ',')}k`
+                : `${totSign}${Math.abs(totNum).toLocaleString('it-IT')} ${cat.currSym}`;
 
               const pctNum = Number(cat.totUnrealizedPnlPct) || 0;
               const pctSign = pctNum >= 0 ? '+' : '';
@@ -1770,6 +1805,14 @@
                         }
 
                         let valGiornoHtml = '';
+                        const absCatDayVal = Math.abs(dayVal);
+                        let formattedCatDayDelta = '';
+                        if (absCatDayVal >= 1000) {
+                          formattedCatDayDelta = (absCatDayVal / 1000).toFixed(1).replace('.', ',') + 'k';
+                        } else {
+                          formattedCatDayDelta = Math.abs(Math.round(dayVal)).toLocaleString('it-IT') + ' ' + cat.currSym;
+                        }
+
                         if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
                           const zeroLabel = `0 ${cat.currSym}`;
                           valGiornoHtml = `
@@ -1780,13 +1823,13 @@
                         } else if (dayVal > 0) {
                           valGiornoHtml = `
                             <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;">
-                              +${Math.abs(Math.round(dayVal)).toLocaleString('it-IT')} ${cat.currSym}
+                              +${formattedCatDayDelta}
                             </span>
                           `;
                         } else {
                           valGiornoHtml = `
                             <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;">
-                              -${Math.abs(Math.round(dayVal)).toLocaleString('it-IT')} ${cat.currSym}
+                              -${formattedCatDayDelta}
                             </span>
                           `;
                         }
@@ -2056,7 +2099,7 @@
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Movers All-Time</span>
-            <span class="text-[10px] font-mono text-gray-400">Totale Storico</span>
+            <span class="text-[10px] font-mono text-gray-400">Storico</span>
           </div>
           <div class="grid grid-cols-2 gap-4 flex-1">
             <!-- Gainers -->
@@ -2118,7 +2161,7 @@
           <div class="my-4 space-y-4 font-mono text-xs">
             <div>
               <div class="flex items-center justify-between text-gray-600 dark:text-gray-300 mb-1">
-                <span>Top 3 Titoli</span>
+                <span>Top 3</span>
                 <span class="font-bold tabular-nums">${top3Weight.toFixed(1)}%</span>
               </div>
               <div class="w-full bg-gray-200 dark:bg-white/10 h-2 rounded-full overflow-hidden">
@@ -2128,7 +2171,7 @@
 
             <div>
               <div class="flex items-center justify-between text-gray-600 dark:text-gray-300 mb-1">
-                <span>Top 5 Titoli</span>
+                <span>Top 5</span>
                 <span class="font-bold tabular-nums">${top5Weight.toFixed(1)}%</span>
               </div>
               <div class="w-full bg-gray-200 dark:bg-white/10 h-2 rounded-full overflow-hidden">
@@ -2138,8 +2181,8 @@
           </div>
 
           <div class="text-[10px] text-gray-400 font-mono flex items-center justify-between">
-            <span>Asset tracciati: ${holdings.length}</span>
-            <span>Max peso: ${holdings[0] ? holdings[0].weight.toFixed(1) + '%' : '0%'}</span>
+            <span>Asset: ${holdings.length}</span>
+            <span>Max: ${holdings[0] ? holdings[0].weight.toFixed(1) + '%' : '0%'}</span>
           </div>
         </div>
       `;
@@ -2227,7 +2270,7 @@
             ${rowsHtml}
           </div>
           <div class="pt-1.5 border-t border-gray-100 dark:border-white/5 text-[10px] font-mono text-gray-400 flex items-center justify-between shrink-0">
-            <span>Fonti: Google News & Yahoo Finance</span>
+            <span>Fonti: Google & Yahoo</span>
             <span>Titoli: ${data.activeHoldings ? data.activeHoldings.length : 0}</span>
           </div>
         </div>
@@ -2253,7 +2296,7 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rendimento TWRR</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rend. TWRR</span>
             <div class="flex items-center space-x-1">
               ${pillsHtml}
             </div>
@@ -2265,7 +2308,7 @@
           </div>
           <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
             <span class="${gainVal >= 0 ? 'text-emerald-600/90 dark:text-emerald-400/90 font-semibold' : 'text-rose-600/90 dark:text-rose-400/90 font-semibold'}">${formatEurSigned(gainVal)} (${activeTwrrPeriod})</span>
-            <span class="text-[10px] uppercase text-gray-400 tracking-wider" title="Time-Weighted Rate of Return: depurato da versamenti e prelievi">Time-Weighted</span>
+            <span class="text-[10px] uppercase text-gray-400 tracking-wider" title="Time-Weighted Rate of Return">TWRR</span>
           </div>
         </div>
       `;
@@ -2280,8 +2323,8 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rendimento MWRR</span>
-            <span class="badge-profit text-[10px] uppercase font-mono">XIRR Ann.</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rend. MWRR</span>
+            <span class="badge-profit text-[10px] uppercase font-mono">XIRR</span>
           </div>
           <div class="my-1.5">
             <div class="text-2xl font-bold font-mono tabular-nums tracking-tight ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
@@ -2289,8 +2332,8 @@
             </div>
           </div>
           <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
-            <span>ROI Semplice: <strong class="${roiVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${formatPct(roiVal)}</strong></span>
-            <span class="text-[10px] uppercase text-gray-400 tracking-wider" title="Money-Weighted Rate of Return (TIR / XIRR) ponderato per flussi e date">Money-Weighted</span>
+            <span>ROI: <strong class="${roiVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${formatPct(roiVal)}</strong></span>
+            <span class="text-[10px] uppercase text-gray-400 tracking-wider" title="Money-Weighted Rate of Return (TIR / XIRR)">MWRR</span>
           </div>
         </div>
       `;
@@ -2306,19 +2349,19 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Drawdown & ATH</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Drawdown</span>
             <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${curDd > 5 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'}">Max -${maxDd.toFixed(2)}%</span>
           </div>
           <div class="my-1.5 flex items-baseline justify-between">
             <div class="text-2xl font-bold font-mono tabular-nums tracking-tight text-rose-600 dark:text-rose-400">
               -${curDd.toFixed(2)}%
             </div>
-            <div class="text-[11px] font-mono text-gray-500">dal picco ATH</div>
+            <div class="text-[11px] font-mono text-gray-500">da ATH</div>
           </div>
           <div>
             <div class="flex items-center justify-between text-[11px] font-mono text-gray-400 mb-1">
-              <span>Picco: ${formatEur(peak)}</span>
-              <span>Data Max: ${m.maxDrawdownDate ? m.maxDrawdownDate.slice(0, 10) : '-'}</span>
+              <span>ATH: ${formatEur(peak)}</span>
+              <span>Data: ${m.maxDrawdownDate ? m.maxDrawdownDate.slice(0, 10) : '-'}</span>
             </div>
             <div class="w-full bg-gray-200 dark:bg-white/10 h-1.5 rounded-full overflow-hidden" title="Livello attuale rispetto al massimo storico ATH">
               <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${recoveryPct}%"></div>
@@ -2337,8 +2380,8 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rischio & Efficienza</span>
-            <span class="badge-profit text-[10px] uppercase font-mono">Volatilità</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rischio & Sharpe</span>
+            <span class="badge-profit text-[10px] uppercase font-mono">Rischio</span>
           </div>
           <div class="my-1.5 grid grid-cols-2 gap-2">
             <div class="bg-gray-50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
@@ -2346,13 +2389,13 @@
               <div class="text-sm sm:text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">${vol.toFixed(2)}%</div>
             </div>
             <div class="bg-gray-50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
-              <div class="text-[10px] uppercase font-mono text-gray-400">Sharpe Ratio</div>
+              <div class="text-[10px] uppercase font-mono text-gray-400">Sharpe</div>
               <div class="text-sm sm:text-base font-bold font-mono tabular-nums ${sharpe >= 1 ? 'text-emerald-600 dark:text-emerald-400' : (sharpe < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}">${sharpe >= 0 ? '+' : ''}${sharpe.toFixed(2)}</div>
             </div>
           </div>
           <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
-            <span>Storico: <strong>${pts} gg</strong></span>
-            <span class="text-[10px] text-gray-400" title="Volatilità annualizzata calcolata su 252 giorni">Dev. Std. 252gg</span>
+            <span>Dati: <strong>${pts} gg</strong></span>
+            <span class="text-[10px] text-gray-400" title="Volatilità annualizzata calcolata su 252 giorni">252gg</span>
           </div>
         </div>
       `;
@@ -2409,10 +2452,10 @@
           <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
             <div>
               <div class="flex items-center space-x-2">
-                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Matrice Rendimenti Multi-Periodo</span>
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Matrice Rendimenti</span>
                 <span class="badge-profit text-[10px] uppercase font-mono">TWRR</span>
               </div>
-              <div class="text-[11px] font-mono text-gray-400">Rendimento temporale e guadagno per orizzonte</div>
+              <div class="text-[11px] font-mono text-gray-400">Rendimenti e guadagni per periodo</div>
             </div>
             <button type="button" data-action="recalculate-perf" title="Ricalcola serie e indicatori" class="p-1 text-gray-400 hover:text-emerald-500 rounded transition cursor-pointer">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2427,7 +2470,7 @@
                 <tr>
                   <th scope="col" class="py-1.5 px-3">Periodo</th>
                   <th scope="col" class="py-1.5 px-3 text-right">Rend. TWRR</th>
-                  <th scope="col" class="py-1.5 px-3 text-right">Guadagno (€)</th>
+                  <th scope="col" class="py-1.5 px-3 text-right">Guadagno</th>
                   <th scope="col" class="py-1.5 px-3 text-right hidden sm:table-cell">Annualizzato</th>
                   <th scope="col" class="py-1.5 px-3 text-right">Stato</th>
                 </tr>
@@ -2439,8 +2482,8 @@
           </div>
 
           <div class="pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-400">
-            <span>TWRR isola le performance dagli apporti/prelievi</span>
-            <span class="text-emerald-600 dark:text-emerald-400 font-semibold cursor-pointer hover:underline" onclick="FolioTrackDashboard.openDrawer()">+ Personalizza Griglia</span>
+            <span>TWRR depurato da flussi</span>
+            <span class="text-emerald-600 dark:text-emerald-400 font-semibold cursor-pointer hover:underline" onclick="FolioTrackDashboard.openDrawer()">Personalizza</span>
           </div>
         </div>
       `;
