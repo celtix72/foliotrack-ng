@@ -137,6 +137,7 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     // AAPL and ISP.MI should be present (both are equities from transactions)
     const aapl = data.assets.find(x => x.ticker === 'AAPL');
     assert.ok(aapl, 'AAPL must be present in analysis assets');
+    assert.equal(aapl.origin, 'OPEN', 'AAPL must have origin OPEN');
     assert.equal(aapl.inPortfolio, true);
     assert.equal(aapl.currentPrice, 180.0);
 
@@ -183,6 +184,7 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     const listData = await listRes.json();
     const nvda = listData.assets.find(x => x.ticker === 'NVDA');
     assert.ok(nvda, 'NVDA must be present in analysis list');
+    assert.equal(nvda.origin, 'WATCHLIST', 'NVDA without portfolio trades must have origin WATCHLIST');
     assert.equal(nvda.inPortfolio, false);
     assert.equal(nvda.isMonitored, true);
     assert.equal(nvda.stopLoss, 110.0);
@@ -443,6 +445,67 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     mu = data.assets.find(x => x.ticker === 'MU');
     assert.ok(mu, 'MU must exist in analysis list');
     assert.equal(mu.inPortfolio, true, 'After purchase, MU must have inPortfolio = true');
+    assert.equal(mu.origin, 'OPEN', 'Purchased MU with remaining position must have origin OPEN');
     assert.equal(mu.ticker, 'MU');
+  });
+
+  test('Asset origin classification: OPEN for active holdings, CLOSE for fully sold positions, WATCHLIST for untraded', async () => {
+    const db = getDb();
+
+    // 1. Create a stock MSFT that was bought and then completely sold out (CLOSE)
+    db.prepare(`
+      INSERT OR REPLACE INTO assets (ticker, name, type, currentPrice, currency)
+      VALUES ('MSFT', 'Microsoft Corporation', 'EQUITY', 420.0, 'USD')
+    `).run();
+
+    db.prepare(`
+      INSERT INTO transactions (portfolioId, date, type, assetTicker, quantity, price, amount)
+      VALUES
+        (?, '2024-03-01', 'BUY', 'MSFT', 10, 400.0, 4000.0),
+        (?, '2024-04-10', 'SELL', 'MSFT', 10, 420.0, 4200.0)
+    `).run(portfolioId, portfolioId);
+
+    // 2. Create a stock GOOGL that is only added in analysis_watchlist, never traded (WATCHLIST)
+    db.prepare(`
+      INSERT OR REPLACE INTO assets (ticker, name, type, currentPrice, currency)
+      VALUES ('GOOGL', 'Alphabet Inc.', 'EQUITY', 175.0, 'USD')
+    `).run();
+
+    db.prepare(`
+      INSERT OR REPLACE INTO analysis_watchlist (ticker, name, isMonitored, updatedAt)
+      VALUES ('GOOGL', 'Alphabet Inc.', 1, datetime('now'))
+    `).run();
+
+    // 3. Query GET /api/analysis
+    const res = await fetch(`${baseUrl}/api/analysis`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+
+    // Check MSFT -> CLOSE
+    const msft = data.assets.find(x => x.ticker === 'MSFT');
+    assert.ok(msft, 'MSFT must be present in analysis list');
+    assert.equal(msft.origin, 'CLOSE', 'MSFT with 0 net quantity and past trades must have origin CLOSE');
+    assert.equal(msft.inPortfolio, false, 'CLOSE asset must have inPortfolio = false');
+    assert.equal(msft.netQuantity, 0);
+
+    // Check GOOGL -> WATCHLIST
+    const googl = data.assets.find(x => x.ticker === 'GOOGL');
+    assert.ok(googl, 'GOOGL must be present in analysis list');
+    assert.equal(googl.origin, 'WATCHLIST', 'GOOGL with zero trades must have origin WATCHLIST');
+    assert.equal(googl.inPortfolio, false);
+
+    // Check AAPL -> OPEN
+    const aapl = data.assets.find(x => x.ticker === 'AAPL');
+    assert.ok(aapl);
+    assert.equal(aapl.origin, 'OPEN', 'AAPL with active holding must have origin OPEN');
+    assert.equal(aapl.inPortfolio, true);
+
+    // Verify stats include counts
+    assert.ok(data.stats.openCount >= 1);
+    assert.ok(data.stats.closeCount >= 1);
+    assert.ok(data.stats.watchlistCount >= 1);
   });
 });

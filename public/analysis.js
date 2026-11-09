@@ -281,6 +281,26 @@
     `;
   }
 
+  function renderOriginBadge(origin) {
+    const o = (origin || 'WATCHLIST').toUpperCase();
+    if (o === 'OPEN') {
+      return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-500/20" title="Posizione aperta in portafoglio">OPEN</span>';
+    } else if (o === 'CLOSE') {
+      return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-400/20" title="Posizione chiusa in portafoglio (operazioni chiuse)">CLOSE</span>';
+    }
+    return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-500/20" title="Titolo in watchlist (mai trattato)">WATCHLIST</span>';
+  }
+
+  function renderOriginBadgeMobile(origin) {
+    const o = (origin || 'WATCHLIST').toUpperCase();
+    if (o === 'OPEN') {
+      return '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-500/20" title="Posizione aperta">OPEN</span>';
+    } else if (o === 'CLOSE') {
+      return '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-400/20" title="Posizione chiusa">CLOSE</span>';
+    }
+    return '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-500/20" title="Watchlist">WATCHLIST</span>';
+  }
+
   async function toggleAssetMonitoring(ticker) {
     if (!ticker) return;
     const cleanTicker = ticker.toUpperCase();
@@ -327,9 +347,15 @@
   function getFilteredAssets() {
     return allAssets.filter(item => {
       // 1. Tab filter
-      if (activeFilter === 'portfolio' && !item.inPortfolio) return false;
-      if (activeFilter === 'monitored' && item.inPortfolio) return false;
-      if (activeFilter === 'alerts' && item.slStatus === 'NORMAL' && item.tpStatus === 'NORMAL') return false;
+      if (activeFilter === 'open' || activeFilter === 'portfolio') {
+        if (item.origin !== 'OPEN') return false;
+      } else if (activeFilter === 'close') {
+        if (item.origin !== 'CLOSE') return false;
+      } else if (activeFilter === 'watchlist' || activeFilter === 'monitored') {
+        if (item.origin !== 'WATCHLIST') return false;
+      } else if (activeFilter === 'alerts') {
+        if (item.slStatus === 'NORMAL' && item.tpStatus === 'NORMAL') return false;
+      }
 
       // 2. Search query
       if (searchQuery) {
@@ -359,6 +385,10 @@
       allAssets = data.assets || [];
       const stats = data.stats || {};
 
+      const openCount = stats.openCount !== undefined ? stats.openCount : allAssets.filter(x => x.origin === 'OPEN').length;
+      const closeCount = stats.closeCount !== undefined ? stats.closeCount : allAssets.filter(x => x.origin === 'CLOSE').length;
+      const watchlistCount = stats.watchlistCount !== undefined ? stats.watchlistCount : allAssets.filter(x => x.origin === 'WATCHLIST').length;
+
       // Update KPI counters (Desktop)
       const kpiTotal = document.getElementById('kpiTotalAssets');
       const kpiPortCount = document.getElementById('kpiPortfolioCount');
@@ -367,23 +397,29 @@
       const kpiTpReached = document.getElementById('kpiTpReached');
 
       if (kpiTotal) kpiTotal.textContent = stats.totalEquities || allAssets.length;
-      if (kpiPortCount) kpiPortCount.textContent = `${stats.portfolioCount || 0} in portafoglio`;
+      if (kpiPortCount) kpiPortCount.textContent = `${openCount} open, ${closeCount} close`;
       if (kpiGainers) kpiGainers.textContent = `${stats.gainers1mCount || 0} (1M) / ${stats.gainers1yCount || 0} (1Y)`;
       if (kpiSlAlerts) kpiSlAlerts.textContent = stats.slTriggeredCount || 0;
       if (kpiTpReached) kpiTpReached.textContent = stats.tpReachedCount || 0;
 
       // Update badge counts in filter buttons
       const countAll = document.getElementById('countAll') || document.getElementById('mCountAll');
-      const countPort = document.getElementById('countPortfolio') || document.getElementById('mCountPortfolio');
-      const countWatch = document.getElementById('countWatchlist') || document.getElementById('mCountWatchlist');
-      const countAlerts = document.getElementById('countAlerts') || document.getElementById('mCountAlerts');
       const mTotalCount = document.getElementById('mTotalCount');
 
       if (countAll) countAll.textContent = allAssets.length;
-      if (countPort) countPort.textContent = allAssets.filter(x => x.inPortfolio).length;
-      if (countWatch) countWatch.textContent = allAssets.filter(x => !x.inPortfolio).length;
-      if (countAlerts) countAlerts.textContent = allAssets.filter(x => x.slStatus !== 'NORMAL' || x.tpStatus !== 'NORMAL').length;
-      if (mTotalCount) mTotalCount.textContent = `${allAssets.length} titoli monitorati`;
+      if (document.getElementById('countOpen')) document.getElementById('countOpen').textContent = openCount;
+      if (document.getElementById('mCountOpen')) document.getElementById('mCountOpen').textContent = openCount;
+      if (document.getElementById('countPortfolio')) document.getElementById('countPortfolio').textContent = openCount;
+      if (document.getElementById('mCountPortfolio')) document.getElementById('mCountPortfolio').textContent = openCount;
+      if (document.getElementById('countClose')) document.getElementById('countClose').textContent = closeCount;
+      if (document.getElementById('mCountClose')) document.getElementById('mCountClose').textContent = closeCount;
+      if (document.getElementById('countWatchlist')) document.getElementById('countWatchlist').textContent = watchlistCount;
+      if (document.getElementById('mCountWatchlist')) document.getElementById('mCountWatchlist').textContent = watchlistCount;
+
+      const alertCount = allAssets.filter(x => x.slStatus !== 'NORMAL' || x.tpStatus !== 'NORMAL').length;
+      if (document.getElementById('countAlerts')) document.getElementById('countAlerts').textContent = alertCount;
+      if (document.getElementById('mCountAlerts')) document.getElementById('mCountAlerts').textContent = alertCount;
+      if (mTotalCount) mTotalCount.textContent = `${allAssets.length} titoli (${openCount} open, ${closeCount} close)`;
 
       // Render view
       if (document.getElementById('analysisTableBody')) {
@@ -424,10 +460,8 @@
       const vars = a.variations || {};
       const cur = a.currency || 'EUR';
 
-      // Origin badge
-      const originBadge = a.inPortfolio
-        ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">PORTAFOGLIO</span>'
-        : '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">WATCHLIST</span>';
+      // Origin badge (OPEN / CLOSE / WATCHLIST)
+      const originBadge = renderOriginBadge(a.origin);
 
       // SL rendering
       let slHtml = '<span class="text-gray-400 font-mono text-xs">-</span>';
@@ -480,7 +514,6 @@
           <td class="px-2.5 py-1.5 whitespace-nowrap text-right">${tpHtml}</td>
           <td class="px-2 py-1.5 whitespace-nowrap text-center" onclick="event.stopPropagation()">
             <div class="inline-flex items-center space-x-1 opacity-75 group-hover:opacity-100 transition leading-none">
-              ${renderEyeIcon(a.isMonitored, a.ticker)}
               <button data-action="targets" data-ticker="${a.ticker}" title="Imposta / Modifica SL e TP" class="p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded hover:bg-gray-100 dark:hover:bg-white/10 transition">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -491,7 +524,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
-              ${!a.inPortfolio ? `
+              ${a.origin === 'WATCHLIST' ? `
                 <button data-action="delete" data-ticker="${a.ticker}" title="Rimuovi da watchlist" class="p-1 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 rounded hover:bg-gray-100 dark:hover:bg-white/10 transition">
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -546,9 +579,7 @@
       const vars = a.variations || {};
       const cur = a.currency || 'EUR';
 
-      const originBadge = a.inPortfolio
-        ? '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">PORTAFOGLIO</span>'
-        : '<span class="px-1 py-0.2 rounded text-[8px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">WATCHLIST</span>';
+      const originBadge = renderOriginBadgeMobile(a.origin);
 
       let slStatusBadge = '';
       if (a.stopLoss !== null && a.stopLoss > 0) {
@@ -603,7 +634,6 @@
               ${tpStatusBadge || '<span class="text-gray-500 text-[9px]">TP: -</span>'}
             </div>
             <div class="flex items-center space-x-1.5">
-              ${renderEyeIcon(a.isMonitored, a.ticker)}
               <button data-action="targets" data-ticker="${a.ticker}" title="Imposta / Modifica SL e TP" class="p-0.5 text-gray-400 hover:text-emerald-500">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -612,7 +642,7 @@
               <button data-action="fundamentals" data-ticker="${a.ticker}" title="Analisi Fondamentale" class="text-[10px] text-blue-500 font-bold px-1 py-0.2 rounded hover:bg-blue-50 dark:hover:bg-white/5">
                 Analisi &rarr;
               </button>
-              ${!a.inPortfolio ? `
+              ${a.origin === 'WATCHLIST' ? `
                 <button data-action="delete" data-ticker="${a.ticker}" title="Rimuovi da watchlist" class="p-0.5 text-rose-500 hover:text-rose-600">
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

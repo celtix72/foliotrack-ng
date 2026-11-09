@@ -73,7 +73,9 @@ router.get('/', async (req, res) => {
         COALESCE(MAX(a.type), 'EQUITY') as type,
         COALESCE(MAX(a.currentPrice), 0.0) as currentPrice,
         COALESCE(MAX(a.currency), 'USD') as currency,
-        MAX(a.previousClose) as previousClose
+        MAX(a.previousClose) as previousClose,
+        SUM(CASE WHEN t.type = 'BUY' THEN t.quantity WHEN t.type = 'SELL' THEN -t.quantity ELSE 0 END) as netQty,
+        COUNT(CASE WHEN t.type IN ('BUY', 'SELL') THEN 1 END) as tradeCount
       FROM transactions t
       LEFT JOIN assets a ON TRIM(UPPER(t.assetTicker)) = TRIM(UPPER(a.ticker))
       WHERE t.assetTicker IS NOT NULL
@@ -128,18 +130,25 @@ router.get('/', async (req, res) => {
     const itemsMap = new Map();
 
     // Add portfolio equities
+    // Origin is 'OPEN' if remaining position > 0, or 'CLOSE' if historical trades exist but net position is 0
     for (const eq of portfolioEquities) {
       const sym = eq.ticker.toUpperCase();
       const w = watchlistMap.get(sym);
       const fund = fundamentalsCacheMap.get(sym);
+      const netQty = Number(eq.netQty) || 0;
+      const isOpen = netQty > 1e-6;
+      const origin = isOpen ? 'OPEN' : 'CLOSE';
+
       itemsMap.set(sym, {
         ticker: sym,
         name: eq.name,
         type: eq.type || 'EQUITY',
         currentPrice: Number(eq.currentPrice) || 0.0,
-        currency: eq.currency || 'EUR',
+        currency: eq.currency || 'USD',
         previousClose: Number(eq.previousClose) || Number(eq.currentPrice) || 0.0,
-        inPortfolio: true,
+        origin,
+        inPortfolio: isOpen,
+        netQuantity: netQty,
         isMonitored: w ? Boolean(w.isMonitored) : true,
         stopLoss: w && w.stopLoss !== null ? Number(w.stopLoss) : null,
         takeProfit: w && w.takeProfit !== null ? Number(w.takeProfit) : null,
@@ -149,7 +158,7 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // Add standalone monitored assets (not in portfolio)
+    // Add standalone monitored assets (never traded in portfolios -> WATCHLIST)
     for (const w of watchlistRows) {
       const sym = w.ticker.toUpperCase();
       if (!itemsMap.has(sym)) {
@@ -161,7 +170,9 @@ router.get('/', async (req, res) => {
           currentPrice: Number(w.currentPrice) || 0.0,
           currency: w.currency || 'EUR',
           previousClose: Number(w.previousClose) || Number(w.currentPrice) || 0.0,
+          origin: 'WATCHLIST',
           inPortfolio: false,
+          netQuantity: 0,
           isMonitored: Boolean(w.isMonitored),
           stopLoss: w.stopLoss !== null ? Number(w.stopLoss) : null,
           takeProfit: w.takeProfit !== null ? Number(w.takeProfit) : null,
@@ -204,9 +215,12 @@ router.get('/', async (req, res) => {
       };
     });
 
-    // Sort: inPortfolio first, then alphabetically by ticker
+    // Sort: OPEN first, then CLOSE, then WATCHLIST, then alphabetically by ticker
+    const originPriority = { OPEN: 1, CLOSE: 2, WATCHLIST: 3 };
     assets.sort((a, b) => {
-      if (a.inPortfolio !== b.inPortfolio) return a.inPortfolio ? -1 : 1;
+      const prioA = originPriority[a.origin] || 4;
+      const prioB = originPriority[b.origin] || 4;
+      if (prioA !== prioB) return prioA - prioB;
       return a.ticker.localeCompare(b.ticker);
     });
 
@@ -214,6 +228,9 @@ router.get('/', async (req, res) => {
     const stats = {
       totalEquities: assets.length,
       portfolioCount: assets.filter(x => x.inPortfolio).length,
+      openCount: assets.filter(x => x.origin === 'OPEN').length,
+      closeCount: assets.filter(x => x.origin === 'CLOSE').length,
+      watchlistCount: assets.filter(x => x.origin === 'WATCHLIST').length,
       monitoredCount: assets.filter(x => x.isMonitored).length,
       slTriggeredCount: assets.filter(x => x.slStatus === 'TRIGGERED').length,
       tpReachedCount: assets.filter(x => x.tpStatus === 'REACHED').length,
