@@ -356,9 +356,14 @@
             <button type="button" id="drawerCloseBtn2" class="btn-pill px-3.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition">
               Chiudi
             </button>
-            <button type="button" id="drawerNewTxBtn" class="btn-pill px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20">
-              + Nuova Operazione
-            </button>
+            <div class="flex items-center gap-2">
+              <button type="button" id="drawerSellBtn" class="btn-pill px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition shadow-md shadow-rose-600/20">
+                🔴 Vendi Titolo (SELL)
+              </button>
+              <button type="button" id="drawerNewTxBtn" class="btn-pill px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20">
+                + Nuova Operazione
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -776,6 +781,26 @@
         });
       }
     });
+
+    // Sell transaction button inside drawer
+    const drawerSellBtn = document.getElementById('drawerSellBtn');
+    if (drawerSellBtn) {
+      drawerSellBtn.addEventListener('click', () => {
+        const asset = currentAssetData;
+        const portId = currentPortfolioId;
+        close();
+        if (window.TransactionModal && asset) {
+          window.TransactionModal.open({
+            portfolioId: (portId && portId !== 'all') ? portId : (asset.portfolioId || null),
+            assetTicker: asset.ticker,
+            type: 'SELL',
+            currency: asset.currency || 'USD',
+            price: asset.currentPriceNative || asset.currentPrice || null,
+            quantity: asset.quantity || null
+          });
+        }
+      });
+    }
   }
 
   function open(holding, portfolioId = null) {

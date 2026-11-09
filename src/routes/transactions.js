@@ -828,8 +828,35 @@ router.post('/', (req, res) => {
     if (qty <= 0) {
       return res.status(400).json({ success: false, error: 'La quantità deve essere maggiore di 0.' });
     }
-    if (prc < 0) {
+    if (cleanType === 'BUY' && prc < 0) {
       return res.status(400).json({ success: false, error: 'Il prezzo non può essere negativo.' });
+    }
+    if (cleanType === 'SELL' && prc <= 0) {
+      return res.status(400).json({ success: false, error: 'Il prezzo di vendita deve essere maggiore di 0.' });
+    }
+    if (comm < 0 || tx < 0) {
+      return res.status(400).json({ success: false, error: 'Commissioni e imposte non possono essere negative.' });
+    }
+    if (fx <= 0) {
+      return res.status(400).json({ success: false, error: 'Il tasso di cambio FX deve essere maggiore di 0.' });
+    }
+
+    if (cleanType === 'SELL') {
+      const currentSnapshot = recalculatePortfolio(pId);
+      const currentPos = currentSnapshot.metrics.holdings.find(h => h.ticker === cleanTicker);
+      const availableQty = currentPos ? currentPos.quantity : 0.0;
+      if (!currentPos || availableQty <= 1e-9) {
+        return res.status(400).json({
+          success: false,
+          error: `Impossibile registrare la vendita: il titolo ${cleanTicker} non è presente in questo portafoglio.`
+        });
+      }
+      if (availableQty < qty - 1e-9) {
+        return res.status(400).json({
+          success: false,
+          error: `Quantità insufficiente in portafoglio per la vendita di ${cleanTicker}: possedute ${availableQty}, richieste ${qty}.`
+        });
+      }
     }
 
     // Auto-create asset entry if missing
@@ -851,7 +878,9 @@ router.post('/', (req, res) => {
         }
 
         const costBasisUnit = currentPos ? (currentPos.costBasis || currentPos.pmc || 0.0) : 0.0;
-        const netProceeds = (qty * prc * fx) - comm - tx;
+        const grossEur = (fx !== 1.0 && fx > 0) ? ((qty * prc) / fx) : (qty * prc);
+        const commEur = (fx !== 1.0 && fx > 0 && comm > 0) ? (comm / fx) : comm;
+        const netProceeds = calculatedAmount > 0 ? calculatedAmount : Math.max(0, grossEur - commEur - tx);
         const totalCost = qty * costBasisUnit;
         const gainOrLoss = netProceeds - totalCost;
 
@@ -966,6 +995,22 @@ router.put('/:id', (req, res) => {
   const comm = Number(commission) || 0.0;
   const tx = Number(tax) || 0.0;
   const fx = Number(exchangeRate) || 1.0;
+
+  if (cleanType === 'SELL') {
+    if (qty <= 0) {
+      return res.status(400).json({ success: false, error: 'La quantità da vendere deve essere maggiore di 0.' });
+    }
+    if (prc <= 0) {
+      return res.status(400).json({ success: false, error: 'Il prezzo di vendita deve essere maggiore di 0.' });
+    }
+    if (comm < 0 || tx < 0) {
+      return res.status(400).json({ success: false, error: 'Commissioni e imposte non possono essere negative.' });
+    }
+    if (fx <= 0) {
+      return res.status(400).json({ success: false, error: 'Il tasso di cambio FX deve essere maggiore di 0.' });
+    }
+  }
+
   const finalAmount = computeTransactionAmount(cleanType, qty, prc, comm, tx, fx, amount);
 
   try {
@@ -998,6 +1043,25 @@ router.put('/:id', (req, res) => {
       );
 
       // Recalculate portfolio to verify consistency
+      const tickersToCheck = new Set([cleanTicker, existingTx.assetTicker].filter(Boolean));
+      for (const tkr of tickersToCheck) {
+        const txs = db.prepare(`
+          SELECT type, quantity, date, id
+          FROM transactions
+          WHERE portfolioId = ? AND assetTicker = ?
+          ORDER BY date ASC, id ASC
+        `).all(existingTx.portfolioId, tkr);
+
+        let runningQty = 0.0;
+        for (const t of txs) {
+          if (t.type === 'BUY') runningQty += Number(t.quantity) || 0.0;
+          else if (t.type === 'SELL') runningQty -= Number(t.quantity) || 0.0;
+          if (runningQty < -1e-9) {
+            throw new Error(`Modifica operazione non valida: la vendita comporta una quantità negativa (${runningQty.toFixed(4)}) per il titolo ${tkr}.`);
+          }
+        }
+      }
+
       const updatedPortfolio = recalculatePortfolio(existingTx.portfolioId);
       return updatedPortfolio;
     });
