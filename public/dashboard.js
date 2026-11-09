@@ -672,6 +672,12 @@
         ? Number(raw.totals.dayPnl)
         : aggHoldings.reduce((sum, h) => sum + (Number(h.dayPnlEur) || 0), 0);
       const aggTotVal = Number(raw.totals?.totalValue) || 0;
+      const aggNetVal = raw.totals?.netValue !== undefined
+        ? Number(raw.totals.netValue)
+        : (raw.portfolios || []).reduce((sum, p) => sum + (Number(p.metrics?.netValue !== undefined ? p.metrics.netValue : p.metrics?.totalValue) || 0), 0);
+      const aggEstTax = raw.totals?.totalEstimatedTax !== undefined
+        ? Number(raw.totals.totalEstimatedTax)
+        : (raw.portfolios || []).reduce((sum, p) => sum + (Number(p.metrics?.estimatedTax) || 0), 0);
       const aggPrevVal = aggTotVal - aggDayPnl;
       const aggDayPct = raw.totals?.dayPnlPercent !== undefined
         ? Number(raw.totals.dayPnlPercent)
@@ -684,6 +690,10 @@
         portfolios: raw.portfolios || [],
         totals: {
           ...raw.totals,
+          totalValue: aggTotVal,
+          netValue: aggNetVal,
+          totalEstimatedTax: aggEstTax,
+          estimatedTax: aggEstTax,
           dayPnl: aggDayPnl,
           dayPnlPercent: aggDayPct
         },
@@ -699,6 +709,12 @@
         ? Number(raw.totals.dayPnl)
         : aggHoldings.reduce((sum, h) => sum + (Number(h.dayPnlEur) || 0), 0);
       const aggTotVal = Number(raw.totals?.totalValue) || 0;
+      const aggNetVal = raw.totals?.netValue !== undefined
+        ? Number(raw.totals.netValue)
+        : (raw.portfolios || []).reduce((sum, p) => sum + (Number(p.metrics?.netValue !== undefined ? p.metrics.netValue : p.metrics?.totalValue) || 0), 0);
+      const aggEstTax = raw.totals?.totalEstimatedTax !== undefined
+        ? Number(raw.totals.totalEstimatedTax)
+        : (raw.portfolios || []).reduce((sum, p) => sum + (Number(p.metrics?.estimatedTax) || 0), 0);
       const aggPrevVal = aggTotVal - aggDayPnl;
       const aggDayPct = raw.totals?.dayPnlPercent !== undefined
         ? Number(raw.totals.dayPnlPercent)
@@ -711,6 +727,10 @@
         portfolios: raw.portfolios || [],
         totals: {
           ...raw.totals,
+          totalValue: aggTotVal,
+          netValue: aggNetVal,
+          totalEstimatedTax: aggEstTax,
+          estimatedTax: aggEstTax,
           dayPnl: aggDayPnl,
           dayPnlPercent: aggDayPct
         },
@@ -726,6 +746,10 @@
       ? Number(p.metrics.dayPnl)
       : portHoldings.reduce((sum, h) => sum + (Number(h.dayPnlEur) || 0), 0);
     const portTotVal = Number(p.metrics?.totalValue) || 0;
+    const portEstTax = Number(p.metrics?.estimatedTax !== undefined ? p.metrics.estimatedTax : (p.estimatedTax || 0)) || 0;
+    const portNetVal = p.metrics?.netValue !== undefined
+      ? Number(p.metrics.netValue)
+      : (portTotVal - portEstTax);
     const portPrevVal = portTotVal - portDayPnl;
     const portDayPct = p.metrics?.dayPnlPercent !== undefined
       ? Number(p.metrics.dayPnlPercent)
@@ -739,6 +763,9 @@
       portfolios: [p],
       totals: {
         totalValue: portTotVal,
+        netValue: portNetVal,
+        totalEstimatedTax: portEstTax,
+        estimatedTax: portEstTax,
         currentCash: p.metrics?.currentCash || 0,
         investedCapital: p.metrics?.investedCapital || 0,
         realizedPnl: p.metrics?.realizedPnl || 0,
@@ -882,24 +909,42 @@
 
   // Widget HTML Renderers for each of the widgets
   const WIDGET_RENDERERS = {
-    // 1. Portfolio Value
+    // 1. Portfolio Value (P.LORDO & P.NETTO)
     value: (data) => {
       const t = data.totals || {};
       const pct = Number(t.unrealizedPnlPercent) || 0;
       const isPos = pct >= 0;
       const label = data.isAggregate ? 'P.Lordo' : (data.selectedPortfolio?.name || 'P.Lordo');
+      const lordoVal = Number(t.totalValue) || 0;
+      const estTax = Number(t.totalEstimatedTax !== undefined ? t.totalEstimatedTax : (t.estimatedTax || 0)) || 0;
+      const nettoVal = t.netValue !== undefined ? Number(t.netValue) : (lordoVal - estTax);
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate max-w-[200px]">${label}</span>
-            <span class="badge-profit text-[10px] uppercase font-mono">${data.isAggregate ? 'Aggr.' : 'Conto'}</span>
+            <div class="flex items-center space-x-1">
+              ${estTax > 0 ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20" title="Imposte stimate su plusvalenze con comp. minusvalenze: -${formatEur(estTax)}">Imp. -${formatEur(estTax)}</span>` : ''}
+              <span class="badge-profit text-[10px] uppercase font-mono">${data.isAggregate ? 'Aggr.' : 'Conto'}</span>
+            </div>
           </div>
-          <div class="my-2">
-            <div class="text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">${formatEur(t.totalValue)}</div>
+          <div class="my-1.5 grid grid-cols-2 gap-2 items-baseline">
+            <div class="truncate">
+              <div class="text-[10px] font-mono font-semibold uppercase text-gray-400 tracking-wider">P.Lordo</div>
+              <div class="text-xl sm:text-2xl lg:text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight truncate">${formatEur(lordoVal)}</div>
+            </div>
+            <div class="truncate text-right">
+              <div class="text-[10px] font-mono font-semibold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">P.Netto</div>
+              <div class="text-xl sm:text-2xl lg:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight truncate">${formatEur(nettoVal)}</div>
+            </div>
           </div>
-          <div class="flex items-center space-x-2 text-xs">
-            <span class="${isPos ? 'badge-profit' : 'badge-loss'} tabular-nums">${formatPct(pct)}</span>
-            <span class="text-gray-400 font-mono text-[11px]">${formatEur(t.unrealizedPnl)} lat.</span>
+          <div class="flex items-center justify-between text-xs pt-1 border-t border-gray-100 dark:border-white/5">
+            <div class="flex items-center space-x-1.5">
+              <span class="${isPos ? 'badge-profit' : 'badge-loss'} tabular-nums text-[10px]">${formatPct(pct)}</span>
+              <span class="text-gray-400 font-mono text-[11px]">${formatEur(t.unrealizedPnl)} lat.</span>
+            </div>
+            <div class="text-[10px] font-mono text-gray-400 truncate text-right">
+              ${estTax > 0 ? `Tax: -${formatEur(estTax)}` : 'Tax: 0 €'}
+            </div>
           </div>
         </div>
       `;

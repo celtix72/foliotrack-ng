@@ -129,6 +129,8 @@ function createSchema(database) {
       initialCash REAL NOT NULL DEFAULT 0.0,
       currentCash REAL NOT NULL DEFAULT 0.0,
       totalValue REAL NOT NULL DEFAULT 0.0,
+      netValue REAL NOT NULL DEFAULT 0.0,
+      estimatedTax REAL NOT NULL DEFAULT 0.0,
       performance1D REAL NOT NULL DEFAULT 0.0,
       performance1DPrePost REAL NOT NULL DEFAULT 0.0,
       totalDividends REAL NOT NULL DEFAULT 0.0,
@@ -368,6 +370,8 @@ function createSchema(database) {
   try { database.exec("ALTER TABLE portfolio_losses ADD COLUMN assetType TEXT DEFAULT 'EQUITY'"); } catch {}
   try { database.exec("ALTER TABLE portfolio_losses ADD COLUMN taxRate REAL DEFAULT 0.26"); } catch {}
   try { database.exec("CREATE INDEX IF NOT EXISTS idx_portfolio_losses_port_type_exp ON portfolio_losses(portfolioId, assetType, expiryDate)"); } catch {}
+  try { database.exec("ALTER TABLE portfolios ADD COLUMN netValue REAL DEFAULT 0.0"); } catch {}
+  try { database.exec("ALTER TABLE portfolios ADD COLUMN estimatedTax REAL DEFAULT 0.0"); } catch {}
 
   try {
     database.exec(`

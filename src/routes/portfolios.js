@@ -2,6 +2,7 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { calculateHoldingsAndMetrics, calculateROI, calculateXIRR } = require('../utils/finance');
+const { calculatePortfolioUnrealizedTax } = require('../utils/taxEngine');
 const { PORTFOLIO_TYPES, CURRENCIES } = require('../utils/constants');
 const { exportWealthfolioCsv } = require('../utils/exportFormats');
 
@@ -94,11 +95,37 @@ function recalculatePortfolio(portfolioId, assetsMap = null) {
     currencyRatesMap
   );
 
+  // Fetch active unexpired tax losses (zainetto fiscale) for this portfolio
+  let detailedLosses = [];
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    detailedLosses = db.prepare(`
+      SELECT * FROM portfolio_losses
+      WHERE portfolioId = ?
+        AND expiryDate >= ?
+        AND residualAmount > 0.001
+      ORDER BY expiryDate ASC, year ASC
+    `).all(portfolioId, todayStr);
+  } catch (e) {
+    detailedLosses = [];
+  }
+
+  // Calculate portfolio unrealized capital gains tax (26% equity, 12.5% bond/monetary with compensation)
+  const taxation = calculatePortfolioUnrealizedTax(metrics.holdings || [], detailedLosses);
+  const estimatedTax = Number(taxation.totalEstimatedTax) || 0.0;
+  const netValue = (Number(metrics.totalValue) || 0.0) - estimatedTax;
+
+  metrics.taxation = taxation;
+  metrics.estimatedTax = estimatedTax;
+  metrics.netValue = netValue;
+
   // Update portfolios table
   const updateStmt = db.prepare(`
     UPDATE portfolios
     SET currentCash = ?,
         totalValue = ?,
+        netValue = ?,
+        estimatedTax = ?,
         totalDividends = ?,
         investedCapital = ?,
         assetCount = ?,
@@ -109,6 +136,8 @@ function recalculatePortfolio(portfolioId, assetsMap = null) {
   updateStmt.run(
     metrics.currentCash,
     metrics.totalValue,
+    netValue,
+    estimatedTax,
     metrics.totalDividends,
     metrics.investedCapital,
     metrics.assetCount,
@@ -146,6 +175,9 @@ function recalculatePortfolio(portfolioId, assetsMap = null) {
     ...portfolio,
     currentCash: metrics.currentCash,
     totalValue: metrics.totalValue,
+    netValue,
+    estimatedTax,
+    taxation,
     totalDividends: metrics.totalDividends,
     investedCapital: metrics.investedCapital,
     assetCount: metrics.assetCount,
@@ -204,6 +236,8 @@ router.get('/', (req, res) => {
   const enriched = [];
 
   let grandTotalValue = 0.0;
+  let grandNetValue = 0.0;
+  let grandTotalEstimatedTax = 0.0;
   let grandTotalCash = 0.0;
   let grandInvestedCapital = 0.0;
   let grandRealizedPnl = 0.0;
@@ -222,6 +256,8 @@ router.get('/', (req, res) => {
     // Aggregate totals if included in totals
     if (full.include_in_totals) {
       grandTotalValue += full.metrics.totalValue;
+      grandNetValue += (full.metrics.netValue !== undefined ? full.metrics.netValue : full.metrics.totalValue);
+      grandTotalEstimatedTax += (full.metrics.estimatedTax || 0.0);
       grandTotalCash += full.metrics.currentCash;
       grandInvestedCapital += full.metrics.investedCapital;
       grandRealizedPnl += full.metrics.realizedPnl;
@@ -263,6 +299,9 @@ router.get('/', (req, res) => {
     portfolios: enriched,
     totals: {
       totalValue: grandTotalValue,
+      netValue: grandNetValue,
+      totalEstimatedTax: grandTotalEstimatedTax,
+      estimatedTax: grandTotalEstimatedTax,
       currentCash: grandTotalCash,
       totalAssetValue: grandTotalValue - grandTotalCash,
       investedCapital: grandInvestedCapital,
