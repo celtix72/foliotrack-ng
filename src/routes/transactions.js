@@ -34,13 +34,15 @@ router.use(requireAuth);
 function ensureAssetExists(ticker, currentPrice = 0.0, currency = 'EUR') {
   if (!ticker) return;
   const cleanTicker = ticker.toUpperCase().trim();
-  const existing = db.prepare('SELECT ticker FROM assets WHERE ticker = ?').get(cleanTicker);
+  const existing = db.prepare('SELECT ticker, type FROM assets WHERE ticker = ?').get(cleanTicker);
 
   if (!existing) {
     db.prepare(`
       INSERT INTO assets (ticker, name, type, currency, currentPrice, sector, region)
       VALUES (?, ?, 'EQUITY', ?, ?, 'Unclassified', 'Global')
     `).run(cleanTicker, cleanTicker, currency, Number(currentPrice) || 0.0);
+  } else if (!existing.type) {
+    db.prepare("UPDATE assets SET type = 'EQUITY' WHERE ticker = ?").run(cleanTicker);
   }
 }
 

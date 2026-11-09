@@ -63,18 +63,26 @@ router.get('/', async (req, res) => {
   try {
     const db = getDb();
 
-    // 1. Portfolio Equities (from actual transactions)
+    // 1. Portfolio Equities (from actual transactions in any portfolio)
+    // Uses TRIM and UPPER so casing or trailing spaces never cause a mismatch.
+    // LEFT JOIN assets ensuring assets are included even if missing from assets catalog or type is unclassified.
     const portfolioEquities = db.prepare(`
-      SELECT DISTINCT
-        t.assetTicker as ticker,
-        COALESCE(a.name, t.assetTicker) as name,
-        COALESCE(a.type, 'EQUITY') as type,
-        COALESCE(a.currentPrice, 0.0) as currentPrice,
-        COALESCE(a.currency, 'EUR') as currency,
-        a.previousClose
+      SELECT
+        TRIM(UPPER(t.assetTicker)) as ticker,
+        COALESCE(MAX(a.name), TRIM(UPPER(t.assetTicker))) as name,
+        COALESCE(MAX(a.type), 'EQUITY') as type,
+        COALESCE(MAX(a.currentPrice), 0.0) as currentPrice,
+        COALESCE(MAX(a.currency), 'USD') as currency,
+        MAX(a.previousClose) as previousClose
       FROM transactions t
-      JOIN assets a ON t.assetTicker = a.ticker
-      WHERE UPPER(a.type) IN ('EQUITY', 'STOCK')
+      LEFT JOIN assets a ON TRIM(UPPER(t.assetTicker)) = TRIM(UPPER(a.ticker))
+      WHERE t.assetTicker IS NOT NULL
+        AND TRIM(t.assetTicker) != ''
+        AND TRIM(UPPER(t.assetTicker)) NOT IN ('CASH', 'EUR', 'USD', 'DEPOSIT', 'WITHDRAWAL')
+        AND (a.type IS NULL OR TRIM(a.type) = '' OR UPPER(TRIM(a.type)) IN ('EQUITY', 'STOCK'))
+      GROUP BY TRIM(UPPER(t.assetTicker))
+      HAVING SUM(CASE WHEN t.type = 'BUY' THEN t.quantity WHEN t.type = 'SELL' THEN -t.quantity ELSE 0 END) > 1e-6
+         OR COUNT(CASE WHEN t.type IN ('BUY', 'SELL') THEN 1 END) > 0
     `).all();
 
     // 2. Watchlist / Monitored Items
@@ -82,7 +90,7 @@ router.get('/', async (req, res) => {
     try {
       watchlistRows = db.prepare(`
         SELECT
-          w.ticker,
+          TRIM(UPPER(w.ticker)) as ticker,
           w.name as watchlistName,
           w.stopLoss,
           w.takeProfit,
@@ -94,7 +102,7 @@ router.get('/', async (req, res) => {
           COALESCE(a.currency, 'EUR') as currency,
           a.previousClose
         FROM analysis_watchlist w
-        LEFT JOIN assets a ON w.ticker = a.ticker
+        LEFT JOIN assets a ON TRIM(UPPER(w.ticker)) = TRIM(UPPER(a.ticker))
       `).all();
     } catch (err) {
       console.warn('[Analysis] Watchlist query fallback:', err.message);

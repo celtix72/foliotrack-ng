@@ -255,27 +255,27 @@
   function renderEyeIcon(isMonitored, ticker) {
     const active = Boolean(isMonitored);
     const title = active
-      ? `Monitoraggio notifiche attivo per ${ticker} (fai clic per disabilitare)`
-      : `Monitoraggio notifiche disabilitato per ${ticker} (fai clic per abilitare)`;
+      ? `Monitoraggio notifiche ATTIVO per ${ticker} (fai clic per disabilitare)`
+      : `Monitoraggio notifiche DISABILITATO per ${ticker} (fai clic per abilitare)`;
     const btnClass = active
-      ? 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 bg-emerald-50/70 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-500/20 shadow-2xs'
-      : 'text-gray-400 dark:text-gray-500 hover:text-rose-500 bg-gray-100/80 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10';
+      ? 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 bg-emerald-50/90 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-500/30 shadow-2xs'
+      : 'text-rose-500 dark:text-rose-400 hover:text-rose-600 bg-rose-50/80 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-500/30 shadow-2xs';
 
     const eyeOpenSvg = `
-      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
       </svg>
     `;
 
     const eyeOffSvg = `
-      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
       </svg>
     `;
 
     return `
-      <button type="button" data-action="toggle-monitor" data-ticker="${ticker}" title="${title}" aria-label="${title}" onclick="event.stopPropagation()" class="p-1 rounded-md transition ${btnClass} flex-shrink-0">
+      <button type="button" data-action="toggle-monitor" data-ticker="${ticker}" title="${title}" aria-label="${title}" onclick="event.stopPropagation()" class="p-1 rounded-md transition cursor-pointer inline-flex items-center justify-center ${btnClass} flex-shrink-0">
         ${active ? eyeOpenSvg : eyeOffSvg}
       </button>
     `;
@@ -412,7 +412,7 @@
     if (items.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="12" class="px-6 py-10 text-center text-gray-400 font-mono text-xs">
+          <td colspan="13" class="px-6 py-10 text-center text-gray-400 font-mono text-xs">
             Nessun titolo azionario trovato per i filtri selezionati.
           </td>
         </tr>
@@ -460,11 +460,13 @@
         <tr data-ticker="${a.ticker}" class="hover:bg-gray-50/80 dark:hover:bg-white/5 transition group cursor-pointer ${!a.isMonitored ? 'opacity-80' : ''}">
           <td class="px-2.5 py-1.5 whitespace-nowrap">
             <div class="flex items-center space-x-2">
-              ${renderEyeIcon(a.isMonitored, a.ticker)}
               <span class="font-bold text-xs text-gray-900 dark:text-white font-mono group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">${a.ticker}</span>
               <span class="text-gray-400 text-[11px] truncate max-w-[150px] font-sans" title="${a.name}">${a.name}</span>
               ${!a.isMonitored ? '<span class="text-[8px] font-mono px-1 py-0.2 rounded bg-gray-100 dark:bg-white/10 text-gray-400 font-bold uppercase" title="Notifiche disabilitate per questo asset">OFF</span>' : ''}
             </div>
+          </td>
+          <td class="px-2 py-1.5 whitespace-nowrap text-center" onclick="event.stopPropagation()">
+            ${renderEyeIcon(a.isMonitored, a.ticker)}
           </td>
           <td class="px-2.5 py-1.5 whitespace-nowrap">${originBadge}</td>
           <td class="px-2.5 py-1.5 whitespace-nowrap text-right font-bold text-xs text-gray-900 dark:text-white font-mono">${fmtPrice(a.currentPrice, cur)}</td>

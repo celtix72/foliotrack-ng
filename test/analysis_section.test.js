@@ -405,4 +405,44 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     assert.ok(content.includes('/api/analysis/'), 'Must call analysis API');
     assert.ok(content.includes('/monitoring'), 'Must call /monitoring endpoint');
   });
+
+  test('Stock (e.g. MU) with preexisting watchlist entry and purchased in portfolio is classified as inPortfolio = true (PORTAFOGLIO)', async () => {
+    const db = getDb();
+
+    // 1. Initially insert MU in watchlist
+    db.prepare(`
+      INSERT OR REPLACE INTO analysis_watchlist (ticker, name, isMonitored, updatedAt)
+      VALUES ('MU', 'Micron Technology Inc.', 1, datetime('now'))
+    `).run();
+
+    // Verify initially it is not in portfolio
+    let res = await fetch(`${baseUrl}/api/analysis`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    let data = await res.json();
+    let mu = data.assets.find(x => x.ticker === 'MU');
+    assert.ok(mu, 'MU must exist in analysis list');
+    assert.equal(mu.inPortfolio, false, 'Before purchase, MU should be in watchlist only');
+
+    // 2. Insert asset with NULL type (simulating quote fetch without explicit type) and BUY transaction
+    db.prepare(`
+      INSERT OR REPLACE INTO assets (ticker, name, type, currentPrice, currency)
+      VALUES ('MU', 'Micron Technology Inc.', NULL, 110.0, 'USD')
+    `).run();
+
+    db.prepare(`
+      INSERT INTO transactions (portfolioId, date, type, assetTicker, quantity, price, amount)
+      VALUES (?, '2024-04-01', 'BUY', 'MU', 15, 105.0, 1575.0)
+    `).run(portfolioId);
+
+    // 3. Query /api/analysis again
+    res = await fetch(`${baseUrl}/api/analysis`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    data = await res.json();
+    mu = data.assets.find(x => x.ticker === 'MU');
+    assert.ok(mu, 'MU must exist in analysis list');
+    assert.equal(mu.inPortfolio, true, 'After purchase, MU must have inPortfolio = true');
+    assert.equal(mu.ticker, 'MU');
+  });
 });
