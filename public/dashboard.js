@@ -2073,24 +2073,32 @@
       `;
     },
 
-    // 13a. Top Gainers & Losers Giornalieri (TOP WINNER / LOSER 1D - Photo 3)
+    // 13a. Top Gainers & Losers Giornalieri (TOP WINNER / LOSER 1D)
     moversDay: (data) => {
       const allHoldings = data.activeHoldings || [];
       const dayHoldings = allHoldings.filter(h => isHoldingQuotedToday(h));
 
       if (dayHoldings.length === 0) {
         return `
-          <div class="h-full flex flex-col justify-between">
-            <div class="flex items-center justify-between pb-2.5 border-b border-gray-100 dark:border-white/5">
-              <span class="text-xs sm:text-sm font-bold font-mono tracking-wider text-gray-700 dark:text-gray-200 uppercase">
-                TOP WINNER / LOSER (1D)
-              </span>
-              <span class="text-[10px] font-mono text-gray-400">Sessione Odierna</span>
+          <div class="h-full flex flex-col -m-2 sm:-m-3 overflow-hidden select-none">
+            <!-- Top Control Header: Matches Matrice Rendimenti -->
+            <div class="px-2 sm:px-2.5 pt-1 pb-1 border-b border-gray-100 dark:border-white/5 shrink-0 bg-white/40 dark:bg-black/20 flex items-center justify-between">
+              <div class="flex items-center space-x-1.5 min-w-0">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">TOP WINNER / LOSER (1D)</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">1D</span>
+              </div>
+              <span class="text-[9px] font-mono text-gray-400">Sessione Odierna</span>
             </div>
+            <!-- Center Empty State -->
             <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
-              <svg class="w-8 h-8 text-gray-400/50 mb-2 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">Nessun titolo con scambi nella seduta odierna</span>
-              <span class="text-[10px] text-gray-400 mt-1 block">I titoli con quotazioni della seduta precedente o a mercati ancora chiusi sono esclusi.</span>
+              <svg class="w-7 h-7 text-gray-400/50 mb-1.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span class="text-[11px] text-gray-500 dark:text-gray-400 font-mono font-semibold">Nessun titolo con scambi nella seduta odierna</span>
+              <span class="text-[9px] text-gray-400 mt-0.5 block">I titoli con quotazioni della seduta precedente o a mercati ancora chiusi sono esclusi.</span>
+            </div>
+            <!-- Compact Footer -->
+            <div class="px-2 py-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-gray-400 shrink-0 bg-white/30 dark:bg-black/10">
+              <span>Variazioni seduta odierna (1D)</span>
+              <span>Aggiornamento live</span>
             </div>
           </div>
         `;
@@ -2143,95 +2151,114 @@
       const isValMode = (typeof activeMoversMode !== 'undefined' ? activeMoversMode : 'pct') === 'val';
 
       return `
-        <div class="h-full flex flex-col justify-between select-none">
-          <!-- Top Header with Segmented Toggle (Photo 3) -->
-          <div class="flex items-center justify-between pb-2.5 border-b border-gray-100 dark:border-white/5">
-            <span class="text-xs sm:text-sm font-bold font-mono tracking-wider text-gray-700 dark:text-gray-200 uppercase">
-              TOP WINNER / LOSER (1D)
-            </span>
-            <div class="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 text-xs font-mono">
-              <button type="button" data-movers-mode="pct"
-                class="px-2.5 py-0.5 rounded-md text-xs font-mono transition ${!isValMode ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}">
-                %
-              </button>
-              <button type="button" data-movers-mode="val"
-                class="px-2.5 py-0.5 rounded-md text-xs font-mono transition ${isValMode ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}">
-                Valore
-              </button>
+        <div class="h-full flex flex-col -m-2 sm:-m-3 overflow-hidden select-none">
+          <!-- Top Control Header: Matches Matrice Rendimenti -->
+          <div class="px-2 sm:px-2.5 pt-1 pb-1 border-b border-gray-100 dark:border-white/5 shrink-0 bg-white/40 dark:bg-black/20">
+            <div class="flex items-center justify-between gap-1">
+              <div class="flex items-center space-x-1.5 min-w-0">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">TOP WINNER / LOSER (1D)</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">1D</span>
+              </div>
+              <div class="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/10 border border-gray-200/60 dark:border-white/10 text-[9px] sm:text-[10px] font-mono shrink-0">
+                <button type="button" data-movers-mode="pct"
+                  class="px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-mono transition cursor-pointer ${!isValMode ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}">
+                  %
+                </button>
+                <button type="button" data-movers-mode="val"
+                  class="px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-mono transition cursor-pointer ${isValMode ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}">
+                  Valore
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- Two Columns (Photo 3) -->
-          <div class="grid grid-cols-2 gap-3 sm:gap-4 flex-1 pt-2.5 overflow-hidden">
+          <!-- Sticky Subheader Bar (MIGLIORI & PEGGIORI) -->
+          <div class="px-2 py-0.5 bg-gray-50/95 dark:bg-[#18181b]/95 backdrop-blur border-b border-gray-200/60 dark:border-white/10 text-[9px] sm:text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wider shrink-0 leading-none grid grid-cols-2 divide-x divide-gray-200/60 dark:divide-white/10">
+            <div class="flex items-center pl-0.5 space-x-1 min-w-0 pr-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0"></span>
+              <span class="truncate">MIGLIORI (1D)</span>
+            </div>
+            <div class="flex items-center pl-2 space-x-1 min-w-0">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block shrink-0"></span>
+              <span class="truncate">PEGGIORI (1D)</span>
+            </div>
+          </div>
+
+          <!-- Two Columns Body Content -->
+          <div role="region" tabindex="0" aria-label="Top Winner e Loser della seduta odierna" class="flex-1 overflow-y-auto no-scrollbar grid grid-cols-2 divide-x divide-gray-100/80 dark:divide-white/5">
             <!-- Gainers (MIGLIORI) -->
-            <div class="space-y-1.5 min-w-0">
-              <div class="flex items-center text-[11px] font-bold font-mono text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1.5 shrink-0"></span>
-                <span>MIGLIORI (1D)</span>
-              </div>
-              <div class="space-y-1">
-                ${gainers.map(g => {
-                  const dayVal = (g.dayPnlEur !== undefined && !isNaN(g.dayPnlEur))
-                    ? Number(g.dayPnlEur)
-                    : ((Number(g.changeValue) || 0) * (Number(g.quantity) || 0));
+            <div class="divide-y divide-gray-100/50 dark:divide-white/5 min-w-0">
+              ${gainers.map(g => {
+                const dayVal = (g.dayPnlEur !== undefined && g.dayPnlEur !== null && !isNaN(g.dayPnlEur))
+                  ? Number(g.dayPnlEur)
+                  : ((Number(g.changeValue) || 0) * (Number(g.quantity) || 0));
 
-                  const displayTicker = g.ticker.length > 7 ? g.ticker.slice(0, 4) + '...' : g.ticker;
-                  const valStr = formatEurSignedDec(dayVal, 2);
-                  const pctStr = formatPct(g.changePercent);
+                const displayTicker = g.ticker.length > 8 ? g.ticker.slice(0, 6) + '..' : g.ticker;
+                const valStr = formatEurSignedDec(dayVal, 2);
+                const pctStr = formatPct(g.changePercent);
 
-                  const contentStr = isValMode
-                    ? `${valStr} (${pctStr})`
-                    : `${pctStr} (${valStr})`;
+                const contentStr = isValMode
+                  ? `${valStr} (${pctStr})`
+                  : `${pctStr} (${valStr})`;
 
-                  return `
-                    <div class="flex items-center justify-between py-1 px-1 rounded hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer"
-                         data-open-asset="${g.ticker}">
-                      <span class="font-extrabold font-mono text-xs sm:text-sm text-gray-900 dark:text-white truncate pr-1" title="${g.ticker}">
+                return `
+                  <div class="px-2 py-[2.5px] border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/70 dark:hover:bg-white/5 transition select-none leading-tight flex items-center justify-between cursor-pointer"
+                       data-open-asset="${g.ticker}">
+                    <div class="flex items-center min-w-0 pr-1 space-x-1">
+                      <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-black font-mono text-[9px] sm:text-[10px] tracking-tight leading-none bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10 shrink-0" title="${g.ticker}">
                         ${displayTicker}
                       </span>
-                      <span class="text-emerald-600 dark:text-emerald-400 font-extrabold font-mono text-xs sm:text-sm whitespace-nowrap text-right tabular-nums">
-                        ${contentStr}
+                      <span class="text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-400 truncate hidden sm:inline" title="${g.name || g.ticker}">
+                        ${g.name || ''}
                       </span>
                     </div>
-                  `;
-                }).join('') || '<div class="text-xs text-gray-400 font-mono py-2">Nessun rialzo</div>'}
-              </div>
+                    <div class="text-right flex items-center justify-end font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none shrink-0 text-[#16A34A] dark:text-[#4ADE80]">
+                      ${contentStr}
+                    </div>
+                  </div>
+                `;
+              }).join('') || '<div class="p-3 text-center text-[10px] text-gray-400 font-mono">Nessun rialzo</div>'}
             </div>
 
             <!-- Losers (PEGGIORI) -->
-            <div class="space-y-1.5 min-w-0">
-              <div class="flex items-center text-[11px] font-bold font-mono text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
-                <span class="w-2 h-2 rounded-full bg-rose-500 inline-block mr-1.5 shrink-0"></span>
-                <span>PEGGIORI (1D)</span>
-              </div>
-              <div class="space-y-1">
-                ${losers.map(l => {
-                  const dayVal = (l.dayPnlEur !== undefined && !isNaN(l.dayPnlEur))
-                    ? Number(l.dayPnlEur)
-                    : ((Number(l.changeValue) || 0) * (Number(l.quantity) || 0));
+            <div class="divide-y divide-gray-100/50 dark:divide-white/5 min-w-0">
+              ${losers.map(l => {
+                const dayVal = (l.dayPnlEur !== undefined && l.dayPnlEur !== null && !isNaN(l.dayPnlEur))
+                  ? Number(l.dayPnlEur)
+                  : ((Number(l.changeValue) || 0) * (Number(l.quantity) || 0));
 
-                  const displayTicker = l.ticker.length > 7 ? l.ticker.slice(0, 4) + '...' : l.ticker;
-                  const valStr = formatEurSignedDec(dayVal, 2);
-                  const pctStr = formatPct(l.changePercent);
+                const displayTicker = l.ticker.length > 8 ? l.ticker.slice(0, 6) + '..' : l.ticker;
+                const valStr = formatEurSignedDec(dayVal, 2);
+                const pctStr = formatPct(l.changePercent);
 
-                  const contentStr = isValMode
-                    ? `${valStr} (${pctStr})`
-                    : `${pctStr} (${valStr})`;
+                const contentStr = isValMode
+                  ? `${valStr} (${pctStr})`
+                  : `${pctStr} (${valStr})`;
 
-                  return `
-                    <div class="flex items-center justify-between py-1 px-1 rounded hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer"
-                         data-open-asset="${l.ticker}">
-                      <span class="font-extrabold font-mono text-xs sm:text-sm text-gray-900 dark:text-white truncate pr-1" title="${l.ticker}">
+                return `
+                  <div class="px-2 py-[2.5px] border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/70 dark:hover:bg-white/5 transition select-none leading-tight flex items-center justify-between cursor-pointer"
+                       data-open-asset="${l.ticker}">
+                    <div class="flex items-center min-w-0 pr-1 space-x-1">
+                      <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-black font-mono text-[9px] sm:text-[10px] tracking-tight leading-none bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10 shrink-0" title="${l.ticker}">
                         ${displayTicker}
                       </span>
-                      <span class="text-rose-600 dark:text-rose-400 font-extrabold font-mono text-xs sm:text-sm whitespace-nowrap text-right tabular-nums">
-                        ${contentStr}
+                      <span class="text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-400 truncate hidden sm:inline" title="${l.name || l.ticker}">
+                        ${l.name || ''}
                       </span>
                     </div>
-                  `;
-                }).join('') || '<div class="text-xs text-gray-400 font-mono py-2">Nessun ribasso</div>'}
-              </div>
+                    <div class="text-right flex items-center justify-end font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none shrink-0 text-[#E11D48] dark:text-[#FB7185]">
+                      ${contentStr}
+                    </div>
+                  </div>
+                `;
+              }).join('') || '<div class="p-3 text-center text-[10px] text-gray-400 font-mono">Nessun ribasso</div>'}
             </div>
+          </div>
+
+          <!-- Compact Footer: Matches Matrice Rendimenti -->
+          <div class="px-2 py-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-gray-400 shrink-0 bg-white/30 dark:bg-black/10">
+            <span>Variazioni seduta odierna (1D)</span>
+            <span>Top 5 rialzi e ribassi</span>
           </div>
         </div>
       `;
