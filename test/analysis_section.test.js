@@ -301,4 +301,108 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     const nvda = listData.assets.find(x => x.ticker === 'NVDA');
     assert.equal(nvda, undefined, 'NVDA should be removed from analysis list');
   });
+
+  test('PUT /api/analysis/:ticker/monitoring toggles notification monitoring state and persists in SQLite', async () => {
+    // 1. AAPL is in portfolio and initially isMonitored is true
+    const initListRes = await fetch(`${baseUrl}/api/analysis`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const initData = await initListRes.json();
+    const aaplInit = initData.assets.find(x => x.ticker === 'AAPL');
+    assert.ok(aaplInit);
+    assert.equal(aaplInit.isMonitored, true);
+
+    // 2. Disable monitoring for AAPL via PUT
+    const putRes1 = await fetch(`${baseUrl}/api/analysis/AAPL/monitoring`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ isMonitored: false })
+    });
+    assert.equal(putRes1.status, 200);
+    const putData1 = await putRes1.json();
+    assert.equal(putData1.success, true);
+    assert.equal(putData1.ticker, 'AAPL');
+    assert.equal(putData1.isMonitored, false);
+
+    // Verify persisted in SQLite
+    const db = getDb();
+    const row1 = db.prepare('SELECT isMonitored FROM analysis_watchlist WHERE ticker = ?').get('AAPL');
+    assert.ok(row1);
+    assert.equal(row1.isMonitored, 0);
+
+    // Verify reflected in GET /api/analysis
+    const listResAfter = await fetch(`${baseUrl}/api/analysis`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const dataAfter = await listResAfter.json();
+    const aaplAfter = dataAfter.assets.find(x => x.ticker === 'AAPL');
+    assert.ok(aaplAfter);
+    assert.equal(aaplAfter.isMonitored, false);
+
+    // 3. Re-enable monitoring via toggle (omitted body)
+    const putRes2 = await fetch(`${baseUrl}/api/analysis/AAPL/monitoring`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      }
+    });
+    assert.equal(putRes2.status, 200);
+    const putData2 = await putRes2.json();
+    assert.equal(putData2.success, true);
+    assert.equal(putData2.isMonitored, true);
+
+    const row2 = db.prepare('SELECT isMonitored FROM analysis_watchlist WHERE ticker = ?').get('AAPL');
+    assert.equal(row2.isMonitored, 1);
+  });
+
+  test('Asset notification suppression: disabled asset sends no push notifications or price alerts', async () => {
+    const { checkAssetChangeNotifications } = require('../src/services/notificationService');
+    const { checkAndSendAssetAlerts } = require('../src/services/telegramService');
+    const db = getDb();
+
+    // Set AAPL changePercent to +8.5% (above default 5% threshold) and set Stop Loss to 190.0 (above current 180.0)
+    db.prepare("UPDATE assets SET changePercent = 8.5, currentPrice = 180.0 WHERE ticker = 'AAPL'").run();
+    db.prepare(`
+      INSERT INTO analysis_watchlist (ticker, name, stopLoss, isMonitored, updatedAt)
+      VALUES ('AAPL', 'Apple Inc.', 190.0, 1, datetime('now'))
+      ON CONFLICT(ticker) DO UPDATE SET stopLoss = 190.0, isMonitored = 1
+    `).run();
+
+    // With isMonitored = 1: checkAssetChangeNotifications finds AAPL
+    const notifResultActive = await checkAssetChangeNotifications(1);
+    const aaplFoundActive = notifResultActive.triggered.find(x => x.ticker === 'AAPL');
+    assert.ok(aaplFoundActive, 'When monitored, AAPL must trigger asset change notification');
+
+    const alertResultActive = await checkAndSendAssetAlerts(1, { notify: false });
+    const aaplAlertActive = alertResultActive.triggered.find(x => x.ticker === 'AAPL');
+    assert.ok(aaplAlertActive, 'When monitored, AAPL must trigger price / SL alert');
+
+    // Now disable monitoring for AAPL (isMonitored = 0)
+    db.prepare("UPDATE analysis_watchlist SET isMonitored = 0 WHERE ticker = 'AAPL'").run();
+
+    // Verify checkAssetChangeNotifications does NOT trigger for AAPL
+    const notifResultDisabled = await checkAssetChangeNotifications(1);
+    const aaplFoundDisabled = notifResultDisabled.triggered.find(x => x.ticker === 'AAPL');
+    assert.equal(aaplFoundDisabled, undefined, 'When disabled, AAPL must NOT trigger asset change notification');
+
+    // Verify checkAndSendAssetAlerts does NOT trigger for AAPL
+    const alertResultDisabled = await checkAndSendAssetAlerts(1, { notify: false });
+    const aaplAlertDisabled = alertResultDisabled.triggered.find(x => x.ticker === 'AAPL');
+    assert.equal(aaplAlertDisabled, undefined, 'When disabled, AAPL must NOT trigger price / SL alert');
+  });
+
+  test('Frontend analysis.js contains eye icon rendering and toggle action', () => {
+    const jsPath = path.join(__dirname, '../public/analysis.js');
+    const content = fs.readFileSync(jsPath, 'utf8');
+
+    assert.ok(content.includes('function renderEyeIcon'), 'Must define renderEyeIcon helper');
+    assert.ok(content.includes('function toggleAssetMonitoring'), 'Must define toggleAssetMonitoring');
+    assert.ok(content.includes('data-action="toggle-monitor"'), 'Must bind toggle-monitor action');
+    assert.ok(content.includes('/api/analysis/'), 'Must call analysis API');
+    assert.ok(content.includes('/monitoring'), 'Must call /monitoring endpoint');
+  });
 });

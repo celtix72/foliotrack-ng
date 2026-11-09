@@ -297,7 +297,14 @@ function getUserTopAndBottomMovers(userId, isTest = false) {
     } catch {}
   }
 
-  const holdingsList = Array.from(holdingsByTicker.values());
+  // Exclude unmonitored assets (isMonitored = 0)
+  let unmonitoredSet = new Set();
+  try {
+    const unmonitoredRows = db.prepare('SELECT ticker FROM analysis_watchlist WHERE isMonitored = 0').all();
+    unmonitoredSet = new Set(unmonitoredRows.map(r => r.ticker.toUpperCase().trim()));
+  } catch {}
+
+  const holdingsList = Array.from(holdingsByTicker.values()).filter(h => !unmonitoredSet.has(h.ticker));
   const activeMovers = holdingsList.filter(h => h.changePercent !== 0 || h.valueCreatedEur !== 0);
 
   if (activeMovers.length >= 2 && !isTest) {
@@ -453,6 +460,7 @@ async function checkAssetChangeNotifications(userId, now = new Date()) {
   }
 
   // Find assets in the user's portfolios whose abs(changePercent) >= threshold
+  // Only include assets whose monitoring is not disabled (isMonitored IS NULL OR isMonitored = 1)
   const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
   let rows;
   if (user && user.role === 'admin') {
@@ -461,10 +469,12 @@ async function checkAssetChangeNotifications(userId, now = new Date()) {
       FROM assets a
       JOIN transactions t ON t.assetTicker = a.ticker
       JOIN portfolios p ON p.id = t.portfolioId
+      LEFT JOIN analysis_watchlist w ON w.ticker = a.ticker
       WHERE a.currentPrice > 0
         AND a.changePercent IS NOT NULL
         AND abs(a.changePercent) >= ?
         AND (a.dataSource IS NULL OR a.dataSource != 'DELISTED')
+        AND (w.isMonitored IS NULL OR w.isMonitored = 1)
     `).all(threshold);
   } else {
     rows = db.prepare(`
@@ -473,11 +483,13 @@ async function checkAssetChangeNotifications(userId, now = new Date()) {
       JOIN transactions t ON t.assetTicker = a.ticker
       JOIN portfolios p ON p.id = t.portfolioId
       INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
+      LEFT JOIN analysis_watchlist w ON w.ticker = a.ticker
       WHERE pu.user_id = ?
         AND a.currentPrice > 0
         AND a.changePercent IS NOT NULL
         AND abs(a.changePercent) >= ?
         AND (a.dataSource IS NULL OR a.dataSource != 'DELISTED')
+        AND (w.isMonitored IS NULL OR w.isMonitored = 1)
     `).all(userId, threshold);
   }
 

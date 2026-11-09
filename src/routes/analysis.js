@@ -132,7 +132,7 @@ router.get('/', async (req, res) => {
         currency: eq.currency || 'EUR',
         previousClose: Number(eq.previousClose) || Number(eq.currentPrice) || 0.0,
         inPortfolio: true,
-        isMonitored: Boolean(w && w.isMonitored),
+        isMonitored: w ? Boolean(w.isMonitored) : true,
         stopLoss: w && w.stopLoss !== null ? Number(w.stopLoss) : null,
         takeProfit: w && w.takeProfit !== null ? Number(w.takeProfit) : null,
         notes: w ? w.notes : null,
@@ -144,7 +144,7 @@ router.get('/', async (req, res) => {
     // Add standalone monitored assets (not in portfolio)
     for (const w of watchlistRows) {
       const sym = w.ticker.toUpperCase();
-      if (!itemsMap.has(sym) && w.isMonitored) {
+      if (!itemsMap.has(sym)) {
         const fund = fundamentalsCacheMap.get(sym);
         itemsMap.set(sym, {
           ticker: sym,
@@ -154,7 +154,7 @@ router.get('/', async (req, res) => {
           currency: w.currency || 'EUR',
           previousClose: Number(w.previousClose) || Number(w.currentPrice) || 0.0,
           inPortfolio: false,
-          isMonitored: true,
+          isMonitored: Boolean(w.isMonitored),
           stopLoss: w.stopLoss !== null ? Number(w.stopLoss) : null,
           takeProfit: w.takeProfit !== null ? Number(w.takeProfit) : null,
           notes: w.notes || null,
@@ -415,6 +415,56 @@ router.put('/:ticker/targets', async (req, res) => {
   } catch (err) {
     console.error('[Analysis Targets PUT Error]', err);
     res.status(500).json({ success: false, error: 'Errore aggiornamento target SL/TP: ' + err.message });
+  }
+});
+
+/**
+ * PUT /api/analysis/:ticker/monitoring
+ * Enables or disables notification monitoring for an asset.
+ * When disabled (isMonitored = 0), no notifications or alerts will be sent for this asset.
+ */
+router.put('/:ticker/monitoring', async (req, res) => {
+  const ticker = (req.params.ticker || '').trim().toUpperCase();
+  if (!ticker) {
+    return res.status(400).json({ success: false, error: 'Ticker obbligatorio' });
+  }
+
+  try {
+    const db = getDb();
+    const existing = db.prepare('SELECT isMonitored, name FROM analysis_watchlist WHERE ticker = ?').get(ticker);
+
+    let newMonitored = 1;
+    if (req.body && req.body.isMonitored !== undefined) {
+      newMonitored = req.body.isMonitored ? 1 : 0;
+    } else if (existing) {
+      newMonitored = existing.isMonitored ? 0 : 1;
+    } else {
+      // By default portfolio assets are monitored (1), so first toggle turns it to 0
+      newMonitored = 0;
+    }
+
+    const asset = db.prepare('SELECT name FROM assets WHERE ticker = ?').get(ticker);
+    const assetName = existing?.name || asset?.name || ticker;
+
+    db.prepare(`
+      INSERT INTO analysis_watchlist (ticker, name, isMonitored, updatedAt)
+      VALUES (?, ?, ?, datetime('now'))
+      ON CONFLICT(ticker) DO UPDATE SET
+        isMonitored = excluded.isMonitored,
+        updatedAt = datetime('now')
+    `).run(ticker, assetName, newMonitored);
+
+    return res.json({
+      success: true,
+      ticker,
+      isMonitored: Boolean(newMonitored),
+      message: newMonitored
+        ? `Monitoraggio notifiche abilitato per ${ticker}`
+        : `Monitoraggio notifiche disabilitato per ${ticker}`
+    });
+  } catch (err) {
+    console.error('[Analysis Monitoring PUT Error]', err);
+    return res.status(500).json({ success: false, error: 'Errore aggiornamento monitoraggio notifiche: ' + err.message });
   }
 });
 

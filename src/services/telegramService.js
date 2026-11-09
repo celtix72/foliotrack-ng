@@ -186,12 +186,20 @@ async function sendDailyDigest(userId, options = {}) {
   const totalUnrealizedPnl = totalNav - totalInvested;
   const totalUnrealizedPnlPercent = totalInvested > 0 ? (totalUnrealizedPnl / totalInvested) * 100 : 0;
 
-  // Find top gainer and worst performer among holdings
+  // Find top gainer and worst performer among holdings (excluding unmonitored assets)
   let topGainer = null;
   let worstLoser = null;
 
-  if (allHoldings.length > 0) {
-    const sorted = [...allHoldings].sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0));
+  let unmonitoredSet = new Set();
+  try {
+    const unmonitoredRows = db.prepare('SELECT ticker FROM analysis_watchlist WHERE isMonitored = 0').all();
+    unmonitoredSet = new Set(unmonitoredRows.map(r => r.ticker.toUpperCase().trim()));
+  } catch {}
+
+  const eligibleHoldings = allHoldings.filter(h => !unmonitoredSet.has((h.ticker || '').toUpperCase().trim()));
+
+  if (eligibleHoldings.length > 0) {
+    const sorted = [...eligibleHoldings].sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0));
     topGainer = sorted[0];
     worstLoser = sorted[sorted.length - 1];
     if (topGainer && topGainer.changePercent <= 0) {
@@ -231,17 +239,43 @@ async function sendDailyDigest(userId, options = {}) {
  */
 async function checkAndSendAssetAlerts(userId = null, options = {}) {
   const db = getDb();
+  const user = userId ? db.prepare('SELECT role FROM users WHERE id = ?').get(userId) : null;
+  const isAdmin = user && user.role === 'admin';
 
-  let query = `
-    SELECT DISTINCT a.ticker, a.name, a.currentPrice, a.targetPrice, a.stopLoss, a.currency
-    FROM assets a
-    JOIN transactions t ON t.assetTicker = a.ticker
-    JOIN portfolio_users pu ON pu.portfolio_id = t.portfolioId
-  `;
+  let query = '';
   const params = [];
-  if (userId) {
-    query += ` WHERE pu.user_id = ?`;
+
+  if (userId && !isAdmin) {
+    query = `
+      SELECT DISTINCT
+        a.ticker,
+        a.name,
+        a.currentPrice,
+        COALESCE(w.takeProfit, a.targetPrice) as targetPrice,
+        COALESCE(w.stopLoss, a.stopLoss) as stopLoss,
+        a.currency
+      FROM assets a
+      JOIN transactions t ON t.assetTicker = a.ticker
+      JOIN portfolio_users pu ON pu.portfolio_id = t.portfolioId
+      LEFT JOIN analysis_watchlist w ON w.ticker = a.ticker
+      WHERE pu.user_id = ?
+        AND (w.isMonitored IS NULL OR w.isMonitored = 1)
+    `;
     params.push(userId);
+  } else {
+    query = `
+      SELECT DISTINCT
+        a.ticker,
+        a.name,
+        a.currentPrice,
+        COALESCE(w.takeProfit, a.targetPrice) as targetPrice,
+        COALESCE(w.stopLoss, a.stopLoss) as stopLoss,
+        a.currency
+      FROM assets a
+      JOIN transactions t ON t.assetTicker = a.ticker
+      LEFT JOIN analysis_watchlist w ON w.ticker = a.ticker
+      WHERE (w.isMonitored IS NULL OR w.isMonitored = 1)
+    `;
   }
 
   const assets = db.prepare(query).all(...params);
