@@ -863,10 +863,12 @@
       todayRomeStr = new Date().toISOString().split('T')[0];
     }
     const holdingDate = holding.quoteDate ? String(holding.quoteDate).substring(0, 10) : null;
-    const isPriorDay = Boolean(holdingDate && holdingDate < todayRomeStr);
+    const isPriorDay = Boolean(holdingDate && holdingDate < todayRomeStr && !holding.hasTradesToday && !(holding.qtyBoughtToday > 0));
 
     const rawDayChgPct = Number(holding.changePercent !== undefined ? holding.changePercent : (holding.change24h || 0)) || 0;
-    const rawDayPnlVal = holding.dayPnlNative !== undefined ? holding.dayPnlNative : ((Number(holding.changeValue) || 0) * qty);
+    const rawDayPnlVal = (holding.dayPnlNative !== undefined && holding.dayPnlNative !== null && !isNaN(holding.dayPnlNative))
+      ? Number(holding.dayPnlNative)
+      : ((Number(holding.changeValue) || 0) * qty);
 
     const dayChgPct = isPriorDay ? 0.0 : rawDayChgPct;
     const dayPnlVal = isPriorDay ? 0.0 : rawDayPnlVal;

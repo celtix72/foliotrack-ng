@@ -198,6 +198,9 @@
    */
   function isHoldingQuotedToday(h) {
     if (!h) return false;
+    if (h.hasTradesToday || (h.qtyBoughtToday !== undefined && h.qtyBoughtToday > 0)) {
+      return true;
+    }
     const now = new Date();
     const todayIso = now.toISOString().split('T')[0];
     const y = now.getFullYear();
@@ -868,8 +871,10 @@
 
         let dayVal = 0;
         if (isToday && !isClosed) {
-          dayVal = Number(isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur) || 0;
-          if (!dayVal && h.changeValue && h.quantity) {
+          const rawDay = isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur;
+          if (rawDay !== undefined && rawDay !== null && !isNaN(rawDay)) {
+            dayVal = Number(rawDay);
+          } else if (h.changeValue && h.quantity) {
             dayVal = Number(h.changeValue) * Number(h.quantity);
           }
         }
@@ -1302,10 +1307,11 @@
               const dayNative = isToday ? (h.dayPnlNative !== undefined ? h.dayPnlNative : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0))) : 0;
               let dayEur = 0;
               if (isToday) {
-                dayEur = h.dayPnlEur !== undefined ? h.dayPnlEur : 0;
-                if (!dayEur && h.changeValue && h.quantity) {
+                if (h.dayPnlEur !== undefined && h.dayPnlEur !== null && !isNaN(h.dayPnlEur)) {
+                  dayEur = Number(h.dayPnlEur);
+                } else if (h.changeValue && h.quantity) {
                   dayEur = Number(h.changeValue) * Number(h.quantity);
-                } else if (!dayEur && dayPct !== 0 && h.marketValue) {
+                } else if (dayPct !== 0 && h.marketValue) {
                   dayEur = h.marketValue - (h.marketValue / (1 + (dayPct / 100)));
                 }
               }
@@ -1556,8 +1562,10 @@
 
               let dayVal = 0;
               if (isToday && !isClosed) {
-                dayVal = Number(isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur) || 0;
-                if (!dayVal && h.changeValue && h.quantity) {
+                const rawDay = isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur;
+                if (rawDay !== undefined && rawDay !== null && !isNaN(rawDay)) {
+                  dayVal = Number(rawDay);
+                } else if (h.changeValue && h.quantity) {
                   dayVal = Number(h.changeValue) * Number(h.quantity);
                 }
               }
@@ -1903,8 +1911,10 @@
 
                       let dayVal = 0;
                       if (isToday && !isClosed) {
-                        dayVal = Number(isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur) || 0;
-                        if (!dayVal && h.changeValue && h.quantity) {
+                        const rawDay = isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur;
+                        if (rawDay !== undefined && rawDay !== null && !isNaN(rawDay)) {
+                          dayVal = Number(rawDay);
+                        } else if (h.changeValue && h.quantity) {
                           dayVal = Number(h.changeValue) * Number(h.quantity);
                         }
                       }
@@ -2089,15 +2099,21 @@
       const gainers = dayHoldings
         .filter(h => {
           const pct = Number(h.changePercent) || 0;
-          const val = Number(h.dayPnlEur) || ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
+          const val = (h.dayPnlEur !== undefined && h.dayPnlEur !== null && !isNaN(h.dayPnlEur))
+            ? Number(h.dayPnlEur)
+            : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
           return pct > 0 || (pct === 0 && val >= 0);
         })
         .sort((a, b) => {
           const aPct = Number(a.changePercent) || 0;
           const bPct = Number(b.changePercent) || 0;
           if (bPct !== aPct) return bPct - aPct;
-          const aVal = Number(a.dayPnlEur) || 0;
-          const bVal = Number(b.dayPnlEur) || 0;
+          const aVal = (a.dayPnlEur !== undefined && a.dayPnlEur !== null && !isNaN(a.dayPnlEur))
+            ? Number(a.dayPnlEur)
+            : ((Number(a.changeValue) || 0) * (Number(a.quantity) || 0));
+          const bVal = (b.dayPnlEur !== undefined && b.dayPnlEur !== null && !isNaN(b.dayPnlEur))
+            ? Number(b.dayPnlEur)
+            : ((Number(b.changeValue) || 0) * (Number(b.quantity) || 0));
           return bVal - aVal;
         })
         .slice(0, 5);
@@ -2105,15 +2121,21 @@
       const losers = dayHoldings
         .filter(h => {
           const pct = Number(h.changePercent) || 0;
-          const val = Number(h.dayPnlEur) || ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
+          const val = (h.dayPnlEur !== undefined && h.dayPnlEur !== null && !isNaN(h.dayPnlEur))
+            ? Number(h.dayPnlEur)
+            : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
           return pct < 0 || (pct === 0 && val < 0);
         })
         .sort((a, b) => {
           const aPct = Number(a.changePercent) || 0;
           const bPct = Number(b.changePercent) || 0;
           if (aPct !== bPct) return aPct - bPct;
-          const aVal = Number(a.dayPnlEur) || 0;
-          const bVal = Number(b.dayPnlEur) || 0;
+          const aVal = (a.dayPnlEur !== undefined && a.dayPnlEur !== null && !isNaN(a.dayPnlEur))
+            ? Number(a.dayPnlEur)
+            : ((Number(a.changeValue) || 0) * (Number(a.quantity) || 0));
+          const bVal = (b.dayPnlEur !== undefined && b.dayPnlEur !== null && !isNaN(b.dayPnlEur))
+            ? Number(b.dayPnlEur)
+            : ((Number(b.changeValue) || 0) * (Number(b.quantity) || 0));
           return aVal - bVal;
         })
         .slice(0, 5);

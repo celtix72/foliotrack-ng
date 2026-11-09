@@ -311,13 +311,16 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
         const totalCostNative = (qty * price + commission);
         const newTotalCostNative = (pos.quantity * pos.pmcNative) + totalCostNative;
 
+        const txDateStr = String(tx.date || '').substring(0, 10);
+        pos.lots.push({
+          date: txDateStr,
+          quantity: qty,
+          priceNative: price,
+          costPerUnitNative: totalCostNative / qty,
+          costPerUnit: totalCostEur / qty
+        });
+
         if (costBasisMethod === 'FIFO') {
-          const unitCost = totalCostEur / qty;
-          pos.lots.push({
-            date: tx.date,
-            quantity: qty,
-            costPerUnit: unitCost
-          });
           pos.quantity += qty;
           pos.totalCost += totalCostEur;
           pos.pmc = pos.quantity > 0 ? pos.totalCost / pos.quantity : 0.0;
@@ -382,6 +385,7 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
         } else {
           // Standard WAC
           costBasisOfSold = qty * pos.pmc;
+          const oldQty = pos.quantity;
           pos.quantity = Math.max(0.0, pos.quantity - qty);
           if (pos.quantity <= 1e-9) {
             pos.quantity = 0.0;
@@ -389,9 +393,17 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
             pos.totalCost = 0.0;
             pos.pmcNative = 0.0;
             pos.totalCostNative = 0.0;
+            pos.lots = [];
           } else {
             pos.totalCost = pos.quantity * pos.pmc;
             pos.totalCostNative = pos.quantity * pos.pmcNative;
+            if (pos.lots && oldQty > 0) {
+              const factor = pos.quantity / oldQty;
+              for (const lot of pos.lots) {
+                lot.quantity *= factor;
+              }
+              pos.lots = pos.lots.filter(l => l.quantity > 1e-9);
+            }
           }
         }
 
@@ -479,10 +491,13 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
           const pos = positions[ticker];
           pos.quantity *= ratio;
           pos.pmc /= ratio;
+          pos.pmcNative /= ratio;
           if (pos.lots) {
             for (const lot of pos.lots) {
               lot.quantity *= ratio;
-              lot.costPerUnit /= ratio;
+              if (lot.costPerUnit) lot.costPerUnit /= ratio;
+              if (lot.costPerUnitNative) lot.costPerUnitNative /= ratio;
+              if (lot.priceNative) lot.priceNative /= ratio;
             }
           }
         }
@@ -547,8 +562,45 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
 
       const changeVal = isPriorDay ? 0.0 : rawChangeVal;
       const changePct = isPriorDay ? 0.0 : rawChangePct;
-      const dayPnlNative = changeVal * pos.quantity;
+      const previousClose = isPriorDay ? currentPriceNative : (Number(asset.previousClose) || (currentPriceNative - changeVal));
+
+      // Separate lots bought today from shares held prior to today
+      const todayLots = (pos.lots || []).filter(l => l.date === todayRomeStr && l.quantity > 1e-9);
+      const qtyBoughtToday = Math.min(pos.quantity, todayLots.reduce((acc, l) => acc + l.quantity, 0.0));
+      const qtyPrior = Math.max(0.0, pos.quantity - qtyBoughtToday);
+
+      // Baseline price for prior shares is previousClose (or currentPriceNative if isPriorDay)
+      const dayGainPriorNative = isPriorDay ? 0.0 : (qtyPrior * (currentPriceNative - previousClose));
+
+      // Baseline price for shares bought today is their actual purchase price (valore di acquisto)
+      let costTodayNative = 0.0;
+      let dayGainTodayNative = 0.0;
+      if (qtyBoughtToday > 0) {
+        costTodayNative = todayLots.reduce((acc, l) => {
+          const buyPrice = Number(l.priceNative) > 0 ? Number(l.priceNative) : (pos.pmcNative || currentPriceNative);
+          return acc + (l.quantity * buyPrice);
+        }, 0.0);
+        dayGainTodayNative = (qtyBoughtToday * currentPriceNative) - costTodayNative;
+      }
+
+      const dayPnlNative = isPriorDay ? 0.0 : (dayGainPriorNative + dayGainTodayNative);
       const dayPnlEur = dayPnlNative * fxRateToPortfolio;
+
+      // Effective holding daily baseline and percentage variation
+      const baselinePriorNative = qtyPrior * previousClose;
+      const totalHoldingBaselineNative = baselinePriorNative + costTodayNative;
+      let holdingDayPct = 0.0;
+      let holdingDayChangeVal = 0.0;
+      if (isPriorDay) {
+        holdingDayPct = 0.0;
+        holdingDayChangeVal = 0.0;
+      } else if (qtyBoughtToday > 0) {
+        holdingDayPct = totalHoldingBaselineNative > 1e-6 ? (dayPnlNative / totalHoldingBaselineNative) * 100.0 : 0.0;
+        holdingDayChangeVal = pos.quantity > 0 ? (dayPnlNative / pos.quantity) : changeVal;
+      } else {
+        holdingDayPct = changePct;
+        holdingDayChangeVal = changeVal;
+      }
 
       // Currency effect (Effetto Cambio in EUR):
       // Difference between total EUR unrealized PnL and local asset PnL converted to EUR at current FX
@@ -563,7 +615,6 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
       const highPrice = isPriorDay ? currentPriceNative : (Number(asset.highPrice) || currentPriceNative);
       const lowPrice = isPriorDay ? currentPriceNative : (Number(asset.lowPrice) || currentPriceNative);
       const closePrice = currentPriceNative;
-      const previousClose = isPriorDay ? currentPriceNative : (Number(asset.previousClose) || (currentPriceNative - changeVal));
 
       totalAssetValue += marketValue;
       totalCostBasis += bookValue;
@@ -605,11 +656,15 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
         priceReturnPercent,
         totalReturnNative,
         totalReturnPercentNative,
-        changePercent: changePct,
-        change24h: changePct,
-        changeValue: changeVal,
+        changePercent: holdingDayPct,
+        change24h: holdingDayPct,
+        changeValue: holdingDayChangeVal,
+        marketChangePercent: changePct,
+        marketChangeValue: changeVal,
         dayPnlNative,
         dayPnlEur,
+        qtyBoughtToday,
+        hasTradesToday: qtyBoughtToday > 0,
         openPrice,
         highPrice,
         lowPrice,
