@@ -1,4 +1,5 @@
 const { GICS_SECTORS } = require('./constants');
+const { resolveAssetTaxInfo } = require('./taxEngine');
 
 /**
  * Calculates Extended Internal Rate of Return (XIRR) using the Newton-Raphson method
@@ -412,6 +413,7 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
           region: 'Global',
           currency: portfolioCurrency
         };
+        const taxInfo = resolveAssetTaxInfo(assetInfo);
 
         realizedPositions.push({
           id: tx.id,
@@ -421,6 +423,11 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
           type: assetInfo.type || 'EQUITY',
           sector: assetInfo.sector || 'Unclassified',
           region: assetInfo.region || 'Global',
+          taxCategory: taxInfo.taxCategory,
+          taxCategoryLabel: taxInfo.label,
+          taxRate: taxInfo.taxRate,
+          taxRatePercent: taxInfo.taxRatePercent,
+          taxRateFormatted: taxInfo.taxRateFormatted,
           quantity: qty,
           pmc: effectivePmcSold,
           pmcNative: pmcNativeAtSell,
@@ -561,10 +568,17 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
       totalAssetValue += marketValue;
       totalCostBasis += bookValue;
 
+      const taxInfo = resolveAssetTaxInfo(asset);
+
       holdings.push({
         ticker,
         name: asset.name || ticker,
         type: asset.type || 'EQUITY',
+        taxCategory: taxInfo.taxCategory,
+        taxCategoryLabel: taxInfo.label,
+        taxRate: taxInfo.taxRate,
+        taxRatePercent: taxInfo.taxRatePercent,
+        taxRateFormatted: taxInfo.taxRateFormatted,
         currency: assetCurrency,
         rawPrice: currentPriceNative,
         currentPriceNative,

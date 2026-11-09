@@ -1,13 +1,14 @@
 /**
  * Fiscal Module & Italian Tax Backpack ("Zainetto Fiscale") for FolioTrack
  * Tracks capital losses (minusvalenze) with 4-year legal expiration (D.Lgs. 461/1997),
- * manages automatic capital gain compensation, and calculates potential 26% tax savings.
+ * manages automatic capital gain compensation, and calculates 26% and 12.5% tax savings.
  */
 
 const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { checkPortfolioAccess } = require('./portfolios');
+const { resolveAssetTaxInfo } = require('../utils/taxEngine');
 
 const router = express.Router();
 
@@ -15,27 +16,33 @@ router.use(requireAuth);
 
 /**
  * Automatically offsets realized capital gains against available unexpired tax losses (FIFO).
+ * Rule: Minusvalenze compensate only within the SAME portfolio and on the SAME asset category.
  *
  * @param {number} portfolioId
  * @param {number} capitalGain Positive realized capital gain
- * @returns {{ originalGain: number, compensatedAmount: number, taxableGain: number, remainingLosses: number }}
+ * @param {string} [assetType='EQUITY'] 'EQUITY' (26%) or 'BOND' (12.5%)
+ * @returns {{ originalGain: number, compensatedAmount: number, taxableGain: number, remainingLosses: number, taxRate: number, taxDue: number, netGain: number }}
  */
-function compensateTaxGain(portfolioId, capitalGain) {
+function compensateTaxGain(portfolioId, capitalGain, assetType = 'EQUITY') {
   const gain = Math.max(0.0, Number(capitalGain) || 0.0);
+  const cleanCat = (String(assetType).toUpperCase().trim() === 'BOND') ? 'BOND' : 'EQUITY';
+  const taxRate = cleanCat === 'BOND' ? 0.125 : 0.26;
+
   if (gain <= 0.0) {
-    return { originalGain: 0.0, compensatedAmount: 0.0, taxableGain: 0.0, remainingLosses: 0.0 };
+    return { originalGain: 0.0, compensatedAmount: 0.0, taxableGain: 0.0, remainingLosses: 0.0, taxRate, taxDue: 0.0, netGain: 0.0 };
   }
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Fetch active unexpired losses, ordered by earliest expiry (FIFO)
+  // Fetch active unexpired losses for the SAME portfolio AND SAME asset category, ordered by earliest expiry (FIFO)
   const activeLosses = db.prepare(`
     SELECT * FROM portfolio_losses
     WHERE portfolioId = ?
+      AND (assetType = ? OR (assetType IS NULL AND ? = 'EQUITY'))
       AND residualAmount > 0.001
       AND expiryDate >= ?
     ORDER BY expiryDate ASC, id ASC
-  `).all(portfolioId, todayStr);
+  `).all(portfolioId, cleanCat, cleanCat, todayStr);
 
   let gainRemaining = gain;
   let totalCompensated = 0.0;
@@ -64,20 +71,29 @@ function compensateTaxGain(portfolioId, capitalGain) {
 
   runAtomic();
 
-  // Sum remaining active losses
+  // Sum remaining active losses for this category and portfolio
   const totalRemRow = db.prepare(`
     SELECT SUM(residualAmount) as rem
     FROM portfolio_losses
-    WHERE portfolioId = ? AND residualAmount > 0.001 AND expiryDate >= ?
-  `).get(portfolioId, todayStr);
+    WHERE portfolioId = ?
+      AND (assetType = ? OR (assetType IS NULL AND ? = 'EQUITY'))
+      AND residualAmount > 0.001
+      AND expiryDate >= ?
+  `).get(portfolioId, cleanCat, cleanCat, todayStr);
 
   const remainingLosses = totalRemRow ? (Number(totalRemRow.rem) || 0.0) : 0.0;
+  const taxableGain = Math.max(0.0, gainRemaining);
+  const taxDue = taxableGain * taxRate;
+  const netGain = gain - taxDue;
 
   return {
     originalGain: gain,
     compensatedAmount: totalCompensated,
-    taxableGain: Math.max(0.0, gainRemaining),
-    remainingLosses
+    taxableGain,
+    remainingLosses,
+    taxRate,
+    taxDue,
+    netGain
   };
 }
 
@@ -89,10 +105,17 @@ function compensateTaxGain(portfolioId, capitalGain) {
  * @param {number} capitalLoss Positive number representing realized loss
  * @param {string} [dateStr=null]
  * @param {string} [notes='']
+ * @param {string} [assetType='EQUITY'] 'EQUITY' (26%) or 'BOND' (12.5%)
+ * @param {number} [taxRate=null]
  */
-function recordTaxLoss(portfolioId, capitalLoss, dateStr = null, notes = '') {
+function recordTaxLoss(portfolioId, capitalLoss, dateStr = null, notes = '', assetType = 'EQUITY', taxRate = null) {
   const lossAmount = Math.abs(Number(capitalLoss) || 0.0);
   if (lossAmount <= 0.0) return null;
+
+  const cleanCat = (String(assetType).toUpperCase().trim() === 'BOND') ? 'BOND' : 'EQUITY';
+  const cleanRate = (taxRate !== null && taxRate !== undefined && !isNaN(Number(taxRate)))
+    ? Number(taxRate)
+    : (cleanCat === 'BOND' ? 0.125 : 0.26);
 
   const date = dateStr || new Date().toISOString().split('T')[0];
   const year = parseInt(date.slice(0, 4), 10);
@@ -100,11 +123,11 @@ function recordTaxLoss(portfolioId, capitalLoss, dateStr = null, notes = '') {
 
   const insertStmt = db.prepare(`
     INSERT INTO portfolio_losses (
-      portfolioId, year, amount, residualAmount, expiryDate, notes, createdAt, updatedAt
-    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      portfolioId, year, amount, residualAmount, expiryDate, notes, assetType, taxRate, createdAt, updatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
   `);
 
-  const info = insertStmt.run(portfolioId, year, lossAmount, lossAmount, expiryDate, notes);
+  const info = insertStmt.run(portfolioId, year, lossAmount, lossAmount, expiryDate, notes, cleanCat, cleanRate);
   return info.lastInsertRowid;
 }
 
@@ -147,6 +170,11 @@ router.get('/zainetto', (req, res) => {
 
   let totalResidual = 0.0;
   let expiringThisYear = 0.0;
+  let totalPotentialTaxSavings = 0.0;
+  let equityResidual = 0.0;
+  let equitySavings = 0.0;
+  let bondResidual = 0.0;
+  let bondSavings = 0.0;
 
   const enriched = rows.map(r => {
     const expDate = new Date(r.expiryDate + 'T23:59:59');
@@ -160,8 +188,22 @@ router.get('/zainetto', (req, res) => {
     const resAmt = Number(r.residualAmount) || 0.0;
     const pctResidual = origAmt > 0 ? (resAmt / origAmt) * 100.0 : 0.0;
 
+    const cat = (String(r.assetType).toUpperCase().trim() === 'BOND' || r.taxRate === 0.125) ? 'BOND' : 'EQUITY';
+    const rate = (r.taxRate !== undefined && r.taxRate !== null && !isNaN(Number(r.taxRate)))
+      ? Number(r.taxRate)
+      : (cat === 'BOND' ? 0.125 : 0.26);
+    const potSaving = resAmt * rate;
+
     if (!isExpired) {
       totalResidual += resAmt;
+      totalPotentialTaxSavings += potSaving;
+      if (cat === 'BOND') {
+        bondResidual += resAmt;
+        bondSavings += potSaving;
+      } else {
+        equityResidual += resAmt;
+        equitySavings += potSaving;
+      }
       if (isExpiringThisYear) {
         expiringThisYear += resAmt;
       }
@@ -179,7 +221,13 @@ router.get('/zainetto', (req, res) => {
       daysRemaining,
       isExpired,
       isExpiringThisYear,
-      percentResidual: pctResidual
+      percentResidual: pctResidual,
+      assetType: cat,
+      taxCategory: cat,
+      taxRate: rate,
+      taxRateFormatted: rate === 0.125 ? '12,5%' : '26%',
+      categoryLabel: cat === 'BOND' ? 'BOND / Monetario' : 'Azioni / ETF',
+      potentialTaxSaving: potSaving
     };
   });
 
@@ -188,8 +236,22 @@ router.get('/zainetto', (req, res) => {
     summary: {
       totalResidualLosses: totalResidual,
       expiringThisYearAmount: expiringThisYear,
-      taxSavingsPotential: totalResidual * 0.26, // Risparmio d'imposta al 26%
-      countActive: enriched.filter(x => !x.isExpired && x.residualAmount > 0).length
+      taxSavingsPotential: totalPotentialTaxSavings,
+      countActive: enriched.filter(x => !x.isExpired && x.residualAmount > 0).length,
+      byCategory: {
+        equity: {
+          residualAmount: equityResidual,
+          taxSavingsPotential: equitySavings,
+          taxRate: 0.26,
+          taxRateFormatted: '26%'
+        },
+        bond: {
+          residualAmount: bondResidual,
+          taxSavingsPotential: bondSavings,
+          taxRate: 0.125,
+          taxRateFormatted: '12,5%'
+        }
+      }
     },
     losses: enriched
   });
@@ -206,7 +268,9 @@ router.post('/losses', (req, res) => {
     amount,
     residualAmount,
     expiryDate,
-    notes = ''
+    notes = '',
+    assetType = 'EQUITY',
+    taxRate = null
   } = req.body || {};
 
   const pId = parseInt(portfolioId, 10);
@@ -224,15 +288,20 @@ router.post('/losses', (req, res) => {
     return res.status(400).json({ success: false, error: 'Importo minusvalenza non valido.' });
   }
 
+  const cleanCat = (String(assetType).toUpperCase().trim() === 'BOND') ? 'BOND' : 'EQUITY';
+  const cleanRate = (taxRate !== null && taxRate !== undefined && !isNaN(Number(taxRate)))
+    ? Number(taxRate)
+    : (cleanCat === 'BOND' ? 0.125 : 0.26);
+
   const yr = parseInt(year, 10) || new Date().getFullYear();
   const resAmt = residualAmount !== undefined ? Math.abs(parseFloat(residualAmount)) : amt;
   const expDate = expiryDate || `${yr + 4}-12-31`;
 
   const info = db.prepare(`
     INSERT INTO portfolio_losses (
-      portfolioId, year, amount, residualAmount, expiryDate, notes, createdAt, updatedAt
-    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `).run(pId, yr, amt, resAmt, expDate, notes);
+      portfolioId, year, amount, residualAmount, expiryDate, notes, assetType, taxRate, createdAt, updatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+  `).run(pId, yr, amt, resAmt, expDate, notes, cleanCat, cleanRate);
 
   const created = db.prepare('SELECT * FROM portfolio_losses WHERE id = ?').get(info.lastInsertRowid);
 

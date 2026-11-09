@@ -2,6 +2,11 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, getAssetsMap, checkPortfolioAccess } = require('./portfolios');
+const {
+  resolveAssetTaxInfo,
+  calculatePortfolioUnrealizedTax,
+  processPortfolioClosedPositionsTaxes
+} = require('../utils/taxEngine');
 
 const router = express.Router();
 
@@ -85,6 +90,7 @@ router.get('/portfolio-data', (req, res) => {
 
     let pResidualLosses = 0.0;
     let pExpiringThisYear = 0.0;
+    let pPotentialTaxSaving = 0.0;
 
     const detailedLosses = lossRows.map(l => {
       const expDate = new Date(l.expiryDate + 'T23:59:59');
@@ -96,8 +102,15 @@ router.get('/portfolio-data', (req, res) => {
       const resAmt = Number(l.residualAmount) || 0.0;
       const origAmt = Number(l.amount) || 0.0;
 
+      const cat = (String(l.assetType).toUpperCase().trim() === 'BOND' || l.taxRate === 0.125) ? 'BOND' : 'EQUITY';
+      const rate = (l.taxRate !== undefined && l.taxRate !== null && !isNaN(Number(l.taxRate)))
+        ? Number(l.taxRate)
+        : (cat === 'BOND' ? 0.125 : 0.26);
+      const potSaving = resAmt * rate;
+
       if (!isExpired && resAmt > 0) {
         pResidualLosses += resAmt;
+        pPotentialTaxSaving += potSaving;
         if (isExpiringThisYear) {
           pExpiringThisYear += resAmt;
         }
@@ -113,11 +126,15 @@ router.get('/portfolio-data', (req, res) => {
         daysRemaining,
         isExpired,
         isExpiringThisYear,
-        potentialTaxSaving: resAmt * 0.26
+        assetType: cat,
+        taxCategory: cat,
+        taxRate: rate,
+        taxRateFormatted: rate === 0.125 ? '12,5%' : '26%',
+        potentialTaxSaving: potSaving
       };
     });
 
-    // Formatted and enriched holdings list
+    // Formatted and enriched holdings list with tax resolution
     let portfolioLatentLosses = 0.0;
     const formattedHoldings = holdings.map(h => {
       const qta = Number(h.quantity) || 0.0;
@@ -128,14 +145,24 @@ router.get('/portfolio-data', (req, res) => {
       const pnlPct = Number(h.unrealizedPnlPercent) || 0.0;
       const weight = totalVal > 0 ? (val / totalVal) * 100.0 : 0.0;
 
+      const taxInfo = resolveAssetTaxInfo(h);
+
       if (pnl < 0) {
         portfolioLatentLosses += Math.abs(pnl);
       }
+
+      const estTax = pnl > 0 ? (pnl * taxInfo.taxRate) : 0.0;
+      const netHoldingGain = pnl - estTax;
 
       return {
         ticker: h.ticker,
         name: h.name || h.ticker,
         type: h.type || 'EQUITY',
+        taxCategory: taxInfo.taxCategory,
+        taxCategoryLabel: taxInfo.label,
+        taxRate: taxInfo.taxRate,
+        taxRatePercent: taxInfo.taxRatePercent,
+        taxRateFormatted: taxInfo.taxRateFormatted,
         currency: h.currency || p.currency || 'EUR',
         quantity: qta,
         pmc: pmc,
@@ -144,12 +171,17 @@ router.get('/portfolio-data', (req, res) => {
         bookValue: Number(h.bookValue) || (qta * pmc),
         gain: pnl,
         gainPercent: pnlPct,
+        estimatedTax: estTax,
+        netGain: netHoldingGain,
         weight: weight
       };
     });
 
     // Sort holdings by currentValue descending
     formattedHoldings.sort((a, b) => b.currentValue - a.currentValue);
+
+    // Calculate portfolio unrealized capital gains tax taking into account minusvalenze compensation strictly within same portfolio and same category
+    const portfolioTax = calculatePortfolioUnrealizedTax(formattedHoldings, detailedLosses);
 
     const portfolioReport = {
       id: p.id,
@@ -168,9 +200,12 @@ router.get('/portfolio-data', (req, res) => {
       dayPnlPercent: Number(metrics.dayPnlPercent) || 0.0,
       assetCount: formattedHoldings.length,
       holdings: formattedHoldings,
+      taxation: portfolioTax,
+      estimatedTax: portfolioTax.totalEstimatedTax,
+      netGain: totalGain - portfolioTax.totalEstimatedTax,
       minusvalenze: {
         totalResidual: pResidualLosses,
-        potentialTaxSaving: pResidualLosses * 0.26,
+        potentialTaxSaving: pPotentialTaxSaving,
         expiringThisYear: pExpiringThisYear,
         latentLosses: portfolioLatentLosses,
         items: detailedLosses
@@ -194,6 +229,14 @@ router.get('/portfolio-data', (req, res) => {
   const grandCostBasis = grandTotalValue - grandUnrealizedPnl - grandTotalCash;
   const grandGainPercent = grandCostBasis > 0 ? (grandUnrealizedPnl / grandCostBasis) * 100.0 : (grandInvestedCapital > 0 ? (grandTotalGain / grandInvestedCapital) * 100.0 : 0.0);
 
+  // Consolidated grand taxation summary
+  const grandTotalEstimatedTax = enrichedPortfolios.reduce((sum, p) => sum + (p.estimatedTax || 0.0), 0.0);
+  const grandPotentialTaxSaving = enrichedPortfolios.reduce((sum, p) => sum + (p.minusvalenze?.potentialTaxSaving || 0.0), 0.0);
+  const grandEquityTaxable = enrichedPortfolios.reduce((sum, p) => sum + (p.taxation?.equity?.taxableGain || 0.0), 0.0);
+  const grandEquityTax = enrichedPortfolios.reduce((sum, p) => sum + (p.taxation?.equity?.taxDue || 0.0), 0.0);
+  const grandBondTaxable = enrichedPortfolios.reduce((sum, p) => sum + (p.taxation?.bond?.taxableGain || 0.0), 0.0);
+  const grandBondTax = enrichedPortfolios.reduce((sum, p) => sum + (p.taxation?.bond?.taxDue || 0.0), 0.0);
+
   const formattedDate = today.toLocaleDateString('it-IT', {
     day: '2-digit',
     month: 'long',
@@ -216,12 +259,30 @@ router.get('/portfolio-data', (req, res) => {
       realizedPnl: grandRealizedPnl,
       totalGain: grandTotalGain,
       gainPercent: grandGainPercent,
+      totalEstimatedTax: grandTotalEstimatedTax,
+      totalNetGain: grandTotalGain - grandTotalEstimatedTax,
       totalMinusvalenze: grandMinusvalenze,
-      potentialTaxSaving: grandMinusvalenze * 0.26,
+      potentialTaxSaving: grandPotentialTaxSaving,
       expiringThisYear: grandMinusvalenzeExpiringThisYear,
       totalLatentLosses: grandLatentLosses,
       portfolioCount: enrichedPortfolios.length,
-      assetCount: enrichedPortfolios.reduce((sum, p) => sum + p.assetCount, 0)
+      assetCount: enrichedPortfolios.reduce((sum, p) => sum + p.assetCount, 0),
+      taxation: {
+        equity: {
+          taxableGain: grandEquityTaxable,
+          taxDue: grandEquityTax,
+          taxRate: 0.26,
+          taxRateFormatted: '26%'
+        },
+        bond: {
+          taxableGain: grandBondTaxable,
+          taxDue: grandBondTax,
+          taxRate: 0.125,
+          taxRateFormatted: '12,5%'
+        },
+        totalTaxDue: grandTotalEstimatedTax,
+        netGain: grandTotalGain - grandTotalEstimatedTax
+      }
     },
     portfolios: enrichedPortfolios
   });
@@ -270,6 +331,14 @@ router.get('/closed-positions', (req, res) => {
     const full = recalculatePortfolio(p.id, assetsMap);
     if (!full || !full.metrics || !Array.isArray(full.metrics.closedPositions)) continue;
 
+    // Fetch active losses for this portfolio to allow category-based compensation
+    const pLosses = db.prepare(`
+      SELECT * FROM portfolio_losses
+      WHERE portfolioId = ?
+      ORDER BY expiryDate ASC, year ASC
+    `).all(p.id);
+
+    const portfolioOps = [];
     for (const cp of full.metrics.closedPositions) {
       const opDate = cp.date || '';
       const opYear = opDate ? parseInt(opDate.slice(0, 4), 10) : null;
@@ -279,7 +348,7 @@ router.get('/closed-positions', (req, res) => {
         if (opYear !== parseInt(year, 10)) continue;
       }
 
-      allOperations.push({
+      portfolioOps.push({
         ...cp,
         portfolioId: p.id,
         portfolioName: p.name,
@@ -287,6 +356,10 @@ router.get('/closed-positions', (req, res) => {
         year: opYear
       });
     }
+
+    // Process taxes & compensation strictly within this portfolio and same asset category
+    const processed = processPortfolioClosedPositionsTaxes(portfolioOps, pLosses);
+    allOperations.push(...processed);
   }
 
   // Sort operations by date DESC (most recent first), then id DESC
@@ -307,11 +380,18 @@ router.get('/closed-positions', (req, res) => {
       totalRealizedGain: 0.0,
       totalProfits: 0.0,
       totalLosses: 0.0,
+      totalTaxDue: 0.0,
+      totalNetRealizedGain: 0.0,
+      totalCompensatedLosses: 0.0,
       totalCostBasis: 0.0,
       totalProceeds: 0.0,
       tradeCount: 0,
       winCount: 0,
       lossCount: 0,
+      equityTaxable: 0.0,
+      equityTaxDue: 0.0,
+      bondTaxable: 0.0,
+      bondTaxDue: 0.0,
       operations: []
     };
   }
@@ -321,6 +401,13 @@ router.get('/closed-positions', (req, res) => {
   let grandLosses = 0.0;
   let grandCostBasis = 0.0;
   let grandProceeds = 0.0;
+  let grandTaxDue = 0.0;
+  let grandNetRealizedGain = 0.0;
+  let grandCompensatedLosses = 0.0;
+  let grandEquityTaxable = 0.0;
+  let grandEquityTaxDue = 0.0;
+  let grandBondTaxable = 0.0;
+  let grandBondTaxDue = 0.0;
   let grandWinCount = 0;
   let grandLossCount = 0;
 
@@ -329,10 +416,25 @@ router.get('/closed-positions', (req, res) => {
     const pnl = Number(op.realizedPnl) || 0.0;
     const cost = Number(op.costBasis) || 0.0;
     const proc = Number(op.proceeds) || 0.0;
+    const taxDue = Number(op.taxDue) || 0.0;
+    const netGain = Number(op.netRealizedGain !== undefined ? op.netRealizedGain : (pnl - taxDue)) || 0.0;
+    const compLoss = Number(op.compensatedLoss) || 0.0;
+    const isBond = op.taxCategory === 'BOND';
 
     grandRealizedGain += pnl;
     grandCostBasis += cost;
     grandProceeds += proc;
+    grandTaxDue += taxDue;
+    grandNetRealizedGain += netGain;
+    grandCompensatedLosses += compLoss;
+
+    if (isBond) {
+      grandBondTaxable += Number(op.taxableGain) || 0.0;
+      grandBondTaxDue += taxDue;
+    } else {
+      grandEquityTaxable += Number(op.taxableGain) || 0.0;
+      grandEquityTaxDue += taxDue;
+    }
 
     if (pnl >= 0) {
       grandProfits += pnl;
@@ -347,7 +449,17 @@ router.get('/closed-positions', (req, res) => {
       yg.totalRealizedGain += pnl;
       yg.totalCostBasis += cost;
       yg.totalProceeds += proc;
+      yg.totalTaxDue += taxDue;
+      yg.totalNetRealizedGain += netGain;
+      yg.totalCompensatedLosses += compLoss;
       yg.tradeCount++;
+      if (isBond) {
+        yg.bondTaxable += Number(op.taxableGain) || 0.0;
+        yg.bondTaxDue += taxDue;
+      } else {
+        yg.equityTaxable += Number(op.taxableGain) || 0.0;
+        yg.equityTaxDue += taxDue;
+      }
       if (pnl >= 0) {
         yg.totalProfits += pnl;
         yg.winCount++;
@@ -367,7 +479,23 @@ router.get('/closed-positions', (req, res) => {
     return {
       ...yg,
       gainPercent: gainPct,
-      winRate: winRate
+      winRate: winRate,
+      taxation: {
+        equity: {
+          taxableGain: yg.equityTaxable,
+          taxDue: yg.equityTaxDue,
+          taxRate: 0.26,
+          taxRateFormatted: '26%'
+        },
+        bond: {
+          taxableGain: yg.bondTaxable,
+          taxDue: yg.bondTaxDue,
+          taxRate: 0.125,
+          taxRateFormatted: '12,5%'
+        },
+        totalTaxDue: yg.totalTaxDue,
+        netGain: yg.totalNetRealizedGain
+      }
     };
   });
 
@@ -395,11 +523,30 @@ router.get('/closed-positions', (req, res) => {
       totalLosses: grandLosses,
       totalCostBasis: grandCostBasis,
       totalProceeds: grandProceeds,
+      totalTaxDue: grandTaxDue,
+      totalNetRealizedGain: grandNetRealizedGain,
+      totalCompensatedLosses: grandCompensatedLosses,
       gainPercent: grandGainPercent,
       operationCount: allOperations.length,
       winCount: grandWinCount,
       lossCount: grandLossCount,
-      winRate: grandWinRate
+      winRate: grandWinRate,
+      taxation: {
+        equity: {
+          taxableGain: grandEquityTaxable,
+          taxDue: grandEquityTaxDue,
+          taxRate: 0.26,
+          taxRateFormatted: '26%'
+        },
+        bond: {
+          taxableGain: grandBondTaxable,
+          taxDue: grandBondTaxDue,
+          taxRate: 0.125,
+          taxRateFormatted: '12,5%'
+        },
+        totalTaxDue: grandTaxDue,
+        netGain: grandNetRealizedGain
+      }
     },
     years: distinctYears,
     byYear,

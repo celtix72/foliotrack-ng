@@ -9,6 +9,7 @@ const { parseBrokerCsv, detectBroker } = require('../utils/brokerParsers');
 const { exportWealthfolioCsv } = require('../utils/exportFormats');
 const { validateImportActivities } = require('../utils/importValidator');
 const { compensateTaxGain, recordTaxLoss } = require('./taxes');
+const { resolveAssetTaxInfo } = require('../utils/taxEngine');
 const { recalculateDividendProjections } = require('./dividends');
 const { recalculateAndReconstructHistoricalPerformance } = require('./history');
 const { fetchUnifiedQuote, ensureHistoricalQuotesIfMissing, reconstructPortfolioHistoryFromQuotes } = require('../services/marketService');
@@ -854,10 +855,22 @@ router.post('/', (req, res) => {
         const totalCost = qty * costBasisUnit;
         const gainOrLoss = netProceeds - totalCost;
 
+        const assetRow = db.prepare('SELECT * FROM assets WHERE ticker = ?').get(cleanTicker);
+        const assetInfo = assetRow || currentPos || { ticker: cleanTicker };
+        const assetTax = resolveAssetTaxInfo(assetInfo);
+
         if (gainOrLoss > 0.01) {
-          compensateTaxGain(pId, gainOrLoss);
+          compensateTaxGain(pId, gainOrLoss, assetTax.taxCategory);
         } else if (gainOrLoss < -0.01) {
-          recordTaxLoss(pId, Math.abs(gainOrLoss), date, `Minusvalenza da vendita ${cleanTicker}`);
+          const categoryTag = assetTax.taxCategory === 'BOND' ? 'Bond/Monetario 12,5%' : 'Azioni/ETF 26%';
+          recordTaxLoss(
+            pId,
+            Math.abs(gainOrLoss),
+            date,
+            notes || `Minusvalenza da vendita ${cleanTicker} (${categoryTag})`,
+            assetTax.taxCategory,
+            assetTax.taxRate
+          );
         }
       }
 

@@ -281,11 +281,14 @@
 
             <!-- KPI 3: Gain Complessivo -->
             <div class="signature-card p-4 space-y-1">
-              <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Gain / Rendimento</span>
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Gain Complessivo</span>
+                <span id="kpiNetGainBadge" class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-600">Lordo / Netto</span>
+              </div>
               <div id="kpiTotalGain" class="text-2xl font-bold font-mono tabular-nums text-emerald-600">-</div>
               <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
-                <span>Rendimento %:</span>
-                <strong id="kpiGainPercent" class="font-bold">-</strong>
+                <span>Netto stimato:</span>
+                <strong id="kpiTotalNetGain" class="font-bold text-gray-900 dark:text-white">-</strong>
               </div>
             </div>
 
@@ -297,7 +300,7 @@
               </div>
               <div id="kpiTotalMinusvalenze" class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">-</div>
               <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
-                <span>Risparmio fiscale 26%:</span>
+                <span>Risparmio (26%/12,5%):</span>
                 <strong id="kpiTaxSavings" class="text-emerald-600 dark:text-emerald-400 font-semibold">-</strong>
               </div>
             </div>
@@ -322,9 +325,9 @@
         <div id="closedContent" class="hidden space-y-6">
           <!-- Executive Summary KPIs for Closed Operations -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- KPI 1: Gain Realizzato Netto -->
+            <!-- KPI 1: Gain Realizzato Lordo -->
             <div class="signature-card p-4 space-y-1">
-              <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Gain Netto Realizzato</span>
+              <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Gain Lordo Realizzato</span>
               <div id="kpiClosedTotalGain" class="text-2xl font-bold font-mono tabular-nums text-emerald-600">-</div>
               <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
                 <span>Rendimento medio:</span>
@@ -332,23 +335,29 @@
               </div>
             </div>
 
-            <!-- KPI 2: Plusvalenze Realizzate -->
-            <div class="signature-card p-4 space-y-1 bg-emerald-500/[0.03] border-emerald-500/20">
-              <span class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Plusvalenze Realizzate</span>
-              <div id="kpiClosedProfits" class="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">-</div>
+            <!-- KPI 2: Imposte Plusvalenze (26% / 12,5%) -->
+            <div class="signature-card p-4 space-y-1 bg-blue-500/[0.03] border-blue-500/20">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-mono text-blue-600 dark:text-blue-400 uppercase tracking-wider block">Imposte Plusvalenze</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">26% / 12,5%</span>
+              </div>
+              <div id="kpiClosedTaxDue" class="text-2xl font-bold font-mono tabular-nums text-blue-600 dark:text-blue-400">-</div>
               <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
-                <span>Operazioni in utile:</span>
-                <strong id="kpiClosedWinCount" class="text-emerald-600 dark:text-emerald-400 font-semibold">-</strong>
+                <span>Compensate:</span>
+                <strong id="kpiClosedCompensated" class="text-amber-600 dark:text-amber-400 font-semibold">-</strong>
               </div>
             </div>
 
-            <!-- KPI 3: Minusvalenze Realizzate -->
-            <div class="signature-card p-4 space-y-1 bg-red-500/[0.03] border-red-500/20">
-              <span class="text-[11px] font-mono text-red-600 dark:text-red-400 uppercase tracking-wider block">Minusvalenze Realizzate</span>
-              <div id="kpiClosedLosses" class="text-2xl font-bold font-mono tabular-nums text-red-600 dark:text-red-400">-</div>
+            <!-- KPI 3: Gain Netto Realizzato -->
+            <div class="signature-card p-4 space-y-1 bg-emerald-500/[0.03] border-emerald-500/20">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Gain Netto Effettivo</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Post-Tasse</span>
+              </div>
+              <div id="kpiClosedNetGain" class="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">-</div>
               <div class="text-[11px] font-mono text-gray-500 flex items-center justify-between pt-1">
-                <span>Operazioni in perdita:</span>
-                <strong id="kpiClosedLossCount" class="text-red-600 dark:text-red-400 font-semibold">-</strong>
+                <span>Plusv. lorde:</span>
+                <strong id="kpiClosedProfits" class="text-emerald-600 dark:text-emerald-400 font-semibold">-</strong>
               </div>
             </div>
 
@@ -372,7 +381,7 @@
       <footer id="printReportFooter" class="pt-6 border-t border-gray-200 dark:border-white/5 text-[10px] font-mono text-gray-400 text-center leading-relaxed">
         FolioTrack Signature Analytics • Generato da sistema il <span id="reportFooterDate"></span>.
         I prezzi di carico (PMC) e i gain realizzati sono calcolati conformemente al metodo fiscale WAC / FIFO adottato.
-        Le minusvalenze fiscali indicate fanno riferimento allo zainetto fiscale ai sensi del D.Lgs. 461/1997 e sono compensabili entro il 4° anno successivo a quello di realizzo.
+        Le minusvalenze fiscali e le imposte su capital gain sono conformi al D.Lgs. 461/1997: aliquota 26% su Azioni ed ETF Azionari, aliquota 12,5% su BOND ed ETF Monetari, con compensazione delle minusvalenze operante all'interno del medesimo portafoglio sulla stessa tipologia di asset entro il 4° anno successivo al realizzo.
       </footer>
     </main>
   </div>
@@ -469,16 +478,18 @@
         document.getElementById('kpiAssetCount').textContent = totals.assetCount + ' asset';
 
         const gainEl = document.getElementById('kpiTotalGain');
-        const gainPctEl = document.getElementById('kpiGainPercent');
         gainEl.textContent = (totals.totalGain >= 0 ? '+' : '') + formatMoney(totals.totalGain);
-        gainPctEl.textContent = formatPercent(totals.gainPercent);
+
+        const netGainEl = document.getElementById('kpiTotalNetGain');
+        if (netGainEl) {
+          netGainEl.textContent = ((totals.totalNetGain || totals.totalGain) >= 0 ? '+' : '') + formatMoney(totals.totalNetGain !== undefined ? totals.totalNetGain : totals.totalGain);
+          netGainEl.className = 'font-bold ' + ((totals.totalNetGain || totals.totalGain) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        }
 
         if (totals.totalGain >= 0) {
           gainEl.className = 'text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400';
-          gainPctEl.className = 'text-emerald-600 dark:text-emerald-400 font-bold';
         } else {
           gainEl.className = 'text-2xl font-bold font-mono tabular-nums text-red-600 dark:text-red-400';
-          gainPctEl.className = 'text-red-600 dark:text-red-400 font-bold';
         }
 
         document.getElementById('kpiTotalMinusvalenze').textContent = formatMoney(totals.totalMinusvalenze);
@@ -515,14 +526,21 @@
                 const hGainColor = h.gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
                 const hGainSign = h.gain >= 0 ? '+' : '';
                 const rowBg = idx % 2 === 0 ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.01]';
+                const isBondTax = h.taxRate === 0.125 || h.taxCategory === 'BOND';
+                const taxBadgeClass = isBondTax
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
 
                 holdingsHtml += `
                   <tr class="${rowBg} hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors border-b border-gray-100/60 dark:border-white/[0.03]">
                     <td class="py-1.5 px-3 min-w-0">
                       <div class="flex items-center space-x-1.5 leading-tight">
                         <span class="font-mono font-bold text-gray-900 dark:text-white text-xs">${h.ticker}</span>
-                        <span class="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 font-semibold border border-gray-200/60 dark:border-white/10 shrink-0">
+                        <span class="px-1.5 py-0.2 rounded text-[8px] font-mono uppercase bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 font-semibold border border-gray-200/60 dark:border-white/10 shrink-0">
                           ${h.type}
+                        </span>
+                        <span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold border ${taxBadgeClass} shrink-0" title="Aliquota capital gain: ${h.taxRateFormatted || (isBondTax ? '12,5%' : '26%')}">
+                          ${h.taxRateFormatted || (isBondTax ? '12,5%' : '26%')}
                         </span>
                       </div>
                       <div class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[210px] leading-tight mt-0.5" title="${h.name}">
@@ -547,7 +565,11 @@
 
                     <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                       <div class="font-bold tabular-nums ${hGainColor}">${hGainSign}${formatMoney(h.gain, h.currency)}</div>
-                      <div class="text-[10px] font-bold tabular-nums mt-0.5 ${hGainColor}">${formatPercent(h.gainPercent)}</div>
+                      <div class="text-[10px] font-bold tabular-nums mt-0.5 ${hGainColor}">
+                        ${formatPercent(h.gainPercent)}
+                        <span class="text-gray-400 font-normal">| Netto:</span>
+                        <span class="${h.netGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">${h.netGain >= 0 ? '+' : ''}${formatMoney(h.netGain, h.currency)}</span>
+                      </div>
                     </td>
                   </tr>
                 `;
@@ -560,9 +582,17 @@
             if (m.items && m.items.length > 0 && m.totalResidual > 0) {
               let rowsLossHtml = '';
               m.items.forEach(l => {
+                const isBondLoss = l.taxRate === 0.125 || l.assetType === 'BOND';
+                const lossBadge = isBondLoss
+                  ? '<span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">BOND 12,5%</span>'
+                  : '<span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">Azioni/ETF 26%</span>';
+
                 rowsLossHtml += `
                   <tr class="border-b border-gray-100 dark:border-white/5">
-                    <td class="py-1.5 px-3 font-mono text-xs text-gray-900 dark:text-white">${l.year}</td>
+                    <td class="py-1.5 px-3 font-mono text-xs text-gray-900 dark:text-white">
+                      ${l.year}
+                      <div class="mt-0.5">${lossBadge}</div>
+                    </td>
                     <td class="py-1.5 px-3 text-right font-mono text-xs text-gray-500">${formatMoney(l.amount, p.currency)}</td>
                     <td class="py-1.5 px-3 text-right font-mono text-xs font-bold text-amber-600 dark:text-amber-400">${formatMoney(l.residualAmount, p.currency)}</td>
                     <td class="py-1.5 px-3 font-mono text-xs text-center text-gray-700 dark:text-gray-300">${l.expiryDate}</td>
@@ -579,7 +609,7 @@
 
               minusvalenzeSectionHtml = `
                 <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 space-y-2">
-                  <div class="flex items-center justify-between">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                     <div class="flex items-center space-x-2">
                       <span class="text-xs font-bold font-mono text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
                         <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -592,7 +622,7 @@
                       </span>
                     </div>
                     <div class="text-xs font-mono text-gray-500">
-                      Potenziale recupero 26%: <strong class="text-emerald-600 dark:text-emerald-400">${formatMoney(m.potentialTaxSaving, p.currency)}</strong>
+                      Risparmio fiscale potenziale: <strong class="text-emerald-600 dark:text-emerald-400">${formatMoney(m.potentialTaxSaving, p.currency)}</strong>
                     </div>
                   </div>
 
@@ -600,19 +630,22 @@
                     <table class="w-full text-left table-fixed">
                       <thead class="bg-amber-500/[0.04] text-[10px] font-mono text-gray-500 uppercase">
                         <tr>
-                          <th class="py-1.5 px-3 w-[12%]">Anno</th>
-                          <th class="py-1.5 px-3 text-right w-[15%]">Originario</th>
-                          <th class="py-1.5 px-3 text-right w-[15%]">Residuo</th>
-                          <th class="py-1.5 px-3 text-center w-[15%]">Scadenza</th>
-                          <th class="py-1.5 px-3 text-right w-[15%]">Giorni Rim.</th>
-                          <th class="py-1.5 px-3 text-right w-[14%]">Risparmio 26%</th>
-                          <th class="py-1.5 px-3 w-[14%] truncate">Note</th>
+                          <th class="py-1.5 px-3 w-[14%]">Anno / Asset</th>
+                          <th class="py-1.5 px-3 text-right w-[14%]">Originario</th>
+                          <th class="py-1.5 px-3 text-right w-[14%]">Residuo</th>
+                          <th class="py-1.5 px-3 text-center w-[14%]">Scadenza</th>
+                          <th class="py-1.5 px-3 text-right w-[14%]">Giorni Rim.</th>
+                          <th class="py-1.5 px-3 text-right w-[15%]">Risparmio Imp.</th>
+                          <th class="py-1.5 px-3 w-[15%] truncate">Note</th>
                         </tr>
                       </thead>
                       <tbody>
                         ${rowsLossHtml}
                       </tbody>
                     </table>
+                  </div>
+                  <div class="text-[10px] font-mono text-gray-400 italic">
+                    * Compensazione minusvalenze applicabile all'interno dello stesso portafoglio sulle stesse tipologie di asset (26% Azioni/ETF Azionari, 12,5% BOND/ETF Monetari).
                   </div>
                 </div>
               `;
@@ -661,11 +694,59 @@
                     <strong class="text-gray-700 dark:text-gray-300 text-sm">${formatMoney(p.currentCash, p.currency)}</strong>
                   </div>
                   <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 text-[10px] block">Gain Complessivo</span>
-                    <strong class="text-sm font-bold ${gainColor}">${gainSign}${formatMoney(p.totalGain, p.currency)} (${formatPercent(p.gainPercent)})</strong>
+                    <span class="text-gray-400 text-[10px] block">Gain Lordo</span>
+                    <strong class="text-sm font-bold ${gainColor}">${gainSign}${formatMoney(p.totalGain, p.currency)}</strong>
+                  </div>
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Imposta Stimata</span>
+                    <strong class="text-blue-600 dark:text-blue-400 text-sm">${formatMoney(p.estimatedTax || 0, p.currency)}</strong>
+                  </div>
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Gain Netto</span>
+                    <strong class="text-sm font-bold ${(p.netGain || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">${(p.netGain || 0) >= 0 ? '+' : ''}${formatMoney(p.netGain || 0, p.currency)}</strong>
                   </div>
                 </div>
               </div>
+
+              <!-- Holdings Table (Compattato a 5 colonne su 2 righe per asset) -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-left table-fixed">
+                  <thead class="text-[10px] font-mono text-gray-400 uppercase border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
+                    <tr>
+                      <th class="py-2 px-3 w-[32%]">Asset / Strumento</th>
+                      <th class="py-2 px-3 text-right w-[17%]">Q.tà / PMC</th>
+                      <th class="py-2 px-3 text-right w-[17%]">Quotaz. / Costo</th>
+                      <th class="py-2 px-3 text-right w-[17%]">Valore Att. / Peso</th>
+                      <th class="py-2 px-3 text-right w-[17%]">Gain / Rend.</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
+                    ${holdingsHtml}
+                  </tbody>
+                  <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
+                    <tr>
+                      <td colspan="3" class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
+                        Totale Portafoglio ${p.name}
+                      </td>
+                      <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-bold">
+                        ${formatMoney(p.totalValue, p.currency)}
+                        <span class="text-[10px] block text-gray-400 font-normal">100%</span>
+                      </td>
+                      <td class="py-2 px-3 text-right ${gainColor} font-bold">
+                        ${gainSign}${formatMoney(p.totalGain, p.currency)}
+                        <span class="text-[10px] block font-bold">${formatPercent(p.gainPercent)}</span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              ${minusvalenzeSectionHtml}
+            `;
+
+            container.appendChild(pCard);
+          });
+        }
 
               <!-- Holdings Table (Compattato a 5 colonne su 2 righe per asset) -->
               <div class="overflow-x-auto">
@@ -781,11 +862,22 @@
         totalGainEl.className = 'text-2xl font-bold font-mono tabular-nums ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
         totalGainPctEl.className = 'font-bold ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
 
-        document.getElementById('kpiClosedProfits').textContent = '+' + formatMoney(t.totalProfits);
-        document.getElementById('kpiClosedWinCount').textContent = `${t.winCount} trade in utile`;
+        const taxDueEl = document.getElementById('kpiClosedTaxDue');
+        if (taxDueEl) taxDueEl.textContent = formatMoney(t.totalTaxDue || 0);
 
-        document.getElementById('kpiClosedLosses').textContent = formatMoney(t.totalLosses);
-        document.getElementById('kpiClosedLossCount').textContent = `${t.lossCount} trade in perdita`;
+        const compEl = document.getElementById('kpiClosedCompensated');
+        if (compEl) compEl.textContent = formatMoney(t.totalCompensatedLosses || 0);
+
+        const netGainEl = document.getElementById('kpiClosedNetGain');
+        const netVal = t.totalNetRealizedGain !== undefined ? t.totalNetRealizedGain : (t.totalRealizedGain - (t.totalTaxDue || 0));
+        const isNetPos = netVal >= 0;
+        if (netGainEl) {
+          netGainEl.textContent = (isNetPos ? '+' : '') + formatMoney(netVal);
+          netGainEl.className = 'text-2xl font-bold font-mono tabular-nums ' + (isNetPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        }
+
+        const profitsEl = document.getElementById('kpiClosedProfits');
+        if (profitsEl) profitsEl.textContent = '+' + formatMoney(t.totalProfits);
 
         document.getElementById('kpiClosedWinRate').textContent = `${formatNumber(t.winRate, 1)}% (${t.operationCount} trade)`;
         document.getElementById('kpiClosedProceeds').textContent = formatMoney(t.totalProceeds);
@@ -816,9 +908,31 @@
               const opGainSign = opGainPos ? '+' : '';
               const rowBg = idx % 2 === 0 ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.01]';
 
+              const isBond = op.taxCategory === 'BOND' || op.taxRate === 0.125;
+              const taxBadgeClass = isBond
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+
+              const netGainVal = op.netRealizedGain !== undefined ? op.netRealizedGain : (op.realizedPnl - (op.taxDue || 0));
+              const netGainClass = netGainVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+              const netGainSign = netGainVal >= 0 ? '+' : '';
+
+              let taxDetailHtml = '';
+              if (op.realizedPnl > 0) {
+                if (op.taxDue > 0.001) {
+                  taxDetailHtml = `<span class="text-blue-600 dark:text-blue-400">Imposta ${op.taxRateFormatted || (isBond ? '12,5%' : '26%')}: <strong>${formatMoney(op.taxDue, op.currency)}</strong></span>`;
+                } else if (op.compensatedLoss > 0.001) {
+                  taxDetailHtml = `<span class="text-amber-600 dark:text-amber-400 font-semibold">Compensata 100% (${formatMoney(op.compensatedLoss, op.currency)})</span>`;
+                } else {
+                  taxDetailHtml = `<span class="text-gray-400">Imposta 0,00 €</span>`;
+                }
+              } else {
+                taxDetailHtml = `<span class="text-gray-400 text-[9px]">Minusvalenza generata</span>`;
+              }
+
               opRowsHtml += `
                 <tr class="${rowBg} hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors border-b border-gray-100/60 dark:border-white/[0.03]">
-                  <!-- Col 1: Data & Asset -->
+                  <!-- Col 1: Data & Asset & Aliquota -->
                   <td class="py-1.5 px-3 min-w-0">
                     <div class="flex items-center space-x-1.5 leading-tight">
                       <span class="font-mono text-gray-500 dark:text-gray-400 text-[10px] font-semibold">${formatDate(op.date)}</span>
@@ -829,7 +943,10 @@
                     </div>
                     <div class="flex items-center space-x-1.5 mt-0.5 leading-tight">
                       <span class="font-mono font-bold text-gray-900 dark:text-white text-xs">${op.ticker}</span>
-                      <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]" title="${op.name}">${op.name}</span>
+                      <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[130px]" title="${op.name}">${op.name}</span>
+                      <span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold border ${taxBadgeClass} shrink-0" title="Aliquota: ${op.taxRateFormatted || (isBond ? '12,5%' : '26%')}">
+                        ${op.taxRateFormatted || (isBond ? '12,5%' : '26%')}
+                      </span>
                     </div>
                   </td>
 
@@ -849,10 +966,16 @@
                     </div>
                   </td>
 
-                  <!-- Col 4: Gain Realizzato & Rendimento -->
+                  <!-- Col 4: Gain Lordo Realizzato -->
                   <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                     <div class="font-bold tabular-nums ${opGainClass}">${opGainSign}${formatMoney(op.realizedPnl, op.currency)}</div>
                     <div class="text-[10px] font-bold tabular-nums mt-0.5 ${opGainClass}">${opGainSign}${formatPercent(op.realizedPnlPercent)}</div>
+                  </td>
+
+                  <!-- Col 5: Gain Netto Effettivo & Imposta -->
+                  <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
+                    <div class="font-bold tabular-nums ${netGainClass}">${netGainSign}${formatMoney(netGainVal, op.currency)}</div>
+                    <div class="text-[10px] tabular-nums mt-0.5">${taxDetailHtml}</div>
                   </td>
                 </tr>
               `;
@@ -885,12 +1008,16 @@
                     <strong class="text-gray-900 dark:text-white text-sm">${formatMoney(y.totalProceeds)}</strong>
                   </div>
                   <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 text-[10px] block">Costo di Carico</span>
-                    <strong class="text-gray-700 dark:text-gray-300 text-sm">${formatMoney(y.totalCostBasis)}</strong>
+                    <span class="text-gray-400 text-[10px] block">Gain Lordo</span>
+                    <strong class="text-sm font-bold ${yGainClass}">${yGainSign}${formatMoney(y.totalRealizedGain)}</strong>
                   </div>
                   <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 text-[10px] block">Gain Realizzato ${y.year}</span>
-                    <strong class="text-sm font-bold ${yGainClass}">${yGainSign}${formatMoney(y.totalRealizedGain)} (${formatPercent(y.gainPercent)})</strong>
+                    <span class="text-gray-400 text-[10px] block">Imposte Plusvalenze</span>
+                    <strong class="text-sm font-bold text-blue-600 dark:text-blue-400">${formatMoney(y.totalTaxDue || 0)}</strong>
+                  </div>
+                  <div class="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                    <span class="text-gray-400 text-[10px] block">Gain Netto ${y.year}</span>
+                    <strong class="text-sm font-bold ${(y.totalNetRealizedGain || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">${(y.totalNetRealizedGain || 0) >= 0 ? '+' : ''}${formatMoney(y.totalNetRealizedGain || 0)}</strong>
                   </div>
                 </div>
               </div>
@@ -900,10 +1027,11 @@
                 <table class="w-full text-left table-fixed">
                   <thead class="text-[10px] font-mono text-gray-400 uppercase border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
                     <tr>
-                      <th class="py-2 px-3 w-[30%]">Data & Asset</th>
-                      <th class="py-2 px-3 text-right w-[22%]">Quantità & Prezzi</th>
-                      <th class="py-2 px-3 text-right w-[24%]">Incasso / Costo</th>
-                      <th class="py-2 px-3 text-right w-[24%]">Gain / Rend.</th>
+                      <th class="py-2 px-3 w-[28%]">Data / Asset / Aliquota</th>
+                      <th class="py-2 px-3 text-right w-[18%]">Quantità & Prezzi</th>
+                      <th class="py-2 px-3 text-right w-[18%]">Costo / Incasso</th>
+                      <th class="py-2 px-3 text-right w-[18%]">Gain Lordo / Rend.</th>
+                      <th class="py-2 px-3 text-right w-[18%]">Gain Netto / Imposta</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
@@ -912,24 +1040,26 @@
                   <!-- Table Year Total -->
                   <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
                     <tr>
-                      <td class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
-                        Totale Anno ${y.year}
-                      </td>
-                      <td class="py-2 px-3 text-right text-gray-500 text-[10px]">
-                        ${y.tradeCount} Operazioni
-                      </td>
-                      <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-bold">
-                        ${formatMoney(y.totalProceeds)}
-                        <span class="text-[10px] block text-gray-400 font-normal">Costo: ${formatMoney(y.totalCostBasis)}</span>
+                      <td colspan="3" class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
+                        Totale Anno Fiscale ${y.year} (${y.tradeCount} Operazioni)
                       </td>
                       <td class="py-2 px-3 text-right ${yGainClass} font-bold">
                         ${yGainSign}${formatMoney(y.totalRealizedGain)}
                         <span class="text-[10px] block font-bold">${formatPercent(y.gainPercent)}</span>
                       </td>
+                      <td class="py-2 px-3 text-right ${(y.totalNetRealizedGain || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'} font-bold">
+                        ${(y.totalNetRealizedGain || 0) >= 0 ? '+' : ''}${formatMoney(y.totalNetRealizedGain || 0)}
+                        <span class="text-[10px] block font-normal text-blue-600 dark:text-blue-400">Imp: -${formatMoney(y.totalTaxDue || 0)}</span>
+                      </td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
+            `;
+
+            container.appendChild(yCard);
+          });
+        }
             `;
 
             container.appendChild(yCard);

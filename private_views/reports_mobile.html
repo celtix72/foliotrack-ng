@@ -187,21 +187,21 @@
         <!-- KPI Cards Grid (2x2) -->
         <div class="grid grid-cols-2 gap-2">
           <div class="signature-card space-y-0.5">
-            <span class="text-[9px] font-mono uppercase text-gray-400 block">Gain Netto Realizzato</span>
+            <span class="text-[9px] font-mono uppercase text-gray-400 block">Gain Lordo Realizzato</span>
             <div id="mKpiClosedTotalGain" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">-</div>
             <div id="mKpiClosedGainPct" class="text-[9px] font-mono font-bold text-emerald-600">-</div>
           </div>
 
-          <div class="signature-card space-y-0.5 bg-emerald-500/[0.03] border-emerald-500/20">
-            <span class="text-[9px] font-mono uppercase text-emerald-600 dark:text-emerald-400 block">Plusvalenze Realizzate</span>
-            <div id="mKpiClosedProfits" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">-</div>
-            <div id="mKpiClosedWinCount" class="text-[9px] font-mono text-gray-500">-</div>
+          <div class="signature-card space-y-0.5 bg-blue-500/[0.03] border-blue-500/20">
+            <span class="text-[9px] font-mono uppercase text-blue-600 dark:text-blue-400 block">Imposte Plusvalenze</span>
+            <div id="mKpiClosedTaxDue" class="text-base font-bold font-mono text-blue-600 dark:text-blue-400 tabular-nums">-</div>
+            <div class="text-[9px] font-mono text-gray-500">Compensate: <span id="mKpiClosedCompensated">-</span></div>
           </div>
 
-          <div class="signature-card space-y-0.5 bg-red-500/[0.03] border-red-500/20">
-            <span class="text-[9px] font-mono uppercase text-red-600 dark:text-red-400 block">Minusvalenze Realizzate</span>
-            <div id="mKpiClosedLosses" class="text-base font-bold font-mono text-red-600 dark:text-red-400 tabular-nums">-</div>
-            <div id="mKpiClosedLossCount" class="text-[9px] font-mono text-gray-500">-</div>
+          <div class="signature-card space-y-0.5 bg-emerald-500/[0.03] border-emerald-500/20">
+            <span class="text-[9px] font-mono uppercase text-emerald-600 dark:text-emerald-400 block">Gain Netto Effettivo</span>
+            <div id="mKpiClosedNetGain" class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">-</div>
+            <div class="text-[9px] font-mono text-gray-500">Lordo: <span id="mKpiClosedProfits">-</span></div>
           </div>
 
           <div class="signature-card space-y-0.5">
@@ -320,13 +320,18 @@
               const hGainPos = h.gain >= 0;
               const hGainClass = hGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
               const hGainSign = hGainPos ? '+' : '';
+              const isBond = h.taxRate === 0.125 || h.taxCategory === 'BOND';
+              const taxBadgeClass = isBond
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20';
 
               holdingsRows += `
                 <div class="py-1.5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
                   <div class="min-w-0 pr-2">
                     <div class="flex items-center space-x-1.5 truncate">
                       <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
-                      <span class="text-[9px] px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-500">${h.type}</span>
+                      <span class="text-[8px] px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-500">${h.type}</span>
+                      <span class="text-[8px] px-1 rounded font-bold ${taxBadgeClass}">${h.taxRateFormatted || (isBond ? '12,5%' : '26%')}</span>
                     </div>
                     <div class="text-[10px] text-gray-400 truncate mt-0.5">
                       Qta: <strong>${formatNumber(h.quantity)}</strong> • PMC: ${formatMoney(h.pmc, h.currency)} • Att: ${formatMoney(h.currentPrice, h.currency)}
@@ -334,7 +339,7 @@
                   </div>
                   <div class="text-right shrink-0">
                     <div class="font-bold text-gray-900 dark:text-white">${formatMoney(h.currentValue, h.currency)}</div>
-                    <div class="text-[10px] font-semibold ${hGainClass}">${hGainSign}${formatMoney(h.gain, h.currency)} (${formatPercent(h.gainPercent)})</div>
+                    <div class="text-[10px] font-semibold ${hGainClass}">${hGainSign}${formatMoney(h.gain, h.currency)}</div>
                   </div>
                 </div>
               `;
@@ -347,7 +352,7 @@
             minusHtml = `
               <div class="p-2 rounded-lg bg-amber-500/[0.05] border border-amber-500/20 text-[10px] font-mono text-amber-600 dark:text-amber-400 flex items-center justify-between">
                 <span>Minusvalenze attive: <strong>${formatMoney(m.totalResidual, p.currency)}</strong></span>
-                <span>Recupero 26%: <strong class="text-emerald-600">${formatMoney(m.potentialTaxSaving, p.currency)}</strong></span>
+                <span>Recupero: <strong class="text-emerald-600">${formatMoney(m.potentialTaxSaving, p.currency)}</strong></span>
               </div>
             `;
           } else {
@@ -367,10 +372,12 @@
                   <span class="px-1.5 py-0.2 rounded text-[8px] font-mono uppercase bg-emerald-500/10 text-emerald-600 font-bold">${p.type}</span>
                 </div>
                 <span class="text-[10px] font-mono text-gray-400">${p.assetCount} asset • Cassa: ${formatMoney(p.currentCash, p.currency)}</span>
+                ${(p.estimatedTax || 0) > 0 ? `<div class="text-[9px] font-mono text-blue-600 dark:text-blue-400">Imp. stimata: ${formatMoney(p.estimatedTax, p.currency)}</div>` : ''}
               </div>
               <div class="text-right">
                 <div class="text-sm font-bold font-mono text-gray-900 dark:text-white">${formatMoney(p.totalValue, p.currency)}</div>
-                <div class="text-[10px] font-mono font-bold ${pGainClass}">${pGainSign}${formatMoney(p.totalGain, p.currency)} (${formatPercent(p.gainPercent)})</div>
+                <div class="text-[10px] font-mono font-bold ${pGainClass}">${pGainSign}${formatMoney(p.totalGain, p.currency)}</div>
+                <div class="text-[9px] font-mono font-bold ${(p.netGain || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">Netto: ${(p.netGain || 0) >= 0 ? '+' : ''}${formatMoney(p.netGain || 0, p.currency)}</div>
               </div>
             </div>
 
@@ -438,11 +445,22 @@
         totalGainEl.className = 'text-base font-bold font-mono tabular-nums ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
         totalGainPctEl.className = 'text-[9px] font-mono font-bold ' + (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
 
-        document.getElementById('mKpiClosedProfits').textContent = '+' + formatMoney(t.totalProfits);
-        document.getElementById('mKpiClosedWinCount').textContent = `${t.winCount} in utile`;
+        const taxDueEl = document.getElementById('mKpiClosedTaxDue');
+        if (taxDueEl) taxDueEl.textContent = formatMoney(t.totalTaxDue || 0);
 
-        document.getElementById('mKpiClosedLosses').textContent = formatMoney(t.totalLosses);
-        document.getElementById('mKpiClosedLossCount').textContent = `${t.lossCount} in perdita`;
+        const compEl = document.getElementById('mKpiClosedCompensated');
+        if (compEl) compEl.textContent = formatMoney(t.totalCompensatedLosses || 0);
+
+        const netGainEl = document.getElementById('mKpiClosedNetGain');
+        const netVal = t.totalNetRealizedGain !== undefined ? t.totalNetRealizedGain : (t.totalRealizedGain - (t.totalTaxDue || 0));
+        const isNetPos = netVal >= 0;
+        if (netGainEl) {
+          netGainEl.textContent = (isNetPos ? '+' : '') + formatMoney(netVal);
+          netGainEl.className = 'text-base font-bold font-mono tabular-nums ' + (isNetPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        }
+
+        const profitsEl = document.getElementById('mKpiClosedProfits');
+        if (profitsEl) profitsEl.textContent = '+' + formatMoney(t.totalProfits);
 
         document.getElementById('mKpiClosedWinRate').textContent = `${formatNumber(t.winRate, 1)}% (${t.operationCount} trade)`;
         document.getElementById('mKpiClosedProceeds').textContent = formatMoney(t.totalProceeds);
@@ -470,6 +488,11 @@
               const opGainPos = op.realizedPnl >= 0;
               const opGainClass = opGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
               const opGainSign = opGainPos ? '+' : '';
+              const isBond = op.taxCategory === 'BOND' || op.taxRate === 0.125;
+              const taxBadgeClass = isBond ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-500/10 text-blue-600';
+              const netGainVal = op.netRealizedGain !== undefined ? op.netRealizedGain : (op.realizedPnl - (op.taxDue || 0));
+              const netGainClass = netGainVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+              const netGainSign = netGainVal >= 0 ? '+' : '';
 
               opRows += `
                 <div class="py-1.5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
@@ -477,6 +500,7 @@
                     <div class="flex items-center space-x-1.5 truncate">
                       <span class="font-bold text-gray-900 dark:text-white">${op.ticker}</span>
                       <span class="text-[8px] px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-500 font-bold">${op.closeType || 'TOTALE'}</span>
+                      <span class="text-[8px] px-1 rounded font-bold ${taxBadgeClass}">${op.taxRateFormatted || (isBond ? '12,5%' : '26%')}</span>
                       <span class="text-[9px] text-gray-400 truncate">[${op.portfolioName}]</span>
                     </div>
                     <div class="text-[10px] text-gray-400 truncate mt-0.5">
@@ -485,7 +509,8 @@
                   </div>
                   <div class="text-right shrink-0">
                     <div class="font-bold text-gray-900 dark:text-white">${formatMoney(op.proceeds, op.currency)}</div>
-                    <div class="text-[10px] font-semibold ${opGainClass}">${opGainSign}${formatMoney(op.realizedPnl, op.currency)} (${formatPercent(op.realizedPnlPercent)})</div>
+                    <div class="text-[10px] font-semibold ${opGainClass}">Lordo: ${opGainSign}${formatMoney(op.realizedPnl, op.currency)}</div>
+                    <div class="text-[9px] font-bold ${netGainClass}">Netto: ${netGainSign}${formatMoney(netGainVal, op.currency)}</div>
                   </div>
                 </div>
               `;
@@ -498,6 +523,18 @@
                     <span class="text-sm font-bold text-gray-900 dark:text-white">Anno ${y.year}</span>
                     <span class="px-1.5 py-0.2 rounded text-[8px] font-mono uppercase bg-emerald-500/10 text-emerald-600 font-bold">${y.tradeCount} Trade</span>
                   </div>
+                  <span class="text-[10px] font-mono text-gray-400">Win Rate: ${formatNumber(y.winRate, 1)}% • Imposte: ${formatMoney(y.totalTaxDue || 0)}</span>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm font-bold font-mono ${yGainClass}">${yGainSign}${formatMoney(y.totalRealizedGain)}</div>
+                  <div class="text-[10px] font-mono font-bold ${(y.totalNetRealizedGain || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}">Netto: ${(y.totalNetRealizedGain || 0) >= 0 ? '+' : ''}${formatMoney(y.totalNetRealizedGain || 0)}</div>
+                </div>
+              </div>
+
+              <div class="space-y-0.5">
+                ${opRows}
+              </div>
+            `;
                   <span class="text-[10px] font-mono text-gray-400">Win Rate: ${formatNumber(y.winRate, 1)}%</span>
                 </div>
                 <div class="text-right">

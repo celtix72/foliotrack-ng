@@ -253,6 +253,8 @@ function createSchema(database) {
       residualAmount REAL NOT NULL,
       expiryDate TEXT NOT NULL,
       notes TEXT,
+      assetType TEXT NOT NULL DEFAULT 'EQUITY',
+      taxRate REAL NOT NULL DEFAULT 0.26,
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (portfolioId) REFERENCES portfolios(id) ON DELETE CASCADE
@@ -361,6 +363,11 @@ function createSchema(database) {
   try { database.exec("ALTER TABLE assets ADD COLUMN previousClose REAL DEFAULT 0.0"); } catch {}
   try { database.exec("ALTER TABLE assets ADD COLUMN marketState TEXT DEFAULT NULL"); } catch {}
   try { database.exec("ALTER TABLE assets ADD COLUMN regularMarketTime TEXT DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN taxRate REAL DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN taxCategory TEXT DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE portfolio_losses ADD COLUMN assetType TEXT DEFAULT 'EQUITY'"); } catch {}
+  try { database.exec("ALTER TABLE portfolio_losses ADD COLUMN taxRate REAL DEFAULT 0.26"); } catch {}
+  try { database.exec("CREATE INDEX IF NOT EXISTS idx_portfolio_losses_port_type_exp ON portfolio_losses(portfolioId, assetType, expiryDate)"); } catch {}
 
   try {
     database.exec(`

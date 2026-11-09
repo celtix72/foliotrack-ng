@@ -362,5 +362,175 @@ describe('Reports & PDF Section under Strumenti (/reports & /api/reports)', () =
     assert.ok(htmlMob.includes('Op. Chiuse'), 'Mobile has closed tab button');
     assert.ok(htmlMob.includes('mSectionClosed'), 'Mobile has closed section');
   });
+
+  test('11. Capital gain taxation on Azioni & ETF Azionari (26%) vs BOND & ETF Monetari (12.5%)', async () => {
+    // Register a BOND asset
+    await fetch(`${baseUrl}/api/assets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        ticker: 'BTP-ITALIA-2030',
+        name: 'BTP Italia Indicizzato 2030',
+        type: 'BOND',
+        sector: 'Government',
+        currency: 'EUR',
+        currentPrice: 102.00
+      })
+    });
+
+    // Register a Monetary ETF asset
+    await fetch(`${baseUrl}/api/assets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        ticker: 'XEON.MI',
+        name: 'Xtrackers II EUR Overnight Rate Swap UCITS ETF',
+        type: 'ETF',
+        sector: 'Money Market',
+        currency: 'EUR',
+        currentPrice: 142.50
+      })
+    });
+
+    // Buy BTP in Portfolio 1
+    await fetch(`${baseUrl}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: portfolio1Id,
+        type: 'BUY',
+        assetTicker: 'BTP-ITALIA-2030',
+        date: '2025-01-15',
+        quantity: 10,
+        price: 95.00,
+        commission: 0.00
+      })
+    });
+
+    // Check portfolio data has differentiated tax rates: SWDA.MI is 26%, BTP is 12.5%
+    const pDataRes = await fetch(`${baseUrl}/api/reports/portfolio-data?portfolioId=${portfolio1Id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const pData = await pDataRes.json();
+    assert.strictEqual(pData.success, true);
+    const p1 = pData.portfolios[0];
+
+    const swdaHolding = p1.holdings.find(h => h.ticker === 'SWDA.MI');
+    assert.ok(swdaHolding);
+    assert.strictEqual(swdaHolding.taxRate, 0.26);
+    assert.strictEqual(swdaHolding.taxCategory, 'EQUITY');
+
+    const bftHolding = p1.holdings.find(h => h.ticker === 'BTP-ITALIA-2030');
+    assert.ok(bftHolding);
+    assert.strictEqual(bftHolding.taxRate, 0.125);
+    assert.strictEqual(bftHolding.taxCategory, 'BOND');
+
+    // Sell BTP at a gain in Portfolio 1 (no losses in Portfolio 1)
+    await fetch(`${baseUrl}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: portfolio1Id,
+        type: 'SELL',
+        assetTicker: 'BTP-ITALIA-2030',
+        date: '2025-06-10',
+        quantity: 5,
+        price: 105.00, // bought at 95 -> 10 EUR gain/share * 5 = 50 EUR gain
+        commission: 0.00
+      })
+    });
+
+    // Verify closed positions for Portfolio 1: BTP has 12.5% tax rate and calculates 12.5% tax due
+    const closedRes = await fetch(`${baseUrl}/api/reports/closed-positions?portfolioId=${portfolio1Id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const closedData = await closedRes.json();
+    assert.strictEqual(closedData.success, true);
+    assert.strictEqual(closedData.operations.length, 1);
+
+    const btpOp = closedData.operations[0];
+    assert.strictEqual(btpOp.ticker, 'BTP-ITALIA-2030');
+    assert.strictEqual(btpOp.taxCategory, 'BOND');
+    assert.strictEqual(btpOp.taxRate, 0.125);
+    assert.strictEqual(btpOp.realizedPnl, 50.00);
+    assert.strictEqual(btpOp.taxableGain, 50.00);
+    assert.strictEqual(btpOp.taxDue, 50.00 * 0.125); // 6.25 EUR
+    assert.strictEqual(btpOp.netRealizedGain, 50.00 - (50.00 * 0.125)); // 43.75 EUR
+  });
+
+  test('12. Minusvalenze compensation rule: strictly within same portfolio and same asset category', async () => {
+    // In Portfolio 2, there is an EQUITY loss (850 EUR from setup).
+    // Now sell a BOND in Portfolio 2 at a gain of 100 EUR.
+    // The EQUITY loss in Portfolio 2 must NOT compensate the BOND gain!
+    await fetch(`${baseUrl}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: portfolio2Id,
+        type: 'BUY',
+        assetTicker: 'BTP-ITALIA-2030',
+        date: '2025-01-10',
+        quantity: 10,
+        price: 90.00,
+        commission: 0.00
+      })
+    });
+
+    await fetch(`${baseUrl}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: portfolio2Id,
+        type: 'SELL',
+        assetTicker: 'BTP-ITALIA-2030',
+        date: '2025-03-10',
+        quantity: 5,
+        price: 110.00, // bought at 90 -> 20 EUR gain/share * 5 = 100 EUR gain
+        commission: 0.00
+      })
+    });
+
+    const resP2 = await fetch(`${baseUrl}/api/reports/closed-positions?portfolioId=${portfolio2Id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const dataP2 = await resP2.json();
+    assert.strictEqual(dataP2.success, true);
+
+    const bondSale = dataP2.operations.find(o => o.ticker === 'BTP-ITALIA-2030');
+    assert.ok(bondSale);
+    assert.strictEqual(bondSale.taxCategory, 'BOND');
+    assert.strictEqual(bondSale.taxRate, 0.125);
+    assert.strictEqual(bondSale.realizedPnl, 100.00);
+    // Because the 850 EUR minusvalenza in Portfolio 2 is EQUITY, it does NOT offset the BOND gain!
+    assert.strictEqual(bondSale.compensatedLoss, 0.00);
+    assert.strictEqual(bondSale.taxDue, 100.00 * 0.125); // 12.50 EUR
+    assert.strictEqual(bondSale.netRealizedGain, 100.00 - 12.50); // 87.50 EUR
+
+    // Now record a BOND loss in Portfolio 2
+    const lossRes = await fetch(`${baseUrl}/api/taxes/losses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: portfolio2Id,
+        year: 2024,
+        amount: 50.00,
+        assetType: 'BOND',
+        notes: 'Minusvalenza certificata Bond 2024'
+      })
+    });
+    assert.strictEqual(lossRes.status, 201);
+
+    // Verify GET /api/taxes/zainetto returns differentiated tax savings:
+    const zainettoRes = await fetch(`${baseUrl}/api/taxes/zainetto?portfolioId=${portfolio2Id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const zData = await zainettoRes.json();
+    assert.strictEqual(zData.success, true);
+    assert.ok(zData.summary.byCategory);
+    assert.strictEqual(zData.summary.byCategory.equity.taxRate, 0.26);
+    assert.strictEqual(zData.summary.byCategory.bond.taxRate, 0.125);
+    assert.strictEqual(zData.summary.byCategory.bond.residualAmount, 50.00);
+    assert.strictEqual(zData.summary.byCategory.bond.taxSavingsPotential, 50.00 * 0.125);
+  });
 });
 

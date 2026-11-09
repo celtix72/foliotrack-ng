@@ -179,6 +179,13 @@
           <select id="modalLossPortfolio" required class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
           </select>
         </div>
+        <div>
+          <label class="block text-gray-500 mb-1">Tipologia Asset & Aliquota Fiscale *</label>
+          <select id="modalLossAssetType" required class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416]">
+            <option value="EQUITY">Azioni ed ETF Azionari (Aliquota 26%)</option>
+            <option value="BOND">BOND ed ETF Monetari (Aliquota 12,5%)</option>
+          </select>
+        </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-gray-500 mb-1">Anno di realizzo *</label>
@@ -485,7 +492,7 @@
 
         const sum = data.summary;
         document.getElementById('statTaxLosses').textContent = fmtEur(sum.totalResidualLosses);
-        document.getElementById('statTaxSavings').textContent = `Risparmio 26%: ${fmtEur(sum.taxSavingsPotential)}`;
+        document.getElementById('statTaxSavings').textContent = `Risparmio effettivo: ${fmtEur(sum.taxSavingsPotential)}`;
 
         const warnBadge = document.getElementById('expiringWarningBadge');
         if (sum.expiringThisYearAmount > 0) {
@@ -507,10 +514,18 @@
           else if (l.isExpiringThisYear) urgencyClass = 'bg-red-500';
           else if (l.daysRemaining < 365) urgencyClass = 'bg-amber-500';
 
+          const isBond = l.assetType === 'BOND' || l.taxRate === 0.125;
+          const badgeHtml = isBond
+            ? '<span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">BOND 12,5%</span>'
+            : '<span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20">Azioni/ETF 26%</span>';
+
           return `
             <tr class="hover:bg-gray-50/50 dark:hover:bg-white/5 transition">
               <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">
-                ${l.year}
+                <div class="flex items-center space-x-1.5">
+                  <span>${l.year}</span>
+                  ${badgeHtml}
+                </div>
                 <div class="text-[10px] text-gray-400 font-sans">${l.portfolioName}</div>
               </td>
               <td class="px-3 py-3 text-right text-gray-500">${fmtEur(l.amount)}</td>
@@ -587,12 +602,13 @@
       const year = parseInt(document.getElementById('modalLossYear').value, 10);
       const amount = parseFloat(document.getElementById('modalLossAmount').value);
       const notes = document.getElementById('modalLossNotes').value;
+      const assetType = document.getElementById('modalLossAssetType') ? document.getElementById('modalLossAssetType').value : 'EQUITY';
 
       try {
         const res = await fetch('/api/taxes/losses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ portfolioId: pId, year, amount, notes })
+          body: JSON.stringify({ portfolioId: pId, year, amount, notes, assetType })
         });
         if (res.ok) {
           lossModal.classList.add('hidden');
