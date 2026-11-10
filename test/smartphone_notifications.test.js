@@ -236,6 +236,67 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       db.prepare('DELETE FROM portfolios WHERE id = ?').run(portfolioId);
     });
 
+    test('checkPortfolioChangeNotification matches dashboard Var. Oggi dayPnl and percentage', async () => {
+      const db = getDb();
+      saveNotificationSettings(1, { portfolioChangeEnabled: true, portfolioChangeThreshold: 200.0 });
+      setSetting(1, 'notif_last_notified_portfolio_total', '5000', false);
+      db.prepare("DELETE FROM settings WHERE key IN ('notif_last_portfolio_day_pnl', 'notif_last_portfolio_change_date')").run();
+
+      let pId = null;
+      let captured = null;
+      const originalSend = pushService.sendPushNotification;
+      pushService.sendPushNotification = async (uId, payload) => {
+        captured = payload;
+        return { sent: 1, failed: 0, pruned: 0 };
+      };
+
+      try {
+        // Seed an asset with previousClose and currentPrice giving dayPnl = +350 EUR
+        db.prepare(`
+          INSERT OR REPLACE INTO assets (ticker, name, type, currentPrice, previousClose, currency, quoteDate)
+          VALUES ('TEST_NOTIF', 'Test Holding Inc.', 'EQUITY', 135.0, 100.0, 'EUR', date('now'))
+        `).run();
+
+        const port = db.prepare(`
+          INSERT INTO portfolios (name, initialCash, currentCash, include_in_totals)
+          VALUES ('Portfolio Live Day PnL Test', 5000, 5000, 1)
+        `).run();
+        pId = port.lastInsertRowid;
+        db.prepare(`INSERT INTO portfolio_users (portfolio_id, user_id, role) VALUES (?, 1, 'owner')`).run(pId);
+
+        // Buy 10 shares on a prior date so day gain is 10 * (135 - 100) = +350 EUR
+        db.prepare(`
+          INSERT INTO transactions (portfolioId, date, type, assetTicker, quantity, price, amount)
+          VALUES (?, '2024-01-01', 'BUY', 'TEST_NOTIF', 10, 100.0, 1000.0)
+        `).run(pId);
+
+        // Query dashboard API /api/portfolios
+        const dashRes = await makeRequest(app, 'GET', '/api/portfolios', { Cookie: authCookie });
+        assert.equal(dashRes.status, 200);
+        const dashDayPnl = dashRes.body.totals.dayPnl;
+        const dashDayPct = dashRes.body.totals.dayPnlPercent;
+        assert.equal(dashDayPnl, 350.0);
+        assert.ok(dashDayPct > 0);
+
+        const notifRes = await checkPortfolioChangeNotification(1);
+        assert.equal(notifRes.sent, true);
+        assert.equal(notifRes.dayPnl, dashDayPnl, 'Notification dayPnl must match dashboard dayPnl');
+        assert.equal(notifRes.dayPnlPercent, dashDayPct, 'Notification dayPnlPercent must match dashboard dayPnlPercent');
+        assert.ok(captured);
+        assert.ok(captured.title.includes('+€350'), 'Notification title must reflect dashboard day variation');
+        assert.ok(captured.body.includes('+€350'), 'Notification body must reflect dashboard day variation');
+        assert.ok(captured.title.includes(dashDayPct.toFixed(2).replace('.', ',') + '%'), 'Notification title must contain dashboard day variation %');
+      } finally {
+        pushService.sendPushNotification = originalSend;
+        if (pId) {
+          db.prepare('DELETE FROM transactions WHERE portfolioId = ?').run(pId);
+          db.prepare('DELETE FROM portfolio_users WHERE portfolio_id = ?').run(pId);
+          db.prepare('DELETE FROM portfolios WHERE id = ?').run(pId);
+        }
+        db.prepare('DELETE FROM assets WHERE ticker = ?').run('TEST_NOTIF');
+      }
+    });
+
     test('buildMoversTableText outputs top 3 and flop 3 with value creation, monospace characters and no TOP/FLOP labels', () => {
       const tableText = buildMoversTableText(1, true);
       assert.ok(!tableText.includes('TOP'), 'Must not include TOP label');

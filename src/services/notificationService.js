@@ -539,31 +539,75 @@ async function checkAssetChangeNotifications(userId, now = new Date()) {
 }
 
 /**
+ * Calculates current aggregate portfolio totals for a user, perfectly matching GET /api/portfolios on the dashboard.
+ * Sums all portfolios accessible by the user with (include_in_totals = 1 OR include_in_totals IS NULL).
+ *
+ * @param {number} userId
+ * @returns {{totalValue: number, dayPnl: number, dayPnlPercent: number, portfolios: Array<object>}}
+ */
+function getUserPortfolioTotals(userId) {
+  const db = getDb();
+  let portfolios = [];
+  try {
+    const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+    if (user && user.role === 'admin') {
+      portfolios = db.prepare('SELECT * FROM portfolios WHERE (include_in_totals = 1 OR include_in_totals IS NULL)').all();
+    } else {
+      portfolios = db.prepare(`
+        SELECT p.* FROM portfolios p
+        INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
+        WHERE pu.user_id = ? AND (p.include_in_totals = 1 OR p.include_in_totals IS NULL)
+      `).all(userId);
+    }
+  } catch {
+    portfolios = [];
+  }
+
+  let grandTotalValue = 0.0;
+  let grandDayPnl = 0.0;
+  const recalculated = [];
+
+  for (const p of portfolios) {
+    try {
+      const txCount = db.prepare('SELECT COUNT(*) as c FROM transactions WHERE portfolioId = ?').get(p.id);
+      if (txCount && txCount.c > 0) {
+        const snap = recalculatePortfolio(p.id);
+        if (snap) {
+          recalculated.push(snap);
+          grandTotalValue += (Number(snap.metrics?.totalValue !== undefined ? snap.metrics.totalValue : snap.totalValue) || 0.0);
+          grandDayPnl += (Number(snap.metrics?.dayPnl !== undefined ? snap.metrics.dayPnl : snap.dayPnl) || 0.0);
+        }
+      } else {
+        // Fallback for portfolios with cash / no transactions
+        const val = Number(p.totalValue) || Number(p.currentCash) || Number(p.initialCash) || 0.0;
+        grandTotalValue += val;
+      }
+    } catch (err) {
+      console.warn(`[Notification] Error calculating portfolio ${p.id}:`, err.message);
+      grandTotalValue += (Number(p.totalValue) || 0.0);
+    }
+  }
+
+  const grandPrevValue = grandTotalValue - grandDayPnl;
+  const grandDayPnlPercent = grandPrevValue > 0 ? (grandDayPnl / grandPrevValue) * 100.0 : 0.0;
+
+  return {
+    totalValue: grandTotalValue,
+    dayPnl: grandDayPnl,
+    dayPnlPercent: grandDayPnlPercent,
+    portfolios: recalculated
+  };
+}
+
+/**
  * Calculates current total portfolio value for a user.
  *
  * @param {number} userId
  * @returns {number}
  */
 function getTotalPortfolioValue(userId) {
-  const db = getDb();
-  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
-  let row;
-  if (user && user.role === 'admin') {
-    row = db.prepare(`
-      SELECT SUM(totalValue) as total
-      FROM portfolios
-      WHERE (include_in_totals = 1 OR include_in_totals IS NULL)
-    `).get();
-  } else {
-    row = db.prepare(`
-      SELECT SUM(p.totalValue) as total
-      FROM portfolios p
-      INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
-      WHERE pu.user_id = ? AND (p.include_in_totals = 1 OR p.include_in_totals IS NULL)
-    `).get(userId);
-  }
-
-  return row && row.total ? parseFloat(row.total) : 0;
+  const totals = getUserPortfolioTotals(userId);
+  return totals.totalValue;
 }
 
 /**
@@ -573,14 +617,17 @@ function getTotalPortfolioValue(userId) {
  * @param {number} userId
  * @returns {Promise<{sent: boolean, currentTotal: number, lastTotal?: number, diff?: number, reason?: string}>}
  */
-async function checkPortfolioChangeNotification(userId) {
+async function checkPortfolioChangeNotification(userId, now = new Date()) {
   const settings = getNotificationSettings(userId);
   if (!settings.portfolioChangeEnabled) {
     return { sent: false, currentTotal: 0, reason: 'Notifica variazione portafoglio disattivata' };
   }
 
   const threshold = settings.portfolioChangeThreshold || 300.0;
-  const currentTotal = getTotalPortfolioValue(userId);
+  const totals = getUserPortfolioTotals(userId);
+  const currentTotal = totals.totalValue;
+  const currentDayPnl = totals.dayPnl;
+  const currentDayPnlPercent = totals.dayPnlPercent;
 
   if (currentTotal <= 0) {
     return { sent: false, currentTotal, reason: 'Nessun portafoglio valorizzato per questo utente' };
@@ -598,34 +645,81 @@ async function checkPortfolioChangeNotification(userId) {
     };
   }
 
+  let todayRomeStr = '';
+  try {
+    todayRomeStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(now);
+  } catch {
+    todayRomeStr = now.toISOString().split('T')[0];
+  }
+
+  const lastNotifiedDate = getSetting(userId, 'notif_last_portfolio_change_date', false);
+  const lastNotifiedDayPnlStr = getSetting(userId, 'notif_last_portfolio_day_pnl', false);
+  const lastNotifiedDayPnl = (lastNotifiedDate === todayRomeStr && lastNotifiedDayPnlStr !== null && !isNaN(parseFloat(lastNotifiedDayPnlStr)))
+    ? parseFloat(lastNotifiedDayPnlStr)
+    : null;
+
   const diff = currentTotal - lastTotal;
   const absDiff = Math.abs(diff);
+  const absDayPnl = Math.abs(currentDayPnl);
 
-  if (absDiff >= threshold) {
-    const isUp = diff >= 0;
-    const sign = isUp ? '+' : '-';
-    const icon = isUp ? '🟢' : '🔴';
-    const diffFormatted = `${sign}€${Math.round(absDiff).toLocaleString('it-IT')}`;
+  // Trigger evaluation:
+  // 1. If portfolio has an active day P&L from assets/quotes (absDayPnl > 0):
+  //    Trigger if absDayPnl >= threshold and (first notification today OR dayPnl moved by >= threshold since last notification)
+  // 2. Else (e.g. pure cash portfolio or manual total update in test mode):
+  //    Trigger if absDiff >= threshold
+  let shouldTrigger = false;
+  if (absDayPnl >= threshold) {
+    if (lastNotifiedDayPnl === null) {
+      shouldTrigger = true;
+    } else if (Math.abs(currentDayPnl - lastNotifiedDayPnl) >= threshold) {
+      shouldTrigger = true;
+    }
+  } else if (absDayPnl === 0 && absDiff >= threshold) {
+    shouldTrigger = true;
+  }
+
+  if (shouldTrigger) {
+    // When dayPnl is present (> 0), use the EXACT daily variation matching the dashboard ("Var. Oggi")
+    const variationVal = absDayPnl > 0 ? currentDayPnl : diff;
+    const variationPct = absDayPnl > 0 ? currentDayPnlPercent : (lastTotal > 0 ? (diff / lastTotal) * 100.0 : 0.0);
+
+    const isUp = variationVal >= 0;
+    const sign = isUp ? '+' : '';
+    const diffFormatted = `${sign}€${Math.round(Math.abs(variationVal)).toLocaleString('it-IT')}`;
+    const pctFormatted = `${sign}${variationPct.toFixed(2).replace('.', ',')}%`;
     const totalFormatted = `€${formatPortfolioK(currentTotal)}`;
     const moversTable = buildMoversTableText(userId, false);
 
+    // Title includes variation amount and %, body includes total and variation matching dashboard
+    const titleText = absDayPnl > 0
+      ? `💼 Variazione Portafoglio: ${diffFormatted} (${pctFormatted})`
+      : `💼 Variazione Portafoglio: ${diffFormatted}`;
+
+    const bodyText = absDayPnl > 0
+      ? `Patrimonio: ${totalFormatted} (Var. Oggi: ${diffFormatted} | ${pctFormatted})\n\n${moversTable}`
+      : `Patrimonio: ${totalFormatted} (${diffFormatted})\n\n${moversTable}`;
+
     const payload = {
-      title: `💼 Variazione Portafoglio: ${diffFormatted}`,
-      body: `Patrimonio: ${totalFormatted} (${diffFormatted})\n\n${moversTable}`,
+      title: titleText,
+      body: bodyText,
       icon: '/icons/icon-192.png',
       badge: '/favicon.svg',
-      url: '/portfolios',
+      url: '/dashboard',
       tag: `portfolio-change-${Date.now()}`
     };
 
     const result = await pushService.sendPushNotification(userId, payload);
-    // Update baseline to the current total after successfully recording the notification
+    // Update baseline to the current total and day PnL after recording
     setSetting(userId, 'notif_last_notified_portfolio_total', currentTotal.toString(), false);
+    setSetting(userId, 'notif_last_portfolio_change_date', todayRomeStr, false);
+    setSetting(userId, 'notif_last_portfolio_day_pnl', currentDayPnl.toString(), false);
 
     return {
       sent: true,
-      diff,
-      absDiff,
+      diff: variationVal,
+      absDiff: Math.abs(variationVal),
+      dayPnl: currentDayPnl,
+      dayPnlPercent: currentDayPnlPercent,
       currentTotal,
       previousTotal: lastTotal,
       result
@@ -636,10 +730,12 @@ async function checkPortfolioChangeNotification(userId) {
     sent: false,
     diff,
     absDiff,
+    dayPnl: currentDayPnl,
+    dayPnlPercent: currentDayPnlPercent,
     currentTotal,
     previousTotal: lastTotal,
     threshold,
-    reason: `Variazione (€${Math.round(absDiff).toLocaleString('it-IT')}) inferiore alla soglia impostata (€${Math.round(threshold).toLocaleString('it-IT')})`
+    reason: `Variazione (€${Math.round(absDayPnl > 0 ? absDayPnl : absDiff).toLocaleString('it-IT')}) inferiore alla soglia impostata (€${Math.round(threshold).toLocaleString('it-IT')})`
   };
 }
 
@@ -687,7 +783,7 @@ async function sendTestNotification(userId, type) {
         body: `Patrimonio simulato: €${formatPortfolioK(simulatedTotal)} (+€300)\n\n${moversTable}`,
         icon: '/icons/icon-192.png',
         badge: '/favicon.svg',
-        url: '/portfolios',
+        url: '/dashboard',
         tag: `test-portfolio-change-${Date.now()}`
       };
       break;
@@ -721,6 +817,7 @@ module.exports = {
   checkAssetChangeNotifications,
   checkPortfolioChangeNotification,
   sendTestNotification,
+  getUserPortfolioTotals,
   getTotalPortfolioValue,
   getUserTopAndBottomMovers,
   buildMoversTableText,

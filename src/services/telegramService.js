@@ -167,17 +167,16 @@ async function sendDailyDigest(userId, options = {}) {
   const allHoldings = [];
 
   for (const p of portfolios) {
+    if (p.include_in_totals === 0 || p.include_in_totals === false) continue;
     const pMetrics = recalculatePortfolio(p.id);
     if (!pMetrics) continue;
-    totalNav += pMetrics.totalValue || 0;
-    totalCash += pMetrics.currentCash || 0;
-    totalInvested += pMetrics.investedCapital || 0;
+    totalNav += (Number(pMetrics.metrics?.totalValue !== undefined ? pMetrics.metrics.totalValue : pMetrics.totalValue) || 0);
+    totalCash += (Number(pMetrics.metrics?.currentCash !== undefined ? pMetrics.metrics.currentCash : pMetrics.currentCash) || 0);
+    totalInvested += (Number(pMetrics.metrics?.investedCapital !== undefined ? pMetrics.metrics.investedCapital : pMetrics.investedCapital) || 0);
+    total1DVal += (Number(pMetrics.metrics?.dayPnl !== undefined ? pMetrics.metrics.dayPnl : pMetrics.dayPnl) || 0);
 
-    for (const h of (pMetrics.holdings || [])) {
+    for (const h of (pMetrics.holdings || pMetrics.metrics?.holdings || [])) {
       allHoldings.push(h);
-      if (h.changeValue && h.shares) {
-        total1DVal += (h.changeValue * h.shares);
-      }
     }
   }
 
