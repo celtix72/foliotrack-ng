@@ -283,9 +283,18 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
         assert.equal(notifRes.dayPnl, dashDayPnl, 'Notification dayPnl must match dashboard dayPnl');
         assert.equal(notifRes.dayPnlPercent, dashDayPct, 'Notification dayPnlPercent must match dashboard dayPnlPercent');
         assert.ok(captured);
-        assert.ok(captured.title.includes('+€350'), 'Notification title must reflect dashboard day variation');
+        assert.equal(captured.title, 'Δ Portf. DAY', 'Notification title must be Δ Portf. DAY');
+        assert.ok(!captured.title.includes('+€350'), 'Notification title must not duplicate variation figures');
+        assert.ok(captured.body.includes('Lordo:'), 'Body must include Lordo');
+        assert.ok(captured.body.includes('Netto:'), 'Body must include Netto');
+        assert.ok(captured.body.includes('Δ Portf. 1DAY:'), 'Body row 2 must start with Δ Portf. 1DAY:');
         assert.ok(captured.body.includes('+€350'), 'Notification body must reflect dashboard day variation');
-        assert.ok(captured.title.includes(dashDayPct.toFixed(2).replace('.', ',') + '%'), 'Notification title must contain dashboard day variation %');
+        assert.ok(captured.body.includes(dashDayPct.toFixed(2).replace('.', ',') + '%'), 'Notification body must contain dashboard day variation %');
+
+        const bodyLines = captured.body.split('\n');
+        assert.equal(bodyLines.length, 8, 'Body must have exactly 8 rows (row 1 Lordo/Netto, row 2 Delta 1DAY, rows 3-5 top, rows 6-8 flop)');
+        assert.match(bodyLines[0], /^Lordo:\s*€\d+.*-\s*Netto:\s*€\d+/);
+        assert.match(bodyLines[1], /^Δ Portf\. 1DAY:/);
       } finally {
         pushService.sendPushNotification = originalSend;
         if (pId) {
@@ -387,7 +396,7 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.ok(lastCapturedPayload.body.includes('+5,4%'));
     });
 
-    test('POST /api/notifications/test/portfolio_change includes top 3 and flop 3 table with value creation and emoticons without TOP/FLOP labels', async () => {
+    test('POST /api/notifications/test/portfolio_change includes compact 8-row layout with Lordo, Netto and Δ Portf. 1DAY', async () => {
       const res = await makeRequest(app, 'POST', '/api/notifications/test/portfolio_change', {
         Cookie: authCookie
       });
@@ -396,16 +405,22 @@ describe('Smartphone App Push Notifications & Market Closed Logic', () => {
       assert.equal(res.body.success, true);
       assert.ok(res.body.message.includes('inviata con successo'));
       assert.ok(lastCapturedPayload);
-      assert.ok(lastCapturedPayload.title.includes('+€300'));
-      assert.ok(!lastCapturedPayload.title.includes('€300,00'));
-      assert.ok(lastCapturedPayload.body.includes('K'));
-      assert.ok(lastCapturedPayload.body.includes('(+€300)'));
+      assert.equal(lastCapturedPayload.title, 'Δ Portf. DAY');
+      assert.ok(lastCapturedPayload.body.includes('Lordo:'));
+      assert.ok(lastCapturedPayload.body.includes('Netto:'));
+      assert.ok(lastCapturedPayload.body.includes('Δ Portf. 1DAY:'));
+      assert.ok(lastCapturedPayload.body.includes('+€300'));
       assert.ok(!lastCapturedPayload.body.includes('TOP'));
       assert.ok(!lastCapturedPayload.body.includes('FLOP'));
       assert.ok(lastCapturedPayload.body.includes('€'));
       assert.ok(lastCapturedPayload.body.includes('%'));
       assert.ok(lastCapturedPayload.body.includes('🚀') || lastCapturedPayload.body.includes('🟢'));
       assert.ok(lastCapturedPayload.body.includes('💥') || lastCapturedPayload.body.includes('🔴'));
+
+      const lines = lastCapturedPayload.body.split('\n');
+      assert.equal(lines.length, 8, 'Body must have exactly 8 rows');
+      assert.match(lines[0], /^Lordo:\s*€\d+.*-\s*Netto:\s*€\d+/);
+      assert.match(lines[1], /^Δ Portf\. 1DAY:/);
     });
 
     test('POST /api/notifications/test/invalid_type returns 400 error', async () => {

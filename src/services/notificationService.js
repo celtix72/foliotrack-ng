@@ -352,8 +352,27 @@ function getUserTopAndBottomMovers(userId, isTest = false) {
 }
 
 /**
+ * Returns icon symbols representing portfolio daily variation direction and intensity.
+ *
+ * @param {number} val
+ * @param {number} pct
+ * @returns {string}
+ */
+function getVariationIconSymbols(val, pct) {
+  if (val > 0) {
+    const lead = pct >= 3.0 ? '🚀' : '🟢';
+    return `${lead} 📈`;
+  }
+  if (val < 0) {
+    const lead = pct <= -3.0 ? '💥' : '🔴';
+    return `${lead} 📉`;
+  }
+  return '⚪ ➖';
+}
+
+/**
  * Builds formatted tabular text representation of top 3 and bottom 3 tickers with emoticons and value creation.
- * Omits "TOP" and "FLOP" labels and applies user-selected font style.
+ * Omits "TOP" and "FLOP" labels, joins directly in compact 6-line block, and applies user-selected font style.
  *
  * @param {number} userId
  * @param {boolean} [isTest=false]
@@ -363,12 +382,9 @@ function getUserTopAndBottomMovers(userId, isTest = false) {
 function buildMoversTableText(userId, isTest = false, fontStyleOverride = null) {
   const fontStyle = fontStyleOverride || getNotificationSettings(userId).fontStyle || 'standard';
   const { top3, flop3 } = getUserTopAndBottomMovers(userId, isTest);
-  const topLines = top3.map(item => formatMoverRow(item, fontStyle)).join('\n');
-  const flopLines = flop3.map(item => formatMoverRow(item, fontStyle)).join('\n');
-  const sections = [];
-  if (topLines) sections.push(topLines);
-  if (flopLines) sections.push(flopLines);
-  return sections.join('\n\n');
+  const topLines = top3.map(item => formatMoverRow(item, fontStyle));
+  const flopLines = flop3.map(item => formatMoverRow(item, fontStyle));
+  return [...topLines, ...flopLines].join('\n');
 }
 
 /**
@@ -564,6 +580,7 @@ function getUserPortfolioTotals(userId) {
   }
 
   let grandTotalValue = 0.0;
+  let grandNetValue = 0.0;
   let grandDayPnl = 0.0;
   const recalculated = [];
 
@@ -574,17 +591,24 @@ function getUserPortfolioTotals(userId) {
         const snap = recalculatePortfolio(p.id);
         if (snap) {
           recalculated.push(snap);
-          grandTotalValue += (Number(snap.metrics?.totalValue !== undefined ? snap.metrics.totalValue : snap.totalValue) || 0.0);
+          const tVal = (Number(snap.metrics?.totalValue !== undefined ? snap.metrics.totalValue : snap.totalValue) || 0.0);
+          const nVal = (Number(snap.metrics?.netValue !== undefined ? snap.metrics.netValue : snap.netValue) || tVal);
+          grandTotalValue += tVal;
+          grandNetValue += nVal;
           grandDayPnl += (Number(snap.metrics?.dayPnl !== undefined ? snap.metrics.dayPnl : snap.dayPnl) || 0.0);
         }
       } else {
         // Fallback for portfolios with cash / no transactions
         const val = Number(p.totalValue) || Number(p.currentCash) || Number(p.initialCash) || 0.0;
+        const nVal = Number(p.netValue) || val;
         grandTotalValue += val;
+        grandNetValue += nVal;
       }
     } catch (err) {
       console.warn(`[Notification] Error calculating portfolio ${p.id}:`, err.message);
-      grandTotalValue += (Number(p.totalValue) || 0.0);
+      const val = (Number(p.totalValue) || 0.0);
+      grandTotalValue += val;
+      grandNetValue += (Number(p.netValue) || val);
     }
   }
 
@@ -593,6 +617,7 @@ function getUserPortfolioTotals(userId) {
 
   return {
     totalValue: grandTotalValue,
+    netValue: grandNetValue,
     dayPnl: grandDayPnl,
     dayPnlPercent: grandDayPnlPercent,
     portfolios: recalculated
@@ -685,19 +710,23 @@ async function checkPortfolioChangeNotification(userId, now = new Date()) {
 
     const isUp = variationVal >= 0;
     const sign = isUp ? '+' : '';
-    const diffFormatted = `${sign}€${Math.round(Math.abs(variationVal)).toLocaleString('it-IT')}`;
-    const pctFormatted = `${sign}${variationPct.toFixed(2).replace('.', ',')}%`;
-    const totalFormatted = `€${formatPortfolioK(currentTotal)}`;
+    const diffFormatted = variationVal !== 0 ? `${sign}€${Math.round(Math.abs(variationVal)).toLocaleString('it-IT')}` : '€0';
+    const pctFormatted = variationVal !== 0 ? `${sign}${variationPct.toFixed(2).replace('.', ',')}%` : '0,00%';
+    const lordoFormatted = `€${Math.round(currentTotal).toLocaleString('it-IT')}`;
+    const nettoFormatted = `€${Math.round(totals.netValue || currentTotal).toLocaleString('it-IT')}`;
+    const variationIcons = getVariationIconSymbols(variationVal, variationPct);
+
+    // Compact notification layout conforming to user specification:
+    // Title: <simbolo Delta> Portf. DAY
+    // 1 row) Lordo: <valore lordo portafoglio> - Netto <valore netto portafoglio>
+    // 2 row) <simbolo Delta> Portf. 1DAY: <valore di delta del portafoglio> <simboli icona che rappresentano la variazione>
+    // 3,4,5 row) top performer
+    // 6,7,8 row) worst performer
+    const titleText = 'Δ Portf. DAY';
+    const row1 = `Lordo: ${lordoFormatted} - Netto: ${nettoFormatted}`;
+    const row2 = `Δ Portf. 1DAY: ${diffFormatted} (${pctFormatted}) ${variationIcons}`;
     const moversTable = buildMoversTableText(userId, false);
-
-    // Title includes variation amount and %, body includes total and variation matching dashboard
-    const titleText = absDayPnl > 0
-      ? `💼 Variazione Portafoglio: ${diffFormatted} (${pctFormatted})`
-      : `💼 Variazione Portafoglio: ${diffFormatted}`;
-
-    const bodyText = absDayPnl > 0
-      ? `Patrimonio: ${totalFormatted} (Var. Oggi: ${diffFormatted} | ${pctFormatted})\n\n${moversTable}`
-      : `Patrimonio: ${totalFormatted} (${diffFormatted})\n\n${moversTable}`;
+    const bodyText = `${row1}\n${row2}\n${moversTable}`;
 
     const payload = {
       title: titleText,
@@ -776,11 +805,26 @@ async function sendTestNotification(userId, type) {
       break;
 
     case 'portfolio_change': {
-      const simulatedTotal = currentTotal > 0 ? currentTotal : 28500.0;
+      const totals = getUserPortfolioTotals(userId);
+      const simulatedTotal = totals.totalValue > 0 ? totals.totalValue : 28500.0;
+      const simulatedNet = totals.netValue > 0 ? totals.netValue : Math.round(simulatedTotal * 0.96);
+      const simulatedDayPnl = totals.dayPnl !== 0 ? totals.dayPnl : 300.0;
+      const simulatedPct = totals.dayPnlPercent !== 0 ? totals.dayPnlPercent : (simulatedDayPnl / simulatedTotal) * 100.0;
+
+      const lordoFormatted = `€${Math.round(simulatedTotal).toLocaleString('it-IT')}`;
+      const nettoFormatted = `€${Math.round(simulatedNet).toLocaleString('it-IT')}`;
+      const sign = simulatedDayPnl >= 0 ? '+' : '';
+      const diffFormatted = `${sign}€${Math.round(Math.abs(simulatedDayPnl)).toLocaleString('it-IT')}`;
+      const pctFormatted = `${sign}${simulatedPct.toFixed(2).replace('.', ',')}%`;
+      const variationIcons = getVariationIconSymbols(simulatedDayPnl, simulatedPct);
+
+      const row1 = `Lordo: ${lordoFormatted} - Netto: ${nettoFormatted}`;
+      const row2 = `Δ Portf. 1DAY: ${diffFormatted} (${pctFormatted}) ${variationIcons}`;
       const moversTable = buildMoversTableText(userId, true);
+
       payload = {
-        title: '💼 [TEST] Variazione Portafoglio: +€300',
-        body: `Patrimonio simulato: €${formatPortfolioK(simulatedTotal)} (+€300)\n\n${moversTable}`,
+        title: 'Δ Portf. DAY',
+        body: `${row1}\n${row2}\n${moversTable}`,
         icon: '/icons/icon-192.png',
         badge: '/favicon.svg',
         url: '/dashboard',
