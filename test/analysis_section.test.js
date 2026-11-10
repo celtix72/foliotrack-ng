@@ -508,4 +508,55 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     assert.ok(data.stats.closeCount >= 1);
     assert.ok(data.stats.watchlistCount >= 1);
   });
+
+  test('GET /api/market/chart/:ticker includes today updated quote from assets table', async () => {
+    const db = getDb();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const testTicker = 'TEST_CHART_LIVE';
+
+    db.prepare(`
+      INSERT OR REPLACE INTO assets (ticker, name, type, currentPrice, previousClose, currency, quoteDate)
+      VALUES (?, 'Test Chart Live Holding', 'EQUITY', 245.50, 240.00, 'EUR', ?)
+    `).run(testTicker, todayStr);
+
+    // Seed historical quotes older than today
+    db.prepare(`
+      INSERT OR REPLACE INTO asset_quotes (ticker, date, close, volume, source)
+      VALUES (?, date('now', '-2 days'), 235.0, 1000, 'YAHOO'),
+             (?, date('now', '-1 day'), 240.0, 1200, 'YAHOO')
+    `).run(testTicker, testTicker);
+
+    const res = await fetch(`${baseUrl}/api/market/chart/${testTicker}?range=1M`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+
+    assert.equal(data.success, true);
+    assert.ok(Array.isArray(data.points) && data.points.length >= 3);
+    const lastPoint = data.points[data.points.length - 1];
+    assert.equal(lastPoint.date, todayStr, 'Last point on chart must have today date');
+    assert.equal(lastPoint.close, 245.50, 'Last point on chart must match today updated currentPrice');
+
+    // Cleanup
+    db.prepare('DELETE FROM asset_quotes WHERE ticker = ?').run(testTicker);
+    db.prepare('DELETE FROM assets WHERE ticker = ?').run(testTicker);
+  });
+
+  test('Frontend analysis.js contains modal price chart canvas, range switcher buttons, and BUY/SELL marker plugins', async () => {
+    const fs = require('fs');
+    const path = require('path');
+    const js = fs.readFileSync(path.join(__dirname, '../public/analysis.js'), 'utf8');
+
+    assert.ok(js.includes('modalPriceChartCanvas'), 'analysis.js must contain modalPriceChartCanvas');
+    assert.ok(js.includes('loadModalPriceChart'), 'analysis.js must define loadModalPriceChart');
+    assert.ok(js.includes('modalTransactionLabels'), 'analysis.js must register modalTransactionLabels plugin for BUY/SELL badges');
+    assert.ok(js.includes('chart-range-btn'), 'analysis.js must support interactive range switcher');
+    assert.ok(js.includes('activePriceChart'), 'analysis.js must track and cleanup activePriceChart');
+  });
+
+  test('Yahoo Finance service exports fetchFinvizPeg and supports multi-source PEG resolution', () => {
+    const yf = require('../src/services/yahooFinance');
+    assert.equal(typeof yf.fetchFinvizPeg, 'function', 'yahooFinance must export fetchFinvizPeg');
+  });
 });

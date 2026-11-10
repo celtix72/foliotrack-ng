@@ -491,6 +491,30 @@ router.get('/chart/:ticker', optionalAuth, async (req, res) => {
       `).all(ticker, daysBack);
     }
 
+    // Ensure latest quote from assets table (updated today) is included as the final point
+    try {
+      const asset = db.prepare('SELECT currentPrice, previousClose, quoteDate, currency FROM assets WHERE ticker = ?').get(ticker.toUpperCase());
+      if (asset && asset.currentPrice > 0 && points && points.length > 0) {
+        const lastPt = points[points.length - 1];
+        const todayStr = new Date().toISOString().split('T')[0];
+        const quoteDate = asset.quoteDate ? String(asset.quoteDate).slice(0, 10) : todayStr;
+        
+        if (lastPt.date < quoteDate) {
+          points.push({
+            date: quoteDate,
+            open: lastPt.close || asset.previousClose || asset.currentPrice,
+            high: Math.max(lastPt.close || asset.currentPrice, asset.currentPrice),
+            low: Math.min(lastPt.close || asset.currentPrice, asset.currentPrice),
+            close: asset.currentPrice,
+            volume: 0,
+            source: 'LIVE_TODAY'
+          });
+        } else if (lastPt.date === quoteDate && asset.currentPrice !== lastPt.close) {
+          lastPt.close = asset.currentPrice;
+        }
+      }
+    } catch {}
+
     return res.json({
       success: true,
       ticker: ticker.toUpperCase(),

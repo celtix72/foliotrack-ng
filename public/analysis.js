@@ -11,8 +11,11 @@
   let activeFilter = 'all';
   let searchQuery = '';
   let currentTargetTicker = null;
+  let currentFundamentalsTicker = null;
+  let currentModalRange = '1Y';
   let activeRevenueChart = null;
   let activePEChart = null;
+  let activePriceChart = null;
 
   // Formatting helpers
   function fmtCurrencySymbol(cur) {
@@ -723,13 +726,32 @@
       }
 
       const f = data.fundamentals;
-      modalTitle.textContent = f.companyName || ticker;
+      currentFundamentalsTicker = ticker;
+      const assetInfo = allAssets.find(a => a.ticker.toUpperCase() === ticker.toUpperCase()) || {};
+      const currentPrice = assetInfo.currentPrice || f.currentPrice || 0;
+      const prevClose = assetInfo.previousClose || f.previousClose || currentPrice;
+      const currency = assetInfo.currency || f.currency || 'EUR';
+      const dayChangePct = prevClose > 0 ? ((currentPrice - prevClose) / prevClose) * 100 : 0;
+
+      modalTitle.textContent = f.companyName || assetInfo.name || ticker;
       modalBadge.textContent = ticker.slice(0, 2).toUpperCase();
+
+      let originBadgeHtml = '';
+      if (assetInfo.origin === 'OPEN') {
+        originBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/30">IN PORTAFOGLIO (${assetInfo.netQuantity ? Math.round(assetInfo.netQuantity) : '1+'} quote)</span>`;
+      } else if (assetInfo.origin === 'CLOSE') {
+        originBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-500/30">POSIZIONE CHIUSA (STORICO)</span>`;
+      } else {
+        originBadgeHtml = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-500/30">WATCHLIST</span>`;
+      }
+
       modalSubtitle.innerHTML = `
         <span>${f.sector || 'N/D'}</span>
         <span>•</span>
         <span>${f.industry || 'N/D'}</span>
         ${f.country ? `<span>•</span><span>${f.country}</span>` : ''}
+        <span>•</span>
+        ${originBadgeHtml}
       `;
 
       if (modalSource) {
@@ -750,8 +772,63 @@
       const cashDebtScore = scoreIndicator('cashDebt', f.totalCash, { cash: f.totalCash, debt: f.totalDebt });
       const divYieldScore = scoreIndicator('dividend', f.dividendYield);
 
-      // Render Rich Fundamental Report
+      // Render Rich Fundamental Report & Price Chart Card
       modalBody.innerHTML = `
+        <!-- TOP CARD: GRAFICO PREZZO CON ULTIMA QUOTAZIONE AD OGGI E OPERAZIONI BUY / SELL -->
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-gray-200/60 dark:border-white/5 pb-2">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="text-base" aria-hidden="true">📈</span>
+                <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono">
+                  Andamento Prezzo & Operazioni Eseguite
+                </h3>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/20">
+                  Live Oggi
+                </span>
+              </div>
+              <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-x-2 font-mono">
+                <span>Ultima quotazione: <strong class="text-gray-900 dark:text-white font-bold">${fmtPrice(currentPrice, currency)}</strong></span>
+                <span>${renderVariationBadge(dayChangePct)}</span>
+                <span class="text-gray-400">• Aggiornato ad oggi</span>
+              </div>
+            </div>
+
+            <!-- Time Range Selector -->
+            <div class="flex items-center space-x-1 font-mono text-[10px]" id="modalPriceChartRangeButtons">
+              <button type="button" data-range="1M" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '1M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">1M</button>
+              <button type="button" data-range="3M" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '3M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">3M</button>
+              <button type="button" data-range="6M" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '6M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">6M</button>
+              <button type="button" data-range="1Y" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '1Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">1Y</button>
+              <button type="button" data-range="5Y" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '5Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">5Y</button>
+              <button type="button" data-range="ALL" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === 'ALL' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">ALL</button>
+            </div>
+          </div>
+
+          <!-- Operations Summary Banner -->
+          <div class="flex flex-wrap items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-white/[0.02] p-1.5 rounded-lg border border-gray-100 dark:border-white/5">
+            <div class="flex items-center space-x-2">
+              <span id="modalTxCountsBadge" class="font-semibold text-gray-700 dark:text-gray-300">Caricamento operazioni portafoglio...</span>
+            </div>
+            <div class="flex items-center space-x-2 text-[9px]">
+              <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white mr-1" aria-hidden="true"></span>BUY (Acquisto)</span>
+              <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white mr-1" aria-hidden="true"></span>SELL (Vendita)</span>
+              <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white mr-1" aria-hidden="true"></span>DIV (Dividendo)</span>
+            </div>
+          </div>
+
+          <!-- Canvas Container -->
+          <div class="h-60 sm:h-72 w-full relative">
+            <div id="modalPriceChartLoading" class="absolute inset-0 bg-white/60 dark:bg-[#151518]/60 backdrop-blur-xs flex items-center justify-center z-10 hidden">
+              <svg class="w-6 h-6 animate-spin text-emerald-500" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <canvas id="modalPriceChartCanvas"></canvas>
+          </div>
+        </div>
+
         <!-- Top Metrics KPI Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono">
           <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
@@ -794,10 +871,13 @@
                 PEG Ratio (Price / Earnings-to-Growth) - Regola di Peter Lynch
               </h3>
             </div>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${pegScore.bgClass} ${pegScore.textClass}">
-              <span class="mr-1" aria-hidden="true">${pegScore.icon}</span>
-              <span>${pegScore.label}</span>
-            </span>
+            <div class="flex items-center space-x-2">
+              ${f.pegSource ? `<span class="text-[9px] text-gray-400 font-mono">Fonte: ${f.pegSource}</span>` : ''}
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${pegScore.bgClass} ${pegScore.textClass}">
+                <span class="mr-1" aria-hidden="true">${pegScore.icon}</span>
+                <span>${pegScore.label}</span>
+              </span>
+            </div>
           </div>
 
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
@@ -1046,8 +1126,23 @@
         ` : ''}
       `;
 
-      // Render 5-year interactive charts on next frame
+      // Bind price chart range buttons
+      const rangeBtns = modalBody.querySelectorAll('.chart-range-btn');
+      rangeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const newRange = btn.getAttribute('data-range');
+          currentModalRange = newRange;
+          rangeBtns.forEach(b => {
+            b.className = 'chart-range-btn px-2 py-0.5 rounded transition border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300';
+          });
+          btn.className = 'chart-range-btn px-2 py-0.5 rounded transition border bg-emerald-600 text-white font-bold border-emerald-500';
+          loadModalPriceChart(ticker, newRange, currency);
+        });
+      });
+
+      // Render charts on next frame
       requestAnimationFrame(() => {
+        loadModalPriceChart(ticker, currentModalRange, currency);
         renderModalCharts(f);
       });
 
@@ -1198,6 +1293,340 @@
           }
         }
       });
+    }
+  }
+
+  // Load interactive Price History & Transactions (BUY/SELL) Chart
+  async function loadModalPriceChart(ticker, range = '1Y', currency = 'EUR') {
+    const canvas = document.getElementById('modalPriceChartCanvas');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const loadingEl = document.getElementById('modalPriceChartLoading');
+    if (loadingEl) loadingEl.classList.remove('hidden');
+
+    try {
+      // Fetch chart points and transactions in parallel
+      const [chartRes, txRes] = await Promise.all([
+        fetch(`/api/market/chart/${encodeURIComponent(ticker)}?range=${encodeURIComponent(range)}`),
+        fetch(`/api/transactions?assetTicker=${encodeURIComponent(ticker)}&limit=500`).catch(() => null)
+      ]);
+
+      const chartData = await chartRes.json();
+      let points = (chartData && (chartData.points || chartData.data)) || [];
+
+      let allTxs = [];
+      if (txRes && txRes.ok) {
+        try {
+          const txData = await txRes.json();
+          if (txData && txData.success && Array.isArray(txData.transactions)) {
+            allTxs = txData.transactions;
+          }
+        } catch {}
+      }
+
+      if (!points || points.length === 0) {
+        const countsBadge = document.getElementById('modalTxCountsBadge');
+        if (countsBadge) countsBadge.textContent = 'Dati grafici storici non disponibili';
+        return;
+      }
+
+      // Determine date window of visible chart
+      const minDate = points[0].date;
+      const maxDate = points[points.length - 1].date;
+
+      // Filter transactions that fall within chart range
+      const visibleTxs = allTxs.filter(t => t.date && t.date >= minDate && t.date <= maxDate);
+
+      // Match transactions to point indices
+      const txMapByPointIndex = {};
+      let buyCount = 0;
+      let sellCount = 0;
+      let divCount = 0;
+
+      visibleTxs.forEach(t => {
+        const tType = (t.type || '').toUpperCase();
+        if (tType === 'BUY') buyCount++;
+        else if (tType === 'SELL') sellCount++;
+        else if (tType === 'DIVIDEND') divCount++;
+
+        let matchIdx = points.findIndex(p => p.date === t.date);
+        if (matchIdx === -1) {
+          const tTime = new Date(t.date).getTime();
+          let closestDist = Infinity;
+          let bestIdx = -1;
+          for (let i = 0; i < points.length; i++) {
+            const dist = Math.abs(new Date(points[i].date).getTime() - tTime);
+            if (dist < closestDist) {
+              closestDist = dist;
+              bestIdx = i;
+            }
+          }
+          if (closestDist <= 4 * 24 * 60 * 60 * 1000) {
+            matchIdx = bestIdx;
+          }
+        }
+
+        if (matchIdx !== -1) {
+          if (!txMapByPointIndex[matchIdx]) {
+            txMapByPointIndex[matchIdx] = [];
+          }
+          txMapByPointIndex[matchIdx].push(t);
+        }
+      });
+
+      // Update summary bar count
+      const countsBadge = document.getElementById('modalTxCountsBadge');
+      if (countsBadge) {
+        if (allTxs.length === 0) {
+          countsBadge.innerHTML = `<span class="text-blue-500 font-semibold">Asset in Watchlist</span> <span class="text-gray-400">• Nessuna operazione eseguita in portafoglio</span>`;
+        } else if (visibleTxs.length > 0) {
+          countsBadge.innerHTML = `<strong class="text-gray-900 dark:text-white font-bold">${visibleTxs.length} operazioni</strong> nel periodo (<span class="text-emerald-600 dark:text-emerald-400 font-semibold">${buyCount} acq</span>, <span class="text-rose-600 dark:text-rose-400 font-semibold">${sellCount} vend</span>${divCount > 0 ? `, <span class="text-amber-600 dark:text-amber-400 font-semibold">${divCount} div</span>` : ''})`;
+        } else {
+          countsBadge.innerHTML = `<span class="text-gray-500 dark:text-gray-400">${allTxs.length} operazioni registrate in altri periodi (espandi il periodo temporale)</span>`;
+        }
+      }
+
+      // Format labels & prices
+      const isMultiYear = range === '1Y' || range === '5Y' || range === 'ALL';
+      const labels = points.map(p => {
+        if (!p.date) return '';
+        const parts = p.date.split('-');
+        if (parts.length === 3) {
+          return isMultiYear ? `${parts[1]}/${parts[0].slice(2)}` : `${parts[2]}/${parts[1]}`;
+        }
+        return p.date;
+      });
+      const prices = points.map(p => p.close);
+
+      // Construct Operation Marker Data Points
+      const txDataPoints = [];
+      const txPointRadii = [];
+      const txColors = [];
+      const txBorderColors = [];
+      const txStyles = [];
+
+      for (let i = 0; i < points.length; i++) {
+        const txList = txMapByPointIndex[i];
+        if (txList && txList.length > 0) {
+          const mainTx = txList.find(x => x.type === 'BUY' || x.type === 'SELL') || txList[0];
+          const yVal = (mainTx.price && Number(mainTx.price) > 0) ? Number(mainTx.price) : points[i].close;
+          txDataPoints.push(yVal);
+          txPointRadii.push(7);
+
+          if (mainTx.type === 'BUY') {
+            txColors.push('#10b981'); // Emerald
+            txBorderColors.push('#ffffff');
+            txStyles.push('circle');
+          } else if (mainTx.type === 'SELL') {
+            txColors.push('#f43f5e'); // Rose
+            txBorderColors.push('#ffffff');
+            txStyles.push('circle');
+          } else if (mainTx.type === 'DIVIDEND') {
+            txColors.push('#f59e0b'); // Amber
+            txBorderColors.push('#ffffff');
+            txStyles.push('circle');
+          } else {
+            txColors.push('#8b5cf6'); // Purple
+            txBorderColors.push('#ffffff');
+            txStyles.push('circle');
+          }
+        } else {
+          txDataPoints.push(null);
+          txPointRadii.push(0);
+          txColors.push('transparent');
+          txBorderColors.push('transparent');
+          txStyles.push('circle');
+        }
+      }
+
+      if (activePriceChart) {
+        activePriceChart.destroy();
+        activePriceChart = null;
+      }
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const isPositive = prices.length > 0 && prices[prices.length - 1] >= prices[0];
+      const strokeColor = isPositive ? '#10b981' : '#f43f5e';
+      const fillColor = isPositive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)';
+
+      // Custom Plugin to Draw Operation Badges/Labels above/below dots
+      const modalTxLabelsPlugin = {
+        id: 'modalTransactionLabels',
+        afterDatasetsDraw(chart) {
+          const ctx = chart.ctx;
+          const meta = chart.getDatasetMeta(1); // operations dataset
+          if (!meta || !meta.data) return;
+
+          ctx.save();
+          ctx.font = 'bold 9px "JetBrains Mono", monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          meta.data.forEach((element, index) => {
+            const txList = txMapByPointIndex[index];
+            if (!txList || txList.length === 0) return;
+
+            const pos = element.tooltipPosition ? element.tooltipPosition() : { x: element.x, y: element.y };
+            if (!pos || isNaN(pos.x) || isNaN(pos.y)) return;
+
+            const primaryTx = txList.find(x => x.type === 'BUY' || x.type === 'SELL') || txList[0];
+            const isBuy = primaryTx.type === 'BUY';
+            const isSell = primaryTx.type === 'SELL';
+            const isDiv = primaryTx.type === 'DIVIDEND';
+
+            let text = isBuy ? 'BUY' : (isSell ? 'SELL' : (isDiv ? 'DIV' : primaryTx.type));
+            if (primaryTx.quantity && (isBuy || isSell)) {
+              text += ` ${isBuy ? '+' : '-'}${Math.round(primaryTx.quantity)}`;
+            } else if (isDiv && primaryTx.amount) {
+              text += ` +${fmtPrice(primaryTx.amount, currency)}`;
+            }
+
+            const textWidth = ctx.measureText(text).width;
+            const padX = 5;
+            const pillWidth = textWidth + padX * 2;
+            const pillHeight = 15;
+            const pillY = isSell ? pos.y + 16 : pos.y - 16;
+            const pillX = pos.x - pillWidth / 2;
+
+            // Background pill
+            ctx.fillStyle = isBuy ? '#10b981' : (isSell ? '#f43f5e' : (isDiv ? '#f59e0b' : '#8b5cf6'));
+            ctx.beginPath();
+            const r = 4;
+            if (typeof ctx.roundRect === 'function') {
+              ctx.roundRect(pillX, pillY - pillHeight / 2, pillWidth, pillHeight, r);
+            } else {
+              ctx.rect(pillX, pillY - pillHeight / 2, pillWidth, pillHeight);
+            }
+            ctx.fill();
+
+            // Border
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Text
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(text, pos.x, pillY);
+          });
+
+          ctx.restore();
+        }
+      };
+
+      activePriceChart = new Chart(canvas, {
+        type: 'line',
+        plugins: [modalTxLabelsPlugin],
+        data: {
+          labels,
+          datasets: [
+            // Dataset 0: Continuous price history line
+            {
+              label: 'Prezzo',
+              data: prices,
+              borderColor: strokeColor,
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointBackgroundColor: strokeColor,
+              fill: true,
+              backgroundColor: fillColor,
+              tension: 0.15,
+              order: 2
+            },
+            // Dataset 1: Operation markers
+            {
+              label: 'Operazioni',
+              data: txDataPoints,
+              borderColor: 'transparent',
+              borderWidth: 0,
+              showLine: false,
+              pointRadius: txPointRadii,
+              pointHoverRadius: 9,
+              pointBackgroundColor: txColors,
+              pointBorderColor: txBorderColors,
+              pointBorderWidth: 2,
+              pointStyle: txStyles,
+              order: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: isDark ? 'rgba(20, 20, 22, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+              titleColor: isDark ? '#ffffff' : '#111827',
+              bodyColor: isDark ? '#d1d5db' : '#374151',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+              borderWidth: 1,
+              padding: 10,
+              boxPadding: 4,
+              usePointStyle: true,
+              callbacks: {
+                title: (items) => {
+                  const idx = items[0]?.dataIndex;
+                  const p = points[idx];
+                  if (!p) return '';
+                  const isToday = p.source === 'LIVE_TODAY' || p.date === new Date().toISOString().split('T')[0];
+                  return `Data: ${p.date}${isToday ? ' (Oggi - Prezzo Live)' : ''}`;
+                },
+                label: (ctx) => {
+                  const idx = ctx.dataIndex;
+                  if (ctx.datasetIndex === 0) {
+                    return ` Prezzo: ${fmtPrice(ctx.raw, currency)}`;
+                  } else {
+                    const txList = txMapByPointIndex[idx];
+                    if (!txList || txList.length === 0) return '';
+                    return txList.map(t => {
+                      const isB = t.type === 'BUY';
+                      const isS = t.type === 'SELL';
+                      const isD = t.type === 'DIVIDEND';
+                      const typeLabel = isB ? '🟢 ACQUISTO (BUY)' : (isS ? '🔴 VENDITA (SELL)' : (isD ? '🟡 DIVIDENDO' : `🟣 ${t.type}`));
+                      const qStr = t.quantity ? `${Math.round(t.quantity)} quote` : '';
+                      const pStr = t.price ? `@ ${fmtPrice(t.price, currency)}` : '';
+                      const amtStr = t.amount ? `[Tot: ${fmtPrice(t.amount, currency)}]` : '';
+                      return ` ${typeLabel}: ${qStr} ${pStr} ${amtStr}`.trim();
+                    });
+                  }
+                },
+                afterLabel: (ctx) => {
+                  if (ctx.datasetIndex === 1) {
+                    const txList = txMapByPointIndex[ctx.dataIndex];
+                    if (txList && txList[0] && txList[0].notes) {
+                      return ` Note: ${txList[0].notes}`;
+                    }
+                  }
+                  return '';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxTicksLimit: 7, font: { family: 'JetBrains Mono', size: 10 }, color: isDark ? '#9ca3af' : '#6b7280' }
+            },
+            y: {
+              grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+              ticks: {
+                font: { family: 'JetBrains Mono', size: 10 },
+                color: isDark ? '#9ca3af' : '#6b7280',
+                callback: (v) => fmtPrice(v, currency)
+              }
+            }
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('Error loading asset price chart:', err);
+    } finally {
+      if (loadingEl) loadingEl.classList.add('hidden');
     }
   }
 
@@ -1408,6 +1837,10 @@
     const fundModal = document.getElementById('fundamentalsModal');
     if (fundModal) {
       fundModal.addEventListener('close', () => {
+        if (activePriceChart) {
+          activePriceChart.destroy();
+          activePriceChart = null;
+        }
         if (activeRevenueChart) {
           activeRevenueChart.destroy();
           activeRevenueChart = null;

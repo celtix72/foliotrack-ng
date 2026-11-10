@@ -324,6 +324,32 @@ async function getFundamentals(symbol) {
       });
     }
 
+    // Robust PEG Ratio Resolution (Yahoo Key Stats -> Calculated Growth Formula -> Finviz Fallback)
+    let pegRatio = (ks.pegRatio !== undefined && ks.pegRatio !== null && !isNaN(Number(ks.pegRatio))) ? Number(Number(ks.pegRatio).toFixed(2)) : null;
+    let pegSource = pegRatio !== null ? 'Yahoo Finance (Key Statistics)' : null;
+
+    if (pegRatio === null) {
+      const pe = sd.forwardPE || ks.forwardPE || sd.trailingPE || ks.trailingPE;
+      const growth = fd.earningsGrowth;
+      if (pe && pe > 0 && growth && growth > 0) {
+        const growthPct = growth < 1 ? growth * 100 : growth;
+        if (growthPct >= 1) {
+          pegRatio = Number((pe / growthPct).toFixed(2));
+          pegSource = 'Formula di Peter Lynch (P/E / Crescita Utili)';
+        }
+      }
+    }
+
+    if (pegRatio === null && !cleanSymbol.includes('.') && !cleanSymbol.includes('-')) {
+      try {
+        const fvPeg = await fetchFinvizPeg(cleanSymbol);
+        if (fvPeg !== null) {
+          pegRatio = fvPeg;
+          pegSource = 'Finviz (Consenso Wall Street)';
+        }
+      } catch {}
+    }
+
     return {
       ticker: cleanSymbol,
       companyName: ap.longName || ap.shortName || cleanSymbol,
@@ -340,7 +366,8 @@ async function getFundamentals(symbol) {
       enterpriseValue: ks.enterpriseValue || null,
       trailingPE: sd.trailingPE || null,
       forwardPE: sd.forwardPE || ks.forwardPE || null,
-      pegRatio: ks.pegRatio || null,
+      pegRatio,
+      pegSource,
       priceToBook: ks.priceToBook || null,
       priceToSales: sd.priceToSalesTrailing12Months || null,
       enterpriseToEbitda: ks.enterpriseToEbitda || null,
@@ -400,9 +427,39 @@ async function getFundamentals(symbol) {
   }
 }
 
+/**
+ * Fallback provider: fetches PEG ratio from Finviz for US equity tickers.
+ *
+ * @param {string} symbol
+ * @returns {Promise<number|null>}
+ */
+async function fetchFinvizPeg(symbol) {
+  if (!symbol) return null;
+  const clean = symbol.trim().toUpperCase();
+  if (clean.includes('.') || clean.includes('-')) return null;
+
+  try {
+    const res = await fetch(`https://finviz.com/quote.ashx?t=${encodeURIComponent(clean)}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml'
+      },
+      signal: AbortSignal.timeout(3000)
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const match = html.match(/>PEG<\/div><\/td><td[^>]*><div[^>]*>(?:<b>)?(?:<span[^>]*>)?([0-9]+(?:\.[0-9]+)?)(?:<\/span>)?(?:<\/b>)?<\/div><\/td>/i)
+      || html.match(/PEG<\/div><\/td><td[^>]*>.*?([0-9]+\.[0-9]+)/is);
+    return match ? parseFloat(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
 module.exports = {
   search,
   getQuote,
   getHistorical,
-  getFundamentals
+  getFundamentals,
+  fetchFinvizPeg
 };
