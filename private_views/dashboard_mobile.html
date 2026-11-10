@@ -114,6 +114,21 @@
     .grid-stack-item[gs-id="categoryQuotes"] .category-block {
       margin-bottom: 0 !important;
     }
+
+    /* Hero Portfolio Value (gs-id="value") compact 3-column optimization on mobile */
+    .grid-stack.gs-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-id="value"],
+    .grid-stack-2 > .grid-stack-item:not(.ui-draggable-dragging)[gs-id="value"] {
+      width: 100% !important;
+    }
+    .grid-stack-item[gs-id="value"] .signature-card {
+      padding: 0.65rem 0.65rem !important;
+    }
+    .grid-stack-item[gs-id="value"] .signature-card .text-2xl,
+    .grid-stack-item[gs-id="value"] .signature-card .text-xl,
+    .grid-stack-item[gs-id="value"] .signature-card .text-base {
+      font-size: calc(1.18rem * var(--ft-widget-font-scale, 1)) !important;
+      line-height: 1.25 !important;
+    }
   </style>
 </head>
 <body class="signature-bg min-h-full flex flex-col text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-24 select-none">

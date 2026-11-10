@@ -258,5 +258,24 @@ describe('Patrimonio Lordo & Patrimonio Netto Engine & Dashboard Widget', () => 
 
     // Check tax indicator badge or footer
     assert.ok(html.includes('2,5k'), 'Must display estimated tax 2,5k');
+
+    // Test with daily variation data (Var. Oggi)
+    const mockWithDay = {
+      totals: {
+        totalValue: 150000,
+        netValue: 147500,
+        totalEstimatedTax: 2500,
+        estimatedTax: 2500,
+        dayPnl: 1250,
+        dayPnlPercent: 0.84,
+        unrealizedPnlPercent: 8.5,
+        unrealizedPnl: 12500
+      },
+      isAggregate: true
+    };
+    const htmlWithDay = evalEnv.renderValue(mockWithDay);
+    assert.ok(htmlWithDay.includes('Var. Oggi'), 'Must contain Var. Oggi in 3-column layout');
+    assert.ok(htmlWithDay.includes('+1,3k'), 'Must contain formatted daily variation value');
+    assert.ok(htmlWithDay.includes('+0,84% 1D'), 'Must contain formatted daily variation percentage badge');
   });
 });

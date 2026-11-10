@@ -45,8 +45,8 @@
 
   // Dedicated 1 or 2-column layout definition for mobile devices
   const MOBILE_DEFAULT_LAYOUT = [
-    // Hero KPI Banner (full width)
-    { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 2, h: 2, x: 0, y: 0 },
+    // Hero KPI Banner (full width on smartphone)
+    { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 2, h: 2, minW: 2, x: 0, y: 0 },
 
     // Core KPIs paired side-by-side (1 column each = 50% width)
     { id: 'dayChange', name: 'Variazione Giornaliera (Oggi)', category: 'Performance', w: 1, h: 2, x: 0, y: 2 },
@@ -914,38 +914,57 @@
 
   // Widget HTML Renderers for each of the widgets
   const WIDGET_RENDERERS = {
-    // 1. Portfolio Value (P.LORDO & P.NETTO)
+    // 1. Portfolio Value (P.LORDO, P.NETTO & VAR. OGGI)
     value: (data) => {
       const t = data.totals || {};
       const pct = Number(t.unrealizedPnlPercent) || 0;
       const isPos = pct >= 0;
-      const label = data.isAggregate ? 'P.Lordo' : (data.selectedPortfolio?.name || 'P.Lordo');
+      const label = data.isAggregate ? 'Patrimonio' : (data.selectedPortfolio?.name || 'Patrimonio');
       const lordoVal = Number(t.totalValue) || 0;
       const estTax = Number(t.totalEstimatedTax !== undefined ? t.totalEstimatedTax : (t.estimatedTax || 0)) || 0;
       const nettoVal = t.netValue !== undefined ? Number(t.netValue) : (lordoVal - estTax);
+
+      // Variazione Giornaliera (1D)
+      const dayVal = Number(t.dayPnl) || 0.0;
+      const totalVal = lordoVal;
+      const prevVal = totalVal - dayVal;
+      const dayPct = t.dayPnlPercent !== undefined && !isNaN(t.dayPnlPercent)
+        ? Number(t.dayPnlPercent)
+        : (prevVal > 0 ? (dayVal / prevVal) * 100.0 : 0.0);
+      const isDayPos = dayVal >= 0;
+
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate max-w-[200px]">${label}</span>
-            <div class="flex items-center space-x-1">
-              ${estTax > 0 ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20" title="Imposte stimate su plusvalenze con comp. minusvalenze: -${formatEur(estTax)}">Imp. -${formatEur(estTax)}</span>` : ''}
+            <div class="flex items-center space-x-1.5 truncate">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate max-w-[130px] sm:max-w-[200px]">${label}</span>
               <span class="badge-profit text-[10px] uppercase font-mono">${data.isAggregate ? 'Aggr.' : 'Conto'}</span>
             </div>
-          </div>
-          <div class="my-1.5 grid grid-cols-2 gap-2 items-baseline">
-            <div class="truncate">
-              <div class="text-[10px] font-mono font-semibold uppercase text-gray-400 tracking-wider">P.Lordo</div>
-              <div class="text-xl sm:text-2xl lg:text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight truncate">${formatEur(lordoVal)}</div>
+            <div class="flex items-center space-x-1.5 shrink-0">
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${isDayPos ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'}" title="Variazione Giornaliera 1D: ${formatPct(dayPct)}">
+                ${formatPct(dayPct)} 1D
+              </span>
+              ${estTax > 0 ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20" title="Imposte stimate su plusvalenze con comp. minusvalenze: -${formatEur(estTax)}">Imp. -${formatEur(estTax)}</span>` : ''}
             </div>
-            <div class="truncate text-right">
+          </div>
+          <div class="my-1.5 grid grid-cols-3 gap-1.5 sm:gap-2 items-baseline">
+            <div class="truncate" title="Patrimonio Lordo: € ${Math.abs(Math.round(lordoVal)).toLocaleString('it-IT')}">
+              <div class="text-[10px] font-mono font-semibold uppercase text-gray-400 dark:text-gray-400 tracking-wider">P.Lordo</div>
+              <div class="text-base sm:text-xl lg:text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight truncate">${formatEur(lordoVal)}</div>
+            </div>
+            <div class="truncate text-center" title="Patrimonio Netto (al netto imposte): € ${Math.abs(Math.round(nettoVal)).toLocaleString('it-IT')}">
               <div class="text-[10px] font-mono font-semibold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">P.Netto</div>
-              <div class="text-xl sm:text-2xl lg:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight truncate">${formatEur(nettoVal)}</div>
+              <div class="text-base sm:text-xl lg:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight truncate">${formatEur(nettoVal)}</div>
+            </div>
+            <div class="truncate text-right" title="Variazione Giornaliera: ${formatEurSignedDec(dayVal, 2)} (${formatPct(dayPct)})">
+              <div class="text-[10px] font-mono font-semibold uppercase ${isDayPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} tracking-wider">Var. Oggi</div>
+              <div class="text-base sm:text-xl lg:text-2xl font-bold font-mono ${isDayPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} tabular-nums tracking-tight truncate">${formatEurSignedDec(dayVal, 2)}</div>
             </div>
           </div>
           <div class="flex items-center justify-between text-xs pt-1 border-t border-gray-100 dark:border-white/5">
-            <div class="flex items-center space-x-1.5">
+            <div class="flex items-center space-x-1.5 truncate">
               <span class="${isPos ? 'badge-profit' : 'badge-loss'} tabular-nums text-[10px]">${formatPct(pct)}</span>
-              <span class="text-gray-400 font-mono text-[11px]">${formatEur(t.unrealizedPnl)} lat.</span>
+              <span class="text-gray-400 font-mono text-[11px] truncate">${formatEur(t.unrealizedPnl)} lat.</span>
             </div>
             <div class="text-[10px] font-mono text-gray-400 truncate text-right">
               ${estTax > 0 ? `Tax: -${formatEur(estTax)}` : 'Tax: 0 €'}
