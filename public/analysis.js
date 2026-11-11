@@ -797,7 +797,7 @@
               <div class="flex items-center space-x-2">
                 <span class="text-base" aria-hidden="true">📈</span>
                 <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono">
-                  Andamento Prezzo & Operazioni Eseguite
+                  Andamento Prezzo, Volumi & Operazioni Eseguite
                 </h3>
                 <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/20">
                   Live Oggi
@@ -836,6 +836,7 @@
               <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white mr-1" aria-hidden="true"></span>BUY (Acquisto)</span>
               <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white mr-1" aria-hidden="true"></span>SELL (Vendita)</span>
               <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white mr-1" aria-hidden="true"></span>DIV (Dividendo)</span>
+              <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-2xs bg-gray-400/60 dark:bg-gray-500/60 mr-1" aria-hidden="true"></span>Volumi</span>
             </div>
           </div>
 
@@ -1471,6 +1472,26 @@
       const strokeColor = isPositive ? '#10b981' : '#f43f5e';
       const fillColor = isPositive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)';
 
+      // Volume series & dynamic coloring (emerald on up days, rose on down days)
+      const volumes = points.map(p => Number(p.volume) || 0);
+      const hasVolumes = volumes.some(v => v > 0);
+      const maxVolume = hasVolumes ? Math.max(...volumes) : 0;
+      const volumeColors = points.map((p, idx) => {
+        const prevClose = idx > 0 ? (points[idx - 1].close || p.close) : p.close;
+        const isUp = (p.close || 0) >= prevClose;
+        return isDark
+          ? (isUp ? 'rgba(16, 185, 129, 0.30)' : 'rgba(244, 63, 94, 0.30)')
+          : (isUp ? 'rgba(16, 185, 129, 0.40)' : 'rgba(244, 63, 94, 0.40)');
+      });
+
+      function fmtVolume(v) {
+        if (!v || isNaN(v) || v <= 0) return null;
+        if (v >= 1e9) return (v / 1e9).toFixed(2) + ' B';
+        if (v >= 1e6) return (v / 1e6).toFixed(2) + ' M';
+        if (v >= 1e3) return (v / 1e3).toFixed(1) + ' K';
+        return Math.round(v).toLocaleString('it-IT');
+      }
+
       // Custom Plugin to Draw Operation Badges/Labels above/below dots
       const modalTxLabelsPlugin = {
         id: 'modalTransactionLabels',
@@ -1569,7 +1590,20 @@
               pointBorderWidth: 2,
               pointStyle: txStyles,
               order: 1
-            }
+            },
+            // Dataset 2: Volume bars along time axis
+            ...(hasVolumes ? [{
+              type: 'bar',
+              label: 'Volume',
+              data: volumes,
+              yAxisID: 'yVolume',
+              backgroundColor: volumeColors,
+              borderWidth: 0,
+              borderRadius: 2,
+              barPercentage: 0.7,
+              categoryPercentage: 0.95,
+              order: 3
+            }] : [])
           ]
         },
         options: {
@@ -1602,9 +1636,12 @@
                   const idx = ctx.dataIndex;
                   if (ctx.datasetIndex === 0) {
                     return ` Prezzo: ${fmtPrice(ctx.raw, currency)}`;
-                  } else {
+                  } else if (ctx.dataset.label === 'Volume') {
+                    const vStr = fmtVolume(ctx.raw);
+                    return vStr ? ` Volume: ${vStr}` : null;
+                  } else if (ctx.datasetIndex === 1) {
                     const txList = txMapByPointIndex[idx];
-                    if (!txList || txList.length === 0) return '';
+                    if (!txList || txList.length === 0) return null;
                     return txList.map(t => {
                       const isB = t.type === 'BUY';
                       const isS = t.type === 'SELL';
@@ -1616,6 +1653,7 @@
                       return ` ${typeLabel}: ${qStr} ${pStr} ${amtStr}`.trim();
                     });
                   }
+                  return null;
                 },
                 afterLabel: (ctx) => {
                   if (ctx.datasetIndex === 1) {
@@ -1635,13 +1673,24 @@
               ticks: { maxTicksLimit: 7, font: { family: 'JetBrains Mono', size: 10 }, color: isDark ? '#9ca3af' : '#6b7280' }
             },
             y: {
+              position: 'left',
               grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
               ticks: {
                 font: { family: 'JetBrains Mono', size: 10 },
                 color: isDark ? '#9ca3af' : '#6b7280',
                 callback: (v) => fmtPrice(v, currency)
               }
-            }
+            },
+            ...(hasVolumes ? {
+              yVolume: {
+                type: 'linear',
+                position: 'right',
+                display: false,
+                min: 0,
+                suggestedMax: maxVolume > 0 ? maxVolume * 3.8 : 100,
+                grid: { display: false }
+              }
+            } : {})
           }
         }
       });

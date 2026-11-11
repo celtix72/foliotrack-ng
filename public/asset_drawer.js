@@ -182,8 +182,8 @@
             <div class="p-3 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Andamento & Operazioni</h4>
-                  <p class="text-[9px] text-gray-400 font-mono">Prezzi storici con eseguiti BUY, SELL e dividendi</p>
+                  <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Andamento, Volumi & Operazioni</h4>
+                  <p class="text-[9px] text-gray-400 font-mono">Prezzi e volumi storici con eseguiti BUY, SELL e dividendi</p>
                 </div>
                 <div class="flex items-center space-x-1 font-mono text-[10px]" id="chartRangeButtons">
                   <button data-range="1M" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">1M</button>
@@ -216,6 +216,10 @@
                     <span class="inline-flex items-center space-x-1">
                       <span class="w-2 h-2 rounded-full bg-amber-500 inline-block shadow-2xs"></span>
                       <span class="font-semibold text-amber-700 dark:text-amber-300">DIV</span>
+                    </span>
+                    <span class="inline-flex items-center space-x-1">
+                      <span class="w-2 h-2 rounded-2xs bg-gray-400/60 dark:bg-gray-500/60 inline-block"></span>
+                      <span class="font-semibold text-gray-500 dark:text-gray-400">Volumi</span>
                     </span>
                   </div>
                   <div id="drawerTxCountsBadge" class="text-gray-400 font-medium truncate">
@@ -529,6 +533,26 @@
       const strokeColor = isPositive ? '#10b981' : '#f43f5e';
       const fillColor = isPositive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)';
 
+      // Volume series & coloring (emerald on up days, rose on down days)
+      const volumes = points.map(p => Number(p.volume) || 0);
+      const hasVolumes = volumes.some(v => v > 0);
+      const maxVolume = hasVolumes ? Math.max(...volumes) : 0;
+      const volumeColors = points.map((p, idx) => {
+        const prevClose = idx > 0 ? (points[idx - 1].close || p.close) : p.close;
+        const isUp = (p.close || 0) >= prevClose;
+        return isDark
+          ? (isUp ? 'rgba(16, 185, 129, 0.30)' : 'rgba(244, 63, 94, 0.30)')
+          : (isUp ? 'rgba(16, 185, 129, 0.40)' : 'rgba(244, 63, 94, 0.40)');
+      });
+
+      function fmtVolume(v) {
+        if (!v || isNaN(v) || v <= 0) return null;
+        if (v >= 1e9) return (v / 1e9).toFixed(2) + ' B';
+        if (v >= 1e6) return (v / 1e6).toFixed(2) + ' M';
+        if (v >= 1e3) return (v / 1e3).toFixed(1) + ' K';
+        return Math.round(v).toLocaleString('it-IT');
+      }
+
       // Custom Plugin to Draw Operation Badges/Labels above/below dots
       const transactionLabelsPlugin = {
         id: 'drawerTransactionLabels',
@@ -627,7 +651,20 @@
               pointBorderWidth: 2,
               pointStyle: txStyles,
               order: 1
-            }
+            },
+            // Dataset 2: Volume bars along time axis
+            ...(hasVolumes ? [{
+              type: 'bar',
+              label: 'Volume',
+              data: volumes,
+              yAxisID: 'yVolume',
+              backgroundColor: volumeColors,
+              borderWidth: 0,
+              borderRadius: 2,
+              barPercentage: 0.7,
+              categoryPercentage: 0.95,
+              order: 3
+            }] : [])
           ]
         },
         options: {
@@ -658,9 +695,12 @@
                   const idx = ctx.dataIndex;
                   if (ctx.datasetIndex === 0) {
                     return ` Prezzo: ${fmtCurrency(ctx.raw, currency)}`;
-                  } else {
+                  } else if (ctx.dataset.label === 'Volume') {
+                    const vStr = fmtVolume(ctx.raw);
+                    return vStr ? ` Volume: ${vStr}` : null;
+                  } else if (ctx.datasetIndex === 1) {
                     const txList = txMapByPointIndex[idx];
-                    if (!txList || txList.length === 0) return '';
+                    if (!txList || txList.length === 0) return null;
                     return txList.map(t => {
                       const isB = t.type === 'BUY';
                       const isS = t.type === 'SELL';
@@ -672,6 +712,7 @@
                       return ` ${typeLabel}: ${qStr} ${pStr} ${amtStr}`.trim();
                     });
                   }
+                  return null;
                 },
                 afterLabel: (ctx) => {
                   if (ctx.datasetIndex === 1) {
@@ -691,13 +732,24 @@
               ticks: { maxTicksLimit: 7, font: { family: 'JetBrains Mono', size: 10 }, color: isDark ? '#9ca3af' : '#6b7280' }
             },
             y: {
+              position: 'left',
               grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
               ticks: {
                 font: { family: 'JetBrains Mono', size: 10 },
                 color: isDark ? '#9ca3af' : '#6b7280',
                 callback: (v) => fmtCurrency(v, currency)
               }
-            }
+            },
+            ...(hasVolumes ? {
+              yVolume: {
+                type: 'linear',
+                position: 'right',
+                display: false,
+                min: 0,
+                suggestedMax: maxVolume > 0 ? maxVolume * 3.8 : 100,
+                grid: { display: false }
+              }
+            } : {})
           }
         }
       });

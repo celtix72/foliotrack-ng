@@ -555,6 +555,18 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     assert.ok(js.includes('activePriceChart'), 'analysis.js must track and cleanup activePriceChart');
   });
 
+  test('Frontend analysis.js and asset_drawer.js include trading volume series and yVolume scale', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const analysisJs = fs.readFileSync(path.join(__dirname, '../public/analysis.js'), 'utf8');
+    const drawerJs = fs.readFileSync(path.join(__dirname, '../public/asset_drawer.js'), 'utf8');
+
+    assert.ok(analysisJs.includes('yVolume'), 'analysis.js must configure yVolume scale');
+    assert.ok(analysisJs.includes("label: 'Volume'"), 'analysis.js must define Volume dataset');
+    assert.ok(drawerJs.includes('yVolume'), 'asset_drawer.js must configure yVolume scale');
+    assert.ok(drawerJs.includes("label: 'Volume'"), 'asset_drawer.js must define Volume dataset');
+  });
+
   test('Yahoo Finance service exports fetchFinvizPeg and supports multi-source PEG resolution', () => {
     const yf = require('../src/services/yahooFinance');
     assert.equal(typeof yf.fetchFinvizPeg, 'function', 'yahooFinance must export fetchFinvizPeg');

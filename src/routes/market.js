@@ -485,7 +485,7 @@ router.get('/chart/:ticker', optionalAuth, async (req, res) => {
       else if (period === 'ALL') daysBack = 3650;
 
       points = db.prepare(`
-        SELECT date, close FROM asset_quotes
+        SELECT date, close, volume FROM asset_quotes
         WHERE ticker = ? AND date >= date('now', '-' || ? || ' days')
         ORDER BY date ASC
       `).all(ticker, daysBack);
