@@ -666,31 +666,6 @@
     }
   }
 
-    state.worksheet.maxDriftAfter = state.worksheet.lines.reduce((max, l) => Math.max(max, Math.abs(l.projectedDriftPercent)), 0);
-    state.worksheet.inBandAfter = state.worksheet.lines.filter(l => l.projectedInBand).length;
-
-    // Update UI elements in-place without losing input focus
-    renderSummaryKpis(state.worksheet);
-
-    const tr = document.querySelector(`tr[data-line-index="${idx}"]`);
-    if (tr) {
-      const inp = tr.querySelector('.input-qty');
-      if (inp && parseFloat(inp.value) !== newQty) inp.value = newQty;
-
-      const amtEl = tr.querySelector('.line-order-amount');
-      if (amtEl) amtEl.textContent = fmtEur(line.suggestedAmount);
-
-      const valEl = tr.querySelector('.line-proj-val');
-      if (valEl) valEl.textContent = fmtEur(line.projectedValue);
-
-      const pctEl = tr.querySelector('.line-proj-pct');
-      if (pctEl) pctEl.textContent = fmtPct(line.projectedPercent);
-
-      const driftEl = tr.querySelector('.line-proj-drift');
-      if (driftEl) driftEl.textContent = fmtPctSigned(line.projectedDriftPercent);
-    }
-  }
-
   // --- DRIFT VISUAL CHART (Mini Bars) ---
   function renderDriftChart(w) {
     const container = document.getElementById('rebalanceDriftChartContainer');
