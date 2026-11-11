@@ -107,6 +107,22 @@ async function getQuote(symbol) {
       quoteDateStr = getTradingDateStr();
     }
 
+    let preMarketTimeIso = null;
+    if (q.preMarketTime) {
+      const d = q.preMarketTime instanceof Date
+        ? q.preMarketTime
+        : new Date(Number(q.preMarketTime) * (Number(q.preMarketTime) < 1e11 ? 1000 : 1));
+      preMarketTimeIso = d.toISOString();
+    }
+
+    let postMarketTimeIso = null;
+    if (q.postMarketTime) {
+      const d = q.postMarketTime instanceof Date
+        ? q.postMarketTime
+        : new Date(Number(q.postMarketTime) * (Number(q.postMarketTime) < 1e11 ? 1000 : 1));
+      postMarketTimeIso = d.toISOString();
+    }
+
     const todayStr = getTradingDateStr();
     const isTodayQuote = Boolean(quoteDateStr && quoteDateStr === todayStr);
 
@@ -146,6 +162,15 @@ async function getQuote(symbol) {
       quoteDate: quoteDateStr || todayStr,
       marketState: q.marketState || null,
       regularMarketTime: regularMarketTimeIso,
+      preMarketPrice: (q.preMarketPrice !== undefined && q.preMarketPrice !== null) ? Number(q.preMarketPrice) : null,
+      preMarketChange: (q.preMarketChange !== undefined && q.preMarketChange !== null) ? Number(q.preMarketChange) : null,
+      preMarketChangePercent: (q.preMarketChangePercent !== undefined && q.preMarketChangePercent !== null) ? Number(q.preMarketChangePercent) : null,
+      preMarketTime: preMarketTimeIso,
+      postMarketPrice: (q.postMarketPrice !== undefined && q.postMarketPrice !== null) ? Number(q.postMarketPrice) : null,
+      postMarketChange: (q.postMarketChange !== undefined && q.postMarketChange !== null) ? Number(q.postMarketChange) : null,
+      postMarketChangePercent: (q.postMarketChangePercent !== undefined && q.postMarketChangePercent !== null) ? Number(q.postMarketChangePercent) : null,
+      postMarketTime: postMarketTimeIso,
+      hasPrePostMarketData: Boolean(q.hasPrePostMarketData),
       source: 'YAHOO'
     };
   } catch (err) {

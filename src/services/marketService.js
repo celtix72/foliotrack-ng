@@ -155,8 +155,11 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
           ticker, name, type, exchange, currency, currentPrice,
           changePercent, changeValue, pe, forwardPE, eps, dividendYield,
           openPrice, highPrice, lowPrice, previousClose,
-          dataSource, quoteDate, marketState, regularMarketTime, lastSyncStatus, lastSyncError, lastSyncAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OK', NULL, datetime('now'), datetime('now'))
+          dataSource, quoteDate, marketState, regularMarketTime,
+          preMarketPrice, preMarketChange, preMarketChangePercent, preMarketTime,
+          postMarketPrice, postMarketChange, postMarketChangePercent, postMarketTime,
+          lastSyncStatus, lastSyncError, lastSyncAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OK', NULL, datetime('now'), datetime('now'))
         ON CONFLICT(ticker) DO UPDATE SET
           name = coalesce(nullif(excluded.name, ''), assets.name),
           currentPrice = excluded.currentPrice,
@@ -174,6 +177,14 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
           quoteDate = excluded.quoteDate,
           marketState = coalesce(excluded.marketState, assets.marketState),
           regularMarketTime = coalesce(excluded.regularMarketTime, assets.regularMarketTime),
+          preMarketPrice = excluded.preMarketPrice,
+          preMarketChange = excluded.preMarketChange,
+          preMarketChangePercent = excluded.preMarketChangePercent,
+          preMarketTime = excluded.preMarketTime,
+          postMarketPrice = excluded.postMarketPrice,
+          postMarketChange = excluded.postMarketChange,
+          postMarketChangePercent = excluded.postMarketChangePercent,
+          postMarketTime = excluded.postMarketTime,
           lastSyncStatus = 'OK',
           lastSyncError = NULL,
           lastSyncAt = datetime('now'),
@@ -200,7 +211,15 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
         preferredSource || 'YAHOO',
         quoteDateStr,
         quote.marketState || null,
-        quote.regularMarketTime || null
+        quote.regularMarketTime || null,
+        quote.preMarketPrice || null,
+        (quote.preMarketChange !== undefined && quote.preMarketChange !== null) ? quote.preMarketChange : null,
+        (quote.preMarketChangePercent !== undefined && quote.preMarketChangePercent !== null) ? quote.preMarketChangePercent : null,
+        quote.preMarketTime || null,
+        quote.postMarketPrice || null,
+        (quote.postMarketChange !== undefined && quote.postMarketChange !== null) ? quote.postMarketChange : null,
+        (quote.postMarketChangePercent !== undefined && quote.postMarketChangePercent !== null) ? quote.postMarketChangePercent : null,
+        quote.postMarketTime || null
       );
 
       // Save close price to asset_quotes cache

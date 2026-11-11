@@ -611,6 +611,24 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
       const totalReturnNative = unrealizedPnlNative + dividendsNative;
       const totalReturnPercentNative = bookValueNative > 0 ? (totalReturnNative / bookValueNative) * 100.0 : 0.0;
 
+      // Pre-Market & Post-Market data
+      const preMarketPrice = (asset.preMarketPrice !== undefined && asset.preMarketPrice !== null) ? Number(asset.preMarketPrice) : null;
+      const preMarketChange = (asset.preMarketChange !== undefined && asset.preMarketChange !== null) ? Number(asset.preMarketChange) : null;
+      const preMarketChangePercent = (asset.preMarketChangePercent !== undefined && asset.preMarketChangePercent !== null) ? Number(asset.preMarketChangePercent) : null;
+      const preMarketTime = asset.preMarketTime || null;
+
+      let preMarketPnlNative = 0.0;
+      let preMarketPnlEur = 0.0;
+      if (preMarketChange !== null && pos.quantity > 0) {
+        preMarketPnlNative = preMarketChange * pos.quantity;
+        preMarketPnlEur = preMarketPnlNative * fxRateToPortfolio;
+      }
+
+      const postMarketPrice = (asset.postMarketPrice !== undefined && asset.postMarketPrice !== null) ? Number(asset.postMarketPrice) : null;
+      const postMarketChange = (asset.postMarketChange !== undefined && asset.postMarketChange !== null) ? Number(asset.postMarketChange) : null;
+      const postMarketChangePercent = (asset.postMarketChangePercent !== undefined && asset.postMarketChangePercent !== null) ? Number(asset.postMarketChangePercent) : null;
+      const postMarketTime = asset.postMarketTime || null;
+
       const openPrice = isPriorDay ? currentPriceNative : (Number(asset.openPrice) || currentPriceNative);
       const highPrice = isPriorDay ? currentPriceNative : (Number(asset.highPrice) || currentPriceNative);
       const lowPrice = isPriorDay ? currentPriceNative : (Number(asset.lowPrice) || currentPriceNative);
@@ -678,6 +696,16 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
         quoteDate: asset.quoteDate || null,
         marketState: asset.marketState || null,
         regularMarketTime: asset.regularMarketTime || null,
+        preMarketPrice,
+        preMarketChange,
+        preMarketChangePercent,
+        preMarketTime,
+        preMarketPnlNative,
+        preMarketPnlEur,
+        postMarketPrice,
+        postMarketChange,
+        postMarketChangePercent,
+        postMarketTime,
         lastSyncAt: asset.lastSyncAt || asset.updatedAt || null,
         updatedAt: asset.updatedAt || null,
         quantity: pos.quantity,

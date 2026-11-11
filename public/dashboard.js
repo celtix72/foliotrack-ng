@@ -364,6 +364,59 @@
   }
 
   /**
+   * Retrieves active pre-market quote details if the market is currently closed
+   * and a live pre-market price is present.
+   *
+   * @param {object} h Holding / asset object
+   * @returns {{ hasPreMarket: boolean, price: number, change: number, changePercent: number, pnlNative: number, pnlEur: number, time: string|null, currSym: string }}
+   */
+  function getHoldingPreMarketInfo(h) {
+    if (!h) return { hasPreMarket: false };
+    const price = Number(h.preMarketPrice);
+    if (!price || isNaN(price) || price <= 0) {
+      return { hasPreMarket: false };
+    }
+
+    // Only active when the regular market session is closed or in PRE state
+    const isClosed = isAssetMarketClosed(h);
+    const ms = String(h.marketState || '').toUpperCase();
+    const isPreState = ms === 'PRE' || ms === 'PREPRE';
+
+    if (!isClosed && !isPreState) {
+      return { hasPreMarket: false };
+    }
+
+    const change = Number(h.preMarketChange) || 0.0;
+    const changePercent = Number(h.preMarketChangePercent) || 0.0;
+    const curr = (h.currency || 'EUR').toUpperCase();
+    const currSym = curr === 'USD' ? '$' : (curr === 'EUR' ? '€' : curr);
+    const qty = Number(h.quantity) || 0.0;
+
+    let pnlNative = 0.0;
+    if (h.preMarketPnlNative !== undefined && h.preMarketPnlNative !== null) {
+      pnlNative = Number(h.preMarketPnlNative);
+    } else if (qty > 0 && change !== 0) {
+      pnlNative = change * qty;
+    }
+
+    let pnlEur = pnlNative;
+    if (h.preMarketPnlEur !== undefined && h.preMarketPnlEur !== null) {
+      pnlEur = Number(h.preMarketPnlEur);
+    }
+
+    return {
+      hasPreMarket: true,
+      price,
+      change,
+      changePercent,
+      pnlNative,
+      pnlEur,
+      time: h.preMarketTime || null,
+      currSym
+    };
+  }
+
+  /**
    * Returns human-readable status metadata for an asset's market state.
    */
   function getAssetMarketStatusInfo(h, refDate = new Date()) {
@@ -379,6 +432,18 @@
     const curr = (h.currency || 'EUR').toUpperCase();
     const exchange = (h.exchange || '').toUpperCase();
     const isUS = curr === 'USD' || ['NASDAQ', 'NYSE', 'NMS', 'NYQ', 'AMEX', 'OTC', 'BATS', 'ARCA'].some(ex => exchange.includes(ex));
+
+    const preInfo = getHoldingPreMarketInfo(h);
+    if (isClosed && preInfo.hasPreMarket) {
+      const pSign = preInfo.changePercent >= 0 ? '+' : '';
+      return {
+        isClosed: true,
+        isPreMarket: true,
+        label: 'PRE-MKT',
+        reason: `Mercato Chiuso - Pre-Market Live: ${preInfo.price.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preInfo.currSym} (${pSign}${preInfo.changePercent.toFixed(2).replace('.', ',')}%)`,
+        preInfo
+      };
+    }
 
     if (isClosed) {
       const romeDayFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Rome', weekday: 'short' });
@@ -574,6 +639,14 @@
           item.unrealizedPnlNative = (item.unrealizedPnlNative || 0) + (h.unrealizedPnlNative || 0);
           item.dayPnlNative = (item.dayPnlNative || 0) + (h.dayPnlNative || 0);
           item.dayPnlEur = (item.dayPnlEur || 0) + (h.dayPnlEur || 0);
+          item.preMarketPnlNative = (item.preMarketPnlNative || 0) + (h.preMarketPnlNative || 0);
+          item.preMarketPnlEur = (item.preMarketPnlEur || 0) + (h.preMarketPnlEur || 0);
+          if (!item.preMarketPrice && h.preMarketPrice) {
+            item.preMarketPrice = h.preMarketPrice;
+            item.preMarketChange = h.preMarketChange;
+            item.preMarketChangePercent = h.preMarketChangePercent;
+            item.preMarketTime = h.preMarketTime;
+          }
           item.dividends = (item.dividends || 0) + (h.dividends || 0);
           item.dividendsNative = (item.dividendsNative || 0) + (h.dividendsNative || 0);
           item.fxImpact = (item.fxImpact || 0) + (h.fxImpact || 0);
@@ -864,6 +937,7 @@
       for (const h of cat.holdings) {
         const isToday = isHoldingQuotedToday(h);
         const isClosed = !isToday;
+        const preInfo = getHoldingPreMarketInfo(h);
 
         const mv = Number(isNonEur && h.marketValueNative !== undefined ? h.marketValueNative : h.marketValue) || 0;
         const cost = (Number(isNonEur && h.pmcNative !== undefined ? h.pmcNative : (h.pmc || h.costBasis)) || 0) * (Number(h.quantity) || 0);
@@ -877,6 +951,8 @@
           } else if (h.changeValue && h.quantity) {
             dayVal = Number(h.changeValue) * Number(h.quantity);
           }
+        } else if (isClosed && preInfo.hasPreMarket) {
+          dayVal = isNonEur ? preInfo.pnlNative : preInfo.pnlEur;
         }
 
         totMarketVal += mv;
@@ -1320,12 +1396,18 @@
               // Sparkline mini chart
               const sparkData = generateSparklineData(h.sparkline, activeSparklinePeriod, h.ticker, h);
 
-              // DAY Variation: strictly 0 if holding has not traded in today's regular session
+              // DAY Variation: strictly 0 if holding has not traded in today's regular session, unless in pre-market
               const isToday = isHoldingQuotedToday(h);
-              const dayPct = isToday ? (Number(h.changePercent !== undefined ? h.changePercent : (h.change24h || 0)) || 0) : 0;
-              const dayNative = isToday ? (h.dayPnlNative !== undefined ? h.dayPnlNative : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0))) : 0;
+              const preInfo = getHoldingPreMarketInfo(h);
+              const isPre = isClosed && preInfo.hasPreMarket;
+
+              let dayPct = 0;
+              let dayNative = 0;
               let dayEur = 0;
-              if (isToday) {
+
+              if (isToday && !isClosed) {
+                dayPct = Number(h.changePercent !== undefined ? h.changePercent : (h.change24h || 0)) || 0;
+                dayNative = h.dayPnlNative !== undefined ? h.dayPnlNative : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
                 if (h.dayPnlEur !== undefined && h.dayPnlEur !== null && !isNaN(h.dayPnlEur)) {
                   dayEur = Number(h.dayPnlEur);
                 } else if (h.changeValue && h.quantity) {
@@ -1333,11 +1415,16 @@
                 } else if (dayPct !== 0 && h.marketValue) {
                   dayEur = h.marketValue - (h.marketValue / (1 + (dayPct / 100)));
                 }
+              } else if (isPre) {
+                dayPct = preInfo.changePercent;
+                dayNative = preInfo.pnlNative;
+                dayEur = preInfo.pnlEur;
               }
+
               const isDayPos = dayPct >= 0;
 
-              // Dynamic gradient background style for open markets, or grey background when market is closed
-              const dayStyle = getDayVarCardStyle(dayPct, isClosed);
+              // Dynamic gradient background style for open markets / pre-market, or grey background when market is closed without pre-market
+              const dayStyle = isPre ? getDayVarCardStyle(dayPct, false) : getDayVarCardStyle(dayPct, isClosed);
 
               // Complessiva (Total P&L) Variation
               const totPct = Number(isNonEur && h.unrealizedPnlPercentNative !== undefined ? h.unrealizedPnlPercentNative : h.unrealizedPnlPercent) || 0;
@@ -1369,7 +1456,7 @@
               };
 
               const displayMv = isNonEur && h.marketValueNative !== undefined ? h.marketValueNative : h.marketValue;
-              const displayPrice = isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice;
+              const displayPrice = isPre ? preInfo.price : (isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice);
 
               return `
                 <div class="pt-5 pb-4 px-5 rounded-2xl border ${isClosed ? 'border-amber-400/40 dark:border-amber-500/30 bg-amber-50/[0.12] dark:bg-[#1a1917]' : 'border-gray-200/70 dark:border-white/10 bg-white dark:bg-[#18181a]'} flex flex-col justify-between transition hover:shadow-xl hover:border-emerald-500/60 dark:hover:border-emerald-500/60 shadow-sm cursor-pointer group"
@@ -1382,7 +1469,12 @@
                         <span class="font-bold font-mono text-xs sm:text-sm text-gray-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">${h.ticker}</span>
                         <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 font-semibold uppercase">${h.type || 'EQUITY'}</span>
                         ${isNonEur ? `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${isUSD ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'}">${curr}</span>` : ''}
-                        ${isClosed ? `
+                        ${isPre ? `
+                          <span class="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0" title="${statusInfo.reason}">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span>PRE-MKT</span>
+                          </span>
+                        ` : (isClosed ? `
                           <span class="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0" title="${statusInfo.reason}">
                             <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                             <span>CHIUSO</span>
@@ -1392,7 +1484,7 @@
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             <span>LIVE</span>
                           </span>
-                        `}
+                        `)}
                       </div>
                       <div class="flex items-center space-x-1 shrink-0">
                         <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/40 transition flex items-center space-x-0.5" title="Espandi scheda dettagliata asset">
@@ -1411,7 +1503,7 @@
                         ${isNonEur ? `<span class="text-[10px] text-gray-400 block sm:inline sm:ml-1 tabular-nums">(≈ ${formatEur(h.marketValue)})</span>` : ''}
                       </div>
                       <div class="text-right">
-                        <span class="text-xs text-gray-400 tabular-nums">${fmtNative(displayPrice)}</span>
+                        <span class="text-xs ${isPre ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-gray-400'} tabular-nums" ${isPre ? `title="Pre-Market: ${fmtNative(preInfo.price)} (Chiusura prec: ${fmtNative(h.currentPriceNative || h.currentPrice)})"` : ''}>${fmtNative(displayPrice)}${isPre ? ' (PRE)' : ''}</span>
                       </div>
                     </div>
                   </div>
@@ -1435,8 +1527,15 @@
                          style="${dayStyle.style}">
                       <div class="text-[9px] uppercase tracking-wider ${dayStyle.titleCls} flex items-center justify-between">
                         <span>DAY</span>
-                        ${isClosed ? `<span class="text-[8px] font-bold text-amber-600 dark:text-amber-400">CHIUSO</span>` : `<span class="text-[8px] font-semibold text-emerald-600 dark:text-emerald-400">LIVE</span>`}
+                        ${isPre ? `<span class="text-[8px] font-bold text-amber-600 dark:text-amber-400">PRE-MKT</span>` : (isClosed ? `<span class="text-[8px] font-bold text-amber-600 dark:text-amber-400">CHIUSO</span>` : `<span class="text-[8px] font-semibold text-emerald-600 dark:text-emerald-400">LIVE</span>`)}
                       </div>
+                      <div class="text-[11px] leading-tight mt-0.5 ${dayStyle.valCls}">
+                        ${formatPct(dayPct)}
+                      </div>
+                      <div class="text-[10px] ${dayStyle.subCls}">
+                        ${isNonEur ? fmtNativeSigned(dayNative) : formatEurSigned(dayEur)}
+                      </div>
+                    </div>
                       <div class="text-[11px] leading-tight mt-0.5 ${dayStyle.valCls}">
                         ${formatPct(dayPct)}
                       </div>
@@ -1479,29 +1578,31 @@
       const closedCount = sortedHoldings.filter(h => !isHoldingQuotedToday(h)).length;
 
       sortedHoldings.sort((a, b) => {
-        const aClosed = !isHoldingQuotedToday(a);
-        const bClosed = !isHoldingQuotedToday(b);
-        const aIsToday = isHoldingQuotedToday(a);
-        const bIsToday = isHoldingQuotedToday(b);
+        const aPre = getHoldingPreMarketInfo(a);
+        const bPre = getHoldingPreMarketInfo(b);
+        const aClosed = !isHoldingQuotedToday(a) && !aPre.hasPreMarket;
+        const bClosed = !isHoldingQuotedToday(b) && !bPre.hasPreMarket;
+        const aIsToday = isHoldingQuotedToday(a) || aPre.hasPreMarket;
+        const bIsToday = isHoldingQuotedToday(b) || bPre.hasPreMarket;
 
-        // In day sorts, open and today-quoted assets come first
+        // In day sorts, open and pre-market/today-quoted assets come first
         if (activeCompactSort === 'day_desc' || activeCompactSort === 'day_asc') {
-          const aActive = aIsToday && !aClosed;
-          const bActive = bIsToday && !bClosed;
+          const aActive = (aIsToday && !aClosed) || aPre.hasPreMarket;
+          const bActive = (bIsToday && !bClosed) || bPre.hasPreMarket;
           if (aActive && !bActive) return -1;
           if (!aActive && bActive) return 1;
 
-          const aDayPct = aActive ? (Number(a.changePercent) || 0) : 0;
-          const bDayPct = bActive ? (Number(b.changePercent) || 0) : 0;
+          const aDayPct = aPre.hasPreMarket ? aPre.changePercent : (aActive ? (Number(a.changePercent) || 0) : 0);
+          const bDayPct = bPre.hasPreMarket ? bPre.changePercent : (bActive ? (Number(b.changePercent) || 0) : 0);
           if (activeCompactSort === 'day_desc') {
             if (bDayPct !== aDayPct) return bDayPct - aDayPct;
-            const aVal = Number(a.dayPnlEur) || 0;
-            const bVal = Number(b.dayPnlEur) || 0;
+            const aVal = aPre.hasPreMarket ? aPre.pnlEur : (Number(a.dayPnlEur) || 0);
+            const bVal = bPre.hasPreMarket ? bPre.pnlEur : (Number(b.dayPnlEur) || 0);
             return bVal - aVal;
           } else {
             if (aDayPct !== bDayPct) return aDayPct - bDayPct;
-            const aVal = Number(a.dayPnlEur) || 0;
-            const bVal = Number(b.dayPnlEur) || 0;
+            const aVal = aPre.hasPreMarket ? aPre.pnlEur : (Number(a.dayPnlEur) || 0);
+            const bVal = bPre.hasPreMarket ? bPre.pnlEur : (Number(b.dayPnlEur) || 0);
             return aVal - bVal;
           }
         }
@@ -1569,17 +1670,23 @@
             ${sortedHoldings.map(h => {
               const isToday = isHoldingQuotedToday(h);
               const isClosed = !isToday;
+              const preInfo = getHoldingPreMarketInfo(h);
+              const isPre = isClosed && preInfo.hasPreMarket;
               const isMarketClosed = isAssetMarketClosed(h);
               const isNonEur = h.currency && h.currency !== 'EUR';
               const currSym = h.currency === 'USD' ? '$' : (h.currency === 'EUR' ? '€' : (h.currency || '€'));
 
-              const rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;
+              let rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;
+              if (isPre) {
+                rawPrice = preInfo.price;
+              }
               const priceStr = rawPrice.toLocaleString('it-IT', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               }) + ' ' + currSym;
 
               let dayVal = 0;
+              let dayPct = 0;
               if (isToday && !isClosed) {
                 const rawDay = isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur;
                 if (rawDay !== undefined && rawDay !== null && !isNaN(rawDay)) {
@@ -1587,12 +1694,27 @@
                 } else if (h.changeValue && h.quantity) {
                   dayVal = Number(h.changeValue) * Number(h.quantity);
                 }
+                dayPct = (Number(h.changePercent) || 0);
+              } else if (isPre) {
+                dayVal = isNonEur ? preInfo.pnlNative : preInfo.pnlEur;
+                dayPct = preInfo.changePercent;
               }
 
-              const dayPct = (isToday && !isClosed) ? (Number(h.changePercent) || 0) : 0;
-
               let pctBadgeHtml = '';
-              if (isClosed) {
+              if (isPre) {
+                const preSign = dayPct > 0 ? '+' : '';
+                const preBg = dayPct > 0 ? '#DCFCE7' : (dayPct < 0 ? '#FFE4E6' : '#FEF3C7');
+                const preCol = dayPct > 0 ? '#15803D' : (dayPct < 0 ? '#BE123C' : '#B45309');
+                const preBorder = dayPct > 0 ? '#86EFAC' : (dayPct < 0 ? '#FDA4AF' : '#FCD34D');
+                pctBadgeHtml = `
+                  <span class="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-md font-bold font-mono text-[9px] sm:text-[10px] tabular-nums border"
+                        style="background-color: ${preBg}; color: ${preCol}; border-color: ${preBorder};"
+                        title="Pre-Market Live: ${preSign}${dayPct.toFixed(2).replace('.', ',')}%">
+                    <span class="opacity-80">PRE</span>
+                    <span>${preSign}${dayPct.toFixed(2).replace('.', ',')}%</span>
+                  </span>
+                `;
+              } else if (isClosed) {
                 pctBadgeHtml = `
                   <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md font-bold font-mono text-[10px] sm:text-[11px] tracking-wide uppercase" style="background-color: #E2E8F0; color: #475569;">
                     CHIUSO
@@ -1627,7 +1749,7 @@
                 formattedDayVal = Math.abs(Math.round(dayVal)).toLocaleString('it-IT') + ' ' + currSym;
               }
 
-              if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
+              if (!isPre && (isClosed || (isToday && Math.abs(dayVal) < 0.001))) {
                 valGiornoHtml = `
                   <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
                     0 ${currSym}
@@ -1635,14 +1757,20 @@
                 `;
               } else if (dayVal > 0) {
                 valGiornoHtml = `
-                  <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;">
+                  <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #15803D;" ${isPre ? `title="Pre-Market: +${formattedDayVal}"` : ''}>
                     +${formattedDayVal}
+                  </span>
+                `;
+              } else if (dayVal < 0) {
+                valGiornoHtml = `
+                  <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;" ${isPre ? `title="Pre-Market: -${formattedDayVal}"` : ''}>
+                    -${formattedDayVal}
                   </span>
                 `;
               } else {
                 valGiornoHtml = `
-                  <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #BE123C;">
-                    -${formattedDayVal}
+                  <span class="text-right font-extrabold font-mono text-xs sm:text-sm tabular-nums" style="color: #64748B;">
+                    0 ${currSym}
                   </span>
                 `;
               }
@@ -1651,19 +1779,23 @@
                 <div class="px-2 py-2 hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer select-none"
                      style="display: grid; grid-template-columns: 1.15fr 1.15fr 1.05fr 1.25fr; align-items: center;"
                      data-open-asset="${h.ticker}">
-                  <!-- Ticker + Dot / Closed indicator -->
+                  <!-- Ticker + Dot / Closed / Pre-Market indicator -->
                   <div class="flex items-center space-x-1.5 min-w-0 pl-0.5">
                     <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded font-black font-mono text-xs sm:text-sm tracking-tight cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10">
                       ${h.ticker}
                     </span>
-                    ${!isClosed ? `
+                    ${isPre ? `
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" title="Pre-Market Live: ${priceStr}"></span>
+                      <span class="text-[9px] font-mono font-bold text-amber-600 dark:text-amber-400">PRE</span>
+                    ` : (!isClosed ? `
                       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Mercato Aperto"></span>
-                    ` : ''}
+                    ` : '')}
                   </div>
 
                   <!-- Prezzo -->
                   <div class="text-right font-extrabold font-mono text-xs sm:text-sm text-gray-900 dark:text-gray-100 tabular-nums">
                     ${priceStr}
+                    ${isPre ? `<span class="text-[9px] font-bold text-amber-600 dark:text-amber-400 font-mono ml-0.5" title="Pre-Market: ${priceStr}">PRE</span>` : ''}
                   </div>
 
                   <!-- % Day -->
@@ -1921,14 +2053,22 @@
                       const isToday = isHoldingQuotedToday(h);
                       const isClosed = !isToday;
                       const isNonEur = cat.currency !== 'EUR';
+                      const preInfo = getHoldingPreMarketInfo(h);
+                      const isPre = isClosed && preInfo.hasPreMarket;
 
-                      const rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;
+                      let rawPrice = Number(isNonEur && h.currentPriceNative !== undefined ? h.currentPriceNative : h.currentPrice) || 0;
+                      if (isPre) {
+                        rawPrice = preInfo.price;
+                      }
+
                       const priceStr = rawPrice.toLocaleString('it-IT', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                       }) + ' ' + cat.currSym;
 
                       let dayVal = 0;
+                      let dayPct = 0;
+
                       if (isToday && !isClosed) {
                         const rawDay = isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur;
                         if (rawDay !== undefined && rawDay !== null && !isNaN(rawDay)) {
@@ -1936,12 +2076,27 @@
                         } else if (h.changeValue && h.quantity) {
                           dayVal = Number(h.changeValue) * Number(h.quantity);
                         }
+                        dayPct = Number(h.changePercent) || 0;
+                      } else if (isPre) {
+                        dayVal = isNonEur ? preInfo.pnlNative : preInfo.pnlEur;
+                        dayPct = preInfo.changePercent;
                       }
 
-                      const dayPct = isToday && !isClosed ? (Number(h.changePercent) || 0) : 0;
-
                       let pctBadgeHtml = '';
-                      if (isClosed) {
+                      if (isPre) {
+                        const preSign = dayPct > 0 ? '+' : '';
+                        const preBg = dayPct > 0 ? '#DCFCE7' : (dayPct < 0 ? '#FFE4E6' : '#FEF3C7');
+                        const preCol = dayPct > 0 ? '#15803D' : (dayPct < 0 ? '#BE123C' : '#B45309');
+                        const preBorder = dayPct > 0 ? '#86EFAC' : (dayPct < 0 ? '#FDA4AF' : '#FCD34D');
+                        pctBadgeHtml = `
+                          <span class="inline-flex items-center space-x-0.5 px-1 py-[1px] rounded font-bold font-mono text-[8px] sm:text-[9px] tabular-nums leading-none border"
+                                style="background-color: ${preBg}; color: ${preCol}; border-color: ${preBorder};"
+                                title="Pre-Market Live: ${preSign}${dayPct.toFixed(2).replace('.', ',')}%">
+                            <span class="opacity-80">PRE</span>
+                            <span>${preSign}${dayPct.toFixed(2).replace('.', ',')}%</span>
+                          </span>
+                        `;
+                      } else if (isClosed) {
                         pctBadgeHtml = `
                           <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-bold font-mono text-[8px] sm:text-[9px] tracking-wide uppercase leading-none" style="background-color: #E2E8F0; color: #475569;">
                             CHIUSO
@@ -1976,7 +2131,7 @@
                         formattedCatDayDelta = Math.abs(Math.round(dayVal)).toLocaleString('it-IT') + ' ' + cat.currSym;
                       }
 
-                      if (isClosed || (isToday && Math.abs(dayVal) < 0.001)) {
+                      if (!isPre && (isClosed || (isToday && Math.abs(dayVal) < 0.001))) {
                         const zeroLabel = `0 ${cat.currSym}`;
                         valGiornoHtml = `
                           <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #64748B;">
@@ -1985,14 +2140,20 @@
                         `;
                       } else if (dayVal > 0) {
                         valGiornoHtml = `
-                          <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #15803D;">
+                          <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #15803D;" ${isPre ? `title="Pre-Market: +${formattedCatDayDelta}"` : ''}>
                             +${formattedCatDayDelta}
+                          </span>
+                        `;
+                      } else if (dayVal < 0) {
+                        valGiornoHtml = `
+                          <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #BE123C;" ${isPre ? `title="Pre-Market: -${formattedCatDayDelta}"` : ''}>
+                            -${formattedCatDayDelta}
                           </span>
                         `;
                       } else {
                         valGiornoHtml = `
-                          <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #BE123C;">
-                            -${formattedCatDayDelta}
+                          <span class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none" style="color: #64748B;">
+                            0 ${cat.currSym}
                           </span>
                         `;
                       }
@@ -2006,11 +2167,15 @@
                             <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-black font-mono text-[10px] sm:text-[11px] tracking-tight leading-none cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10">
                               ${h.ticker}
                             </span>
+                            ${isPre ? `
+                              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse ml-1 shrink-0" title="Pre-Market Live: ${priceStr}"></span>
+                            ` : ''}
                           </div>
 
                           <!-- Prezzo -->
                           <div class="text-right font-extrabold font-mono text-[10px] sm:text-[11px] text-gray-900 dark:text-gray-100 tabular-nums leading-none">
                             ${priceStr}
+                            ${isPre ? `<span class="text-[8px] font-bold text-amber-600 dark:text-amber-400 font-mono ml-0.5" title="Pre-Market Live: ${priceStr}">PRE</span>` : ''}
                           </div>
 
                           <!-- % Giorno -->
@@ -2064,24 +2229,37 @@
               <tbody class="divide-y divide-gray-200/40 dark:divide-white/5 tabular-nums">
                 ${holdings.map(h => {
                   const sInfo = getAssetMarketStatusInfo(h);
+                  const preInfo = getHoldingPreMarketInfo(h);
+                  const statusBadge = sInfo.isPreMarket
+                    ? `<span class="px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20" title="${sInfo.reason}">PRE-MKT</span>`
+                    : (sInfo.isClosed
+                        ? `<span class="px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20" title="${sInfo.reason}">CHIUSO</span>`
+                        : `<span class="px-1.5 py-0.2 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20" title="${sInfo.reason}">LIVE</span>`);
+
                   return `
                   <tr class="hover:bg-gray-50/50 dark:hover:bg-white/5 transition cursor-pointer" data-open-asset="${h.ticker}">
                     <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">
                       <div class="flex items-center space-x-1.5">
                         <span>${h.ticker}</span>
-                        ${sInfo.isClosed
-                          ? `<span class="px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20" title="${sInfo.reason}">CHIUSO</span>`
-                          : `<span class="px-1.5 py-0.2 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20" title="${sInfo.reason}">LIVE</span>`}
+                        ${statusBadge}
                       </div>
                     </td>
                     <td class="px-4 py-3 text-gray-600 dark:text-gray-300 truncate max-w-[150px]">${h.name}</td>
                     <td class="px-4 py-3 text-gray-400">${h.sector || 'Unclassified'}</td>
                     <td class="px-4 py-3 text-right">${Math.round(h.quantity).toLocaleString('it-IT')}</td>
                     <td class="px-4 py-3 text-right">${formatPriceEur(h.pmc)}</td>
-                    <td class="px-4 py-3 text-right">${formatPriceEur(h.currentPrice)}</td>
+                    <td class="px-4 py-3 text-right">
+                      <div>${formatPriceEur(h.currentPrice)}</div>
+                      ${preInfo.hasPreMarket ? `
+                        <div class="text-[9px] font-mono font-bold text-amber-600 dark:text-amber-400 flex items-center justify-end space-x-1 mt-0.5" title="Pre-Market Live: ${preInfo.price.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preInfo.currSym}">
+                          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse inline-block"></span>
+                          <span>PRE: ${preInfo.price.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preInfo.currSym}</span>
+                        </div>
+                      ` : ''}
+                    </td>
                     <td class="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">${formatEur(h.marketValue)}</td>
                     <td class="px-4 py-3 text-right font-semibold ${h.unrealizedPnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">${formatPct(h.unrealizedPnlPercent)}</td>
-                    <td class="px-4 py-3 text-right font-bold">${h.weight.toFixed(1)}%</td>
+                    <td class="px-4 py-3 text-right font-bold">${(Number(h.weight) || 0).toFixed(1)}%</td>
                   </tr>
                 `;
                 }).join('') || '<tr><td colspan="9" class="text-center py-8 text-gray-400">Nessuna posizione in portafoglio.</td></tr>'}
@@ -2095,7 +2273,32 @@
     // 13a. Top Gainers & Losers Giornalieri (TOP WINNER / LOSER 1D)
     moversDay: (data) => {
       const allHoldings = data.activeHoldings || [];
-      const dayHoldings = allHoldings.filter(h => isHoldingQuotedToday(h));
+      const dayHoldings = allHoldings
+        .map(h => {
+          const isToday = isHoldingQuotedToday(h);
+          const preInfo = getHoldingPreMarketInfo(h);
+          if (isToday) {
+            const pct = Number(h.changePercent) || 0;
+            const val = (h.dayPnlEur !== undefined && h.dayPnlEur !== null && !isNaN(h.dayPnlEur))
+              ? Number(h.dayPnlEur)
+              : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
+            return {
+              ...h,
+              _isPre: false,
+              _pct: pct,
+              _val: val
+            };
+          } else if (preInfo.hasPreMarket) {
+            return {
+              ...h,
+              _isPre: true,
+              _pct: preInfo.changePercent,
+              _val: preInfo.pnlEur
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
 
       if (dayHoldings.length === 0) {
         return `
@@ -2112,7 +2315,7 @@
             <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
               <svg class="w-7 h-7 text-gray-400/50 mb-1.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span class="text-[11px] text-gray-500 dark:text-gray-400 font-mono font-semibold">Nessun titolo con scambi nella seduta odierna</span>
-              <span class="text-[9px] text-gray-400 mt-0.5 block">I titoli con quotazioni della seduta precedente o a mercati ancora chiusi sono esclusi.</span>
+              <span class="text-[9px] text-gray-400 mt-0.5 block">I titoli con quotazioni della seduta precedente o senza scambi live/pre-market sono esclusi.</span>
             </div>
             <!-- Compact Footer -->
             <div class="px-2 py-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-gray-400 shrink-0 bg-white/30 dark:bg-black/10">
@@ -2124,46 +2327,18 @@
       }
 
       const gainers = dayHoldings
-        .filter(h => {
-          const pct = Number(h.changePercent) || 0;
-          const val = (h.dayPnlEur !== undefined && h.dayPnlEur !== null && !isNaN(h.dayPnlEur))
-            ? Number(h.dayPnlEur)
-            : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
-          return pct > 0 || (pct === 0 && val >= 0);
-        })
+        .filter(h => h._pct > 0 || (h._pct === 0 && h._val >= 0))
         .sort((a, b) => {
-          const aPct = Number(a.changePercent) || 0;
-          const bPct = Number(b.changePercent) || 0;
-          if (bPct !== aPct) return bPct - aPct;
-          const aVal = (a.dayPnlEur !== undefined && a.dayPnlEur !== null && !isNaN(a.dayPnlEur))
-            ? Number(a.dayPnlEur)
-            : ((Number(a.changeValue) || 0) * (Number(a.quantity) || 0));
-          const bVal = (b.dayPnlEur !== undefined && b.dayPnlEur !== null && !isNaN(b.dayPnlEur))
-            ? Number(b.dayPnlEur)
-            : ((Number(b.changeValue) || 0) * (Number(b.quantity) || 0));
-          return bVal - aVal;
+          if (b._pct !== a._pct) return b._pct - a._pct;
+          return b._val - a._val;
         })
         .slice(0, 5);
 
       const losers = dayHoldings
-        .filter(h => {
-          const pct = Number(h.changePercent) || 0;
-          const val = (h.dayPnlEur !== undefined && h.dayPnlEur !== null && !isNaN(h.dayPnlEur))
-            ? Number(h.dayPnlEur)
-            : ((Number(h.changeValue) || 0) * (Number(h.quantity) || 0));
-          return pct < 0 || (pct === 0 && val < 0);
-        })
+        .filter(h => h._pct < 0 || (h._pct === 0 && h._val < 0))
         .sort((a, b) => {
-          const aPct = Number(a.changePercent) || 0;
-          const bPct = Number(b.changePercent) || 0;
-          if (aPct !== bPct) return aPct - bPct;
-          const aVal = (a.dayPnlEur !== undefined && a.dayPnlEur !== null && !isNaN(a.dayPnlEur))
-            ? Number(a.dayPnlEur)
-            : ((Number(a.changeValue) || 0) * (Number(a.quantity) || 0));
-          const bVal = (b.dayPnlEur !== undefined && b.dayPnlEur !== null && !isNaN(b.dayPnlEur))
-            ? Number(b.dayPnlEur)
-            : ((Number(b.changeValue) || 0) * (Number(b.quantity) || 0));
-          return aVal - bVal;
+          if (a._pct !== b._pct) return a._pct - b._pct;
+          return a._val - b._val;
         })
         .slice(0, 5);
 
@@ -2208,13 +2383,10 @@
             <!-- Gainers (MIGLIORI) -->
             <div class="divide-y divide-gray-100/50 dark:divide-white/5 min-w-0">
               ${gainers.map(g => {
-                const dayVal = (g.dayPnlEur !== undefined && g.dayPnlEur !== null && !isNaN(g.dayPnlEur))
-                  ? Number(g.dayPnlEur)
-                  : ((Number(g.changeValue) || 0) * (Number(g.quantity) || 0));
-
+                const dayVal = g._val;
                 const displayTicker = g.ticker.length > 8 ? g.ticker.slice(0, 6) + '..' : g.ticker;
                 const valStr = formatEurSignedDec(dayVal, 2);
-                const pctStr = formatPct(g.changePercent);
+                const pctStr = formatPct(g._pct);
 
                 const contentStr = isValMode
                   ? `${valStr} (${pctStr})`
@@ -2227,6 +2399,9 @@
                       <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-black font-mono text-[9px] sm:text-[10px] tracking-tight leading-none bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10 shrink-0" title="${g.ticker}">
                         ${displayTicker}
                       </span>
+                      ${g._isPre ? `
+                        <span class="px-1 py-0.2 rounded text-[7px] sm:text-[8px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0" title="Pre-Market Live">PRE</span>
+                      ` : ''}
                       <span class="text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-400 truncate hidden sm:inline" title="${g.name || g.ticker}">
                         ${g.name || ''}
                       </span>
@@ -2242,13 +2417,10 @@
             <!-- Losers (PEGGIORI) -->
             <div class="divide-y divide-gray-100/50 dark:divide-white/5 min-w-0">
               ${losers.map(l => {
-                const dayVal = (l.dayPnlEur !== undefined && l.dayPnlEur !== null && !isNaN(l.dayPnlEur))
-                  ? Number(l.dayPnlEur)
-                  : ((Number(l.changeValue) || 0) * (Number(l.quantity) || 0));
-
+                const dayVal = l._val;
                 const displayTicker = l.ticker.length > 8 ? l.ticker.slice(0, 6) + '..' : l.ticker;
                 const valStr = formatEurSignedDec(dayVal, 2);
-                const pctStr = formatPct(l.changePercent);
+                const pctStr = formatPct(l._pct);
 
                 const contentStr = isValMode
                   ? `${valStr} (${pctStr})`
@@ -2261,6 +2433,9 @@
                       <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-black font-mono text-[9px] sm:text-[10px] tracking-tight leading-none bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10 shrink-0" title="${l.ticker}">
                         ${displayTicker}
                       </span>
+                      ${l._isPre ? `
+                        <span class="px-1 py-0.2 rounded text-[7px] sm:text-[8px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0" title="Pre-Market Live">PRE</span>
+                      ` : ''}
                       <span class="text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-400 truncate hidden sm:inline" title="${l.name || l.ticker}">
                         ${l.name || ''}
                       </span>

@@ -180,6 +180,14 @@ function createSchema(database) {
       quoteDate TEXT,
       marketState TEXT,
       regularMarketTime TEXT,
+      preMarketPrice REAL DEFAULT NULL,
+      preMarketChange REAL DEFAULT NULL,
+      preMarketChangePercent REAL DEFAULT NULL,
+      preMarketTime TEXT DEFAULT NULL,
+      postMarketPrice REAL DEFAULT NULL,
+      postMarketChange REAL DEFAULT NULL,
+      postMarketChangePercent REAL DEFAULT NULL,
+      postMarketTime TEXT DEFAULT NULL,
       lastSyncStatus TEXT DEFAULT 'OK',
       lastSyncError TEXT,
       lastSyncAt TEXT,
@@ -365,6 +373,14 @@ function createSchema(database) {
   try { database.exec("ALTER TABLE assets ADD COLUMN previousClose REAL DEFAULT 0.0"); } catch {}
   try { database.exec("ALTER TABLE assets ADD COLUMN marketState TEXT DEFAULT NULL"); } catch {}
   try { database.exec("ALTER TABLE assets ADD COLUMN regularMarketTime TEXT DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN preMarketPrice REAL DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN preMarketChange REAL DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN preMarketChangePercent REAL DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN preMarketTime TEXT DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN postMarketPrice REAL DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN postMarketChange REAL DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN postMarketChangePercent REAL DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE assets ADD COLUMN postMarketTime TEXT DEFAULT NULL"); } catch {}
   try { database.exec("ALTER TABLE assets ADD COLUMN taxRate REAL DEFAULT NULL"); } catch {}
   try { database.exec("ALTER TABLE assets ADD COLUMN taxCategory TEXT DEFAULT NULL"); } catch {}
   try { database.exec("ALTER TABLE portfolio_losses ADD COLUMN assetType TEXT DEFAULT 'EQUITY'"); } catch {}

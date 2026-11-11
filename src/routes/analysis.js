@@ -74,6 +74,11 @@ router.get('/', async (req, res) => {
         COALESCE(MAX(a.currentPrice), 0.0) as currentPrice,
         COALESCE(MAX(a.currency), 'USD') as currency,
         MAX(a.previousClose) as previousClose,
+        MAX(a.preMarketPrice) as preMarketPrice,
+        MAX(a.preMarketChange) as preMarketChange,
+        MAX(a.preMarketChangePercent) as preMarketChangePercent,
+        MAX(a.preMarketTime) as preMarketTime,
+        MAX(a.marketState) as marketState,
         SUM(CASE WHEN t.type = 'BUY' THEN t.quantity WHEN t.type = 'SELL' THEN -t.quantity ELSE 0 END) as netQty,
         COUNT(CASE WHEN t.type IN ('BUY', 'SELL') THEN 1 END) as tradeCount
       FROM transactions t
@@ -102,7 +107,12 @@ router.get('/', async (req, res) => {
           COALESCE(a.type, 'EQUITY') as type,
           COALESCE(a.currentPrice, 0.0) as currentPrice,
           COALESCE(a.currency, 'EUR') as currency,
-          a.previousClose
+          a.previousClose,
+          a.preMarketPrice,
+          a.preMarketChange,
+          a.preMarketChangePercent,
+          a.preMarketTime,
+          a.marketState
         FROM analysis_watchlist w
         LEFT JOIN assets a ON TRIM(UPPER(w.ticker)) = TRIM(UPPER(a.ticker))
       `).all();
@@ -146,6 +156,11 @@ router.get('/', async (req, res) => {
         currentPrice: Number(eq.currentPrice) || 0.0,
         currency: eq.currency || 'USD',
         previousClose: Number(eq.previousClose) || Number(eq.currentPrice) || 0.0,
+        preMarketPrice: (eq.preMarketPrice !== undefined && eq.preMarketPrice !== null) ? Number(eq.preMarketPrice) : null,
+        preMarketChange: (eq.preMarketChange !== undefined && eq.preMarketChange !== null) ? Number(eq.preMarketChange) : null,
+        preMarketChangePercent: (eq.preMarketChangePercent !== undefined && eq.preMarketChangePercent !== null) ? Number(eq.preMarketChangePercent) : null,
+        preMarketTime: eq.preMarketTime || null,
+        marketState: eq.marketState || null,
         origin,
         inPortfolio: isOpen,
         netQuantity: netQty,
@@ -170,6 +185,11 @@ router.get('/', async (req, res) => {
           currentPrice: Number(w.currentPrice) || 0.0,
           currency: w.currency || 'EUR',
           previousClose: Number(w.previousClose) || Number(w.currentPrice) || 0.0,
+          preMarketPrice: (w.preMarketPrice !== undefined && w.preMarketPrice !== null) ? Number(w.preMarketPrice) : null,
+          preMarketChange: (w.preMarketChange !== undefined && w.preMarketChange !== null) ? Number(w.preMarketChange) : null,
+          preMarketChangePercent: (w.preMarketChangePercent !== undefined && w.preMarketChangePercent !== null) ? Number(w.preMarketChangePercent) : null,
+          preMarketTime: w.preMarketTime || null,
+          marketState: w.marketState || null,
           origin: 'WATCHLIST',
           inPortfolio: false,
           netQuantity: 0,

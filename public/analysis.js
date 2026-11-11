@@ -506,7 +506,15 @@
             ${renderEyeIcon(a.isMonitored, a.ticker)}
           </td>
           <td class="px-2.5 py-1.5 whitespace-nowrap">${originBadge}</td>
-          <td class="px-2.5 py-1.5 whitespace-nowrap text-right font-bold text-xs text-gray-900 dark:text-white font-mono">${fmtPrice(a.currentPrice, cur)}</td>
+          <td class="px-2.5 py-1.5 whitespace-nowrap text-right font-bold text-xs text-gray-900 dark:text-white font-mono">
+            <div>${fmtPrice(a.currentPrice, cur)}</div>
+            ${(a.preMarketPrice && Number(a.preMarketPrice) > 0) ? `
+              <div class="text-[9px] font-bold text-amber-600 dark:text-amber-400 flex items-center justify-end space-x-1 mt-0.5" title="Pre-Market Live: ${fmtPrice(a.preMarketPrice, cur)}">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>PRE: ${fmtPrice(a.preMarketPrice, cur)}</span>
+              </div>
+            ` : ''}
+          </td>
           <td class="px-2 py-1.5 whitespace-nowrap text-right">${renderVariationBadge(vars['1W'])}</td>
           <td class="px-2 py-1.5 whitespace-nowrap text-right">${renderVariationBadge(vars['1M'])}</td>
           <td class="px-2 py-1.5 whitespace-nowrap text-right">${renderVariationBadge(vars['3M'])}</td>
@@ -615,7 +623,15 @@
             </div>
             <div class="flex items-center space-x-1 tabular-nums flex-shrink-0 ml-1">
               ${a.pegRatio !== null && a.pegRatio !== undefined ? renderPegTableBadge(a.pegRatio) : ''}
-              <span class="font-bold font-mono text-xs text-gray-900 dark:text-white">${fmtPrice(a.currentPrice, cur)}</span>
+              <div class="text-right">
+                <span class="font-bold font-mono text-xs text-gray-900 dark:text-white">${fmtPrice(a.currentPrice, cur)}</span>
+                ${(a.preMarketPrice && Number(a.preMarketPrice) > 0) ? `
+                  <div class="text-[8px] font-bold text-amber-600 dark:text-amber-400 flex items-center justify-end space-x-0.5">
+                    <span class="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span>PRE: ${fmtPrice(a.preMarketPrice, cur)}</span>
+                  </div>
+                ` : ''}
+              </div>
             </div>
           </div>
 
@@ -789,6 +805,12 @@
               </div>
               <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-x-2 font-mono">
                 <span>Ultima quotazione: <strong class="text-gray-900 dark:text-white font-bold">${fmtPrice(currentPrice, currency)}</strong></span>
+                ${(assetInfo.preMarketPrice && Number(assetInfo.preMarketPrice) > 0) ? `
+                  <span class="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span>PRE: ${fmtPrice(assetInfo.preMarketPrice, currency)} (${Number(assetInfo.preMarketChangePercent || 0) > 0 ? '+' : ''}${Number(assetInfo.preMarketChangePercent || 0).toFixed(2).replace('.', ',')}%)</span>
+                  </span>
+                ` : ''}
                 <span>${renderVariationBadge(dayChangePct)}</span>
                 <span class="text-gray-400">• Aggiornato ad oggi</span>
               </div>

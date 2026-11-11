@@ -86,6 +86,8 @@
               <span id="drawerCurrencyBadge" class="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                 USD
               </span>
+              <span id="drawerMarketStateBadge" class="hidden px-2 py-0.5 rounded text-[10px] font-bold font-mono">
+              </span>
               <div class="truncate">
                 <h3 id="drawerAssetTicker" class="text-lg sm:text-xl font-bold font-mono text-gray-900 dark:text-white leading-tight">-</h3>
                 <p id="drawerAssetName" class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px] sm:max-w-sm">-</p>
@@ -113,6 +115,10 @@
                   </div>
                   <div class="mt-1">
                     <strong id="drawerCurrentPrice" class="text-base sm:text-lg font-bold text-gray-900 dark:text-white block leading-tight">0,00 USD</strong>
+                    <div id="drawerPreMarketWrap" class="hidden mt-1 flex items-center space-x-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                      <span id="drawerPreMarketText" class="text-[10px] font-bold font-mono text-amber-600 dark:text-amber-400">PRE: 0,00 USD (+0,00%)</span>
+                    </div>
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5">
                     <div id="drawerDayChangeBadge" class="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block">
@@ -855,6 +861,28 @@
       priceEurEl.textContent = '';
     }
 
+    // Pre-Market Live Display
+    const preMarketPrice = Number(holding.preMarketPrice) || 0;
+    const preMarketChangePercent = Number(holding.preMarketChangePercent) || 0;
+    const preWrap = document.getElementById('drawerPreMarketWrap');
+    const preText = document.getElementById('drawerPreMarketText');
+    const stateBadge = document.getElementById('drawerMarketStateBadge');
+
+    if (preMarketPrice > 0) {
+      const preSign = preMarketChangePercent > 0 ? '+' : (preMarketChangePercent < 0 ? '-' : '');
+      const prePctFormatted = `${preSign}${Math.abs(preMarketChangePercent).toFixed(2).replace('.', ',')}%`;
+      const prePriceFormatted = fmtPrice(preMarketPrice, curr);
+      preText.textContent = `PRE: ${prePriceFormatted} (${prePctFormatted})`;
+      preWrap.classList.remove('hidden');
+
+      stateBadge.textContent = 'PRE-MKT';
+      stateBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30';
+      stateBadge.classList.remove('hidden');
+    } else {
+      preWrap.classList.add('hidden');
+      stateBadge.classList.add('hidden');
+    }
+
     // 1D Change Badge: strictly 0 if holding has not traded in today's regular session
     let todayRomeStr = '';
     try {
@@ -1004,6 +1032,21 @@
           if (a.dividendYield) document.getElementById('drawerDivYield').textContent = fmtPercent(a.dividendYield);
           if (a.sector) document.getElementById('drawerSector').textContent = a.sector;
           if (a.country || a.region) document.getElementById('drawerRegion').textContent = a.country || a.region;
+
+          const pmPrice = Number(a.preMarketPrice) || 0;
+          if (pmPrice > 0) {
+            const pmChgPct = Number(a.preMarketChangePercent) || 0;
+            const pmSign = pmChgPct > 0 ? '+' : (pmChgPct < 0 ? '-' : '');
+            const pmPctFormatted = `${pmSign}${Math.abs(pmChgPct).toFixed(2).replace('.', ',')}%`;
+            const pmPriceFormatted = fmtPrice(pmPrice, curr);
+            document.getElementById('drawerPreMarketText').textContent = `PRE: ${pmPriceFormatted} (${pmPctFormatted})`;
+            document.getElementById('drawerPreMarketWrap').classList.remove('hidden');
+
+            const sBadge = document.getElementById('drawerMarketStateBadge');
+            sBadge.textContent = 'PRE-MKT';
+            sBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30';
+            sBadge.classList.remove('hidden');
+          }
         }
       })
       .catch(() => {});
