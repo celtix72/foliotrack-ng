@@ -116,6 +116,15 @@ const DYNAMIC_PRESET_MODELS = [
   }
 ];
 
+const CATEGORY_FRIENDLY_LABELS = {
+  EQUITY: 'Azioni (Equity)',
+  BOND: 'Obbligazioni (Bond)',
+  CASH: 'Liquidità (Cash)',
+  COMMODITY: 'Materie Prime (Commodities)',
+  CRYPTO: 'Criptovalute (Crypto)',
+  REAL_ESTATE: 'Immobiliare (Real Estate)'
+};
+
 /**
  * Normalizes asset type or holding object to standard taxonomy for asset class rebalancing.
  */
@@ -126,7 +135,7 @@ function normalizeAssetClass(h) {
     if (t.includes('BOND') || t.includes('BTP') || t.includes('BOT') || t.includes('TREASURY') || t === 'FIXED_INCOME') return 'BOND';
     if (t.includes('COMMODIT') || t.includes('GOLD') || t.includes('METAL') || t.includes('OIL')) return 'COMMODITY';
     if (t.includes('CRYPTO') || t.includes('BTC') || t.includes('ETH')) return 'CRYPTO';
-    if (t.includes('CASH') || t.includes('LIQUID')) return 'CASH';
+    if (t.includes('CASH') || t.includes('LIQUID') || t.includes('CURRENCY') || t.includes('FOREX')) return 'CASH';
     if (t.includes('REAL_ESTATE') || t.includes('REIT')) return 'REAL_ESTATE';
     if (t === 'ETF' || t === 'STOCK' || t === 'EQUITY' || t === 'SHARE') return 'EQUITY';
     return 'EQUITY';
@@ -137,10 +146,11 @@ function normalizeAssetClass(h) {
   const type = String(h.type || 'EQUITY').toUpperCase().trim();
   const sector = String(h.sector || '').toUpperCase().trim();
 
-  // Cash / Liquidity / Money Market (e.g. XEON, C3M, SMART, overnight rate, conto deposito)
+  // Cash / Liquidity / Money Market / Currencies (e.g. XEON, C3M, SMART, overnight rate, conto deposito, EURUSD=X)
   if (
-    type === 'CASH' || type === 'LIQUIDITY' ||
+    type === 'CASH' || type === 'LIQUIDITY' || type === 'CURRENCY' || type === 'FOREX' ||
     ticker === 'XEON.DE' || ticker === 'XEON' || ticker === 'C3M.MI' || ticker === 'SMART.MI' ||
+    ticker.endsWith('=X') ||
     name.includes('OVERNIGHT') || name.includes('OVER.RATE') || name.includes('MONEY MARKET') ||
     name.includes('LIQUIDIT') || name.includes('CONTO DEPOSITO')
   ) {
@@ -152,8 +162,11 @@ function normalizeAssetClass(h) {
     type.includes('BOND') || type.includes('BTP') || type.includes('BOT') || type === 'FIXED_INCOME' ||
     sector === 'GOVERNMENT' || sector.includes('TREASURY') || sector.includes('FIXED INCOME') ||
     name.includes('BTP') || name.includes('BOT') || name.includes('BOND') || name.includes('GOVT') ||
-    name.includes('TREASURY') || name.includes('OBBLIGAZION') || ticker.startsWith('IT000') || ticker.startsWith('XS')
+    name.includes('TREASURY') || name.includes('OBBLIGAZION')
   ) {
+    return 'BOND';
+  }
+  if (type !== 'EQUITY' && type !== 'STOCK' && (ticker.startsWith('IT000') || ticker.startsWith('XS'))) {
     return 'BOND';
   }
 
@@ -299,7 +312,7 @@ function calculateRebalanceWorksheet(params) {
     for (const [id, t] of targetMap.entries()) {
       catMap.set(id, {
         id,
-        label: t.label || id,
+        label: t.label || CATEGORY_FRIENDLY_LABELS[id] || id,
         currentValue: 0.0,
         targetPercent: Number(t.targetPercent) || 0.0,
         holdings: []
@@ -313,7 +326,7 @@ function calculateRebalanceWorksheet(params) {
       if (!cat) {
         cat = {
           id: cls,
-          label: cls,
+          label: CATEGORY_FRIENDLY_LABELS[cls] || cls,
           currentValue: 0.0,
           targetPercent: 0.0,
           holdings: []
@@ -324,9 +337,19 @@ function calculateRebalanceWorksheet(params) {
       cat.holdings.push(h);
     }
 
-    // Include Cash if targeted
-    if (catMap.has('CASH')) {
-      const cashCat = catMap.get('CASH');
+    // Include Cash if available or targeted
+    if (currentCash > 0 || catMap.has('CASH')) {
+      let cashCat = catMap.get('CASH');
+      if (!cashCat) {
+        cashCat = {
+          id: 'CASH',
+          label: CATEGORY_FRIENDLY_LABELS['CASH'],
+          currentValue: 0.0,
+          targetPercent: 0.0,
+          holdings: []
+        };
+        catMap.set('CASH', cashCat);
+      }
       cashCat.currentValue += currentCash;
     }
 
