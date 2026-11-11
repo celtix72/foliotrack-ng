@@ -748,46 +748,6 @@
           });
         }
 
-              <!-- Holdings Table (Compattato a 5 colonne su 2 righe per asset) -->
-              <div class="overflow-x-auto">
-                <table class="w-full text-left table-fixed">
-                  <thead class="text-[10px] font-mono text-gray-400 uppercase border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <tr>
-                      <th class="py-2 px-3 w-[32%]">Asset / Strumento</th>
-                      <th class="py-2 px-3 text-right w-[17%]">Q.tà / PMC</th>
-                      <th class="py-2 px-3 text-right w-[17%]">Quotaz. / Costo</th>
-                      <th class="py-2 px-3 text-right w-[17%]">Valore Att. / Peso</th>
-                      <th class="py-2 px-3 text-right w-[17%]">Gain / Rend.</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
-                    ${holdingsHtml}
-                  </tbody>
-                  <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
-                    <tr>
-                      <td colspan="3" class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
-                        Totale Portafoglio ${p.name}
-                      </td>
-                      <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-bold">
-                        ${formatMoney(p.totalValue, p.currency)}
-                        <span class="text-[10px] block text-gray-400 font-normal">100%</span>
-                      </td>
-                      <td class="py-2 px-3 text-right ${gainColor} font-bold">
-                        ${gainSign}${formatMoney(p.totalGain, p.currency)}
-                        <span class="text-[10px] block font-bold">${formatPercent(p.gainPercent)}</span>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              ${minusvalenzeSectionHtml}
-            `;
-
-            container.appendChild(pCard);
-          });
-        }
-
         spinner.classList.add('hidden');
         content.classList.remove('hidden');
       }
@@ -1055,11 +1015,6 @@
                   </tfoot>
                 </table>
               </div>
-            `;
-
-            container.appendChild(yCard);
-          });
-        }
             `;
 
             container.appendChild(yCard);
