@@ -19,6 +19,131 @@ const MONTH_SHORT_NAMES = [
 ];
 
 /**
+ * Authoritative payment schedule registry for known government bonds and equities.
+ * Prevents incorrect quarterly fallback for annual/semi-annual payers (e.g. Rai Way, Nexi, Intesa Sanpaolo, Prosus, BTP Valore).
+ */
+const KNOWN_ASSET_SCHEDULES = {
+  // BTP Valore 4ª emissione (Maggio 2024 - Maggio 2030): trimestrale a Feb, Mag, Ago, Nov (14 Nov 2026)
+  'IT0005594483': {
+    payoutMonths: [2, 5, 8, 11],
+    frequency: 'QUARTERLY',
+    dayOfMonth: 14,
+    expectedPayment: 219.84,
+    note: '14 Nov (BTP Valore Mg30)'
+  },
+  // BTP Valore 3ª emissione (Marzo 2024 - Marzo 2030): trimestrale a Mar, Giu, Set, Dic (5 Dic 2026)
+  'IT0005583486': {
+    payoutMonths: [3, 6, 9, 12],
+    frequency: 'QUARTERLY',
+    dayOfMonth: 5,
+    expectedPayment: 213.43,
+    note: '5 Dic (BTP Valore Mz30)'
+  },
+  // BTP 2039: semestrale 1° Marzo e 1° Settembre
+  'IT0004532559': {
+    payoutMonths: [3, 9],
+    frequency: 'SEMI_ANNUAL',
+    dayOfMonth: 1,
+    note: '1 Mar / 1 Set'
+  },
+  // Mediobanca Bond: annuale a Luglio
+  'XS3021378388': {
+    payoutMonths: [7],
+    frequency: 'ANNUAL',
+    dayOfMonth: 16,
+    note: '16 Lug'
+  },
+  // Intesa Sanpaolo: saldo a Maggio, acconto deliberato CdA per il 25 Novembre 2026
+  'ISP.MI': {
+    payoutMonths: [5, 11],
+    frequency: 'SEMI_ANNUAL',
+    dayOfMonth: 25,
+    interimAmountPerShare: 0.17, // Acconto deliberato dal CdA (€ 0.17/azione)
+    note: '25 Nov deliberato CdA'
+  },
+  // Rai Way: dividendo annuale staccato solo a Maggio (nessun dividendo a fine anno)
+  'RWAY.MI': {
+    payoutMonths: [5],
+    frequency: 'ANNUAL',
+    note: 'Annuale a Maggio (già staccato)'
+  },
+  // Nexi: dividendo annuale staccato solo a Maggio (nessun dividendo a fine anno)
+  'NEXI.MI': {
+    payoutMonths: [5],
+    frequency: 'ANNUAL',
+    note: 'Annuale a Maggio (già staccato)'
+  },
+  // Prosus: dividendo annuale a Dicembre
+  'PRX.AS': {
+    payoutMonths: [12],
+    frequency: 'ANNUAL',
+    note: 'Annuale a Dicembre'
+  },
+  // Nomad Foods: trimestrale Feb, Mag, Ago, Nov
+  'NOMD': {
+    payoutMonths: [2, 5, 8, 11],
+    frequency: 'QUARTERLY',
+    note: 'Trimestrale Nov'
+  },
+  // PayPal Holdings: trimestrale Mar, Giu, Set, Dic (23 Dic 2026)
+  'PYPL': {
+    payoutMonths: [3, 6, 9, 12],
+    frequency: 'QUARTERLY',
+    dayOfMonth: 23,
+    note: '23 Dic'
+  },
+  // Micron Technology: trimestrale con stacco a Dicembre
+  'MU': {
+    payoutMonths: [3, 6, 9, 12],
+    frequency: 'QUARTERLY',
+    note: 'Dicembre'
+  },
+  // UnitedHealth Group: trimestrale Mar, Giu, Set, Dic
+  'UNH': {
+    payoutMonths: [3, 6, 9, 12],
+    frequency: 'QUARTERLY',
+    note: 'Dicembre'
+  },
+  // VanEck Developed Markets Dividend ETF: trimestrale Mar, Giu, Set, Dic
+  'TDIV.AS': {
+    payoutMonths: [3, 6, 9, 12],
+    frequency: 'QUARTERLY',
+    note: 'Dicembre'
+  },
+  // Meta Platforms: trimestrale Mar, Giu, Set, Dic
+  'META': {
+    payoutMonths: [3, 6, 9, 12],
+    frequency: 'QUARTERLY',
+    note: 'Dicembre'
+  },
+  // Alibaba Group: annuale a Luglio
+  'BABA': {
+    payoutMonths: [7],
+    frequency: 'ANNUAL'
+  },
+  // JD.com: annuale ad Aprile
+  'JD': {
+    payoutMonths: [4],
+    frequency: 'ANNUAL'
+  },
+  // Salesforce: trimestrale Gen, Apr, Lug, Ott
+  'CRM': {
+    payoutMonths: [1, 4, 7, 10],
+    frequency: 'QUARTERLY'
+  },
+  // Novo Nordisk: semestrale Aprile, Agosto
+  'NOV.DE': {
+    payoutMonths: [4, 8],
+    frequency: 'SEMI_ANNUAL'
+  },
+  // Kaspi.kz: trimestrale Mar, Giu, Set
+  'KSPI': {
+    payoutMonths: [3, 6, 9],
+    frequency: 'QUARTERLY'
+  }
+};
+
+/**
  * Calculates historical dividends and interest grouped by calendar year.
  *
  * @param {Array<object>} transactions - Array of transaction objects
@@ -176,8 +301,20 @@ function calculateDividendForecast(activeHoldings = [], transactions = [], asset
     const recentHistory = history.filter(t => t.yr >= currentYear - 1);
     const historyMonths = Array.from(new Set(recentHistory.map(t => t.mth))).sort((x, y) => x - y);
 
+    const sched = KNOWN_ASSET_SCHEDULES[tkr];
+    let payoutMonths = sched && sched.payoutMonths ? sched.payoutMonths : historyMonths;
+    if (!payoutMonths || payoutMonths.length === 0) {
+      // Default quarterly if unknown
+      payoutMonths = [3, 6, 9, 12];
+    }
+
     if (yieldPct > 0) {
       annualIncome = qty * price * (yieldPct / 100.0);
+    } else if (sched && sched.expectedPayment && sched.payoutMonths) {
+      annualIncome = sched.expectedPayment * sched.payoutMonths.length;
+      if (marketValue > 0) {
+        yieldPct = Number(((annualIncome / marketValue) * 100).toFixed(2));
+      }
     } else if (history.length > 0) {
       // Deducing coupon / dividend from historical payments (e.g. Italian BTPs)
       const txPrevYear = history.filter(t => t.yr === currentYear - 1);
@@ -194,20 +331,20 @@ function calculateDividendForecast(activeHoldings = [], transactions = [], asset
       }
     }
 
-    if (annualIncome <= 0) {
+    if (annualIncome <= 0 && (!sched || !sched.expectedPayment)) {
       continue;
     }
 
     totalProjectedNextYear += annualIncome;
 
-    // Determine payout schedule
-    let payoutMonths = historyMonths;
-    if (payoutMonths.length === 0) {
-      // Default quarterly if unknown
-      payoutMonths = [3, 6, 9, 12];
+    let perPayment = annualIncome / payoutMonths.length;
+    if (sched && sched.expectedPayment) {
+      perPayment = sched.expectedPayment;
+    } else if (sched && sched.interimAmountPerShare) {
+      perPayment = qty * sched.interimAmountPerShare;
+    } else if (sched && sched.frequency === 'ANNUAL') {
+      perPayment = annualIncome;
     }
-
-    const perPayment = annualIncome / payoutMonths.length;
 
     // Remaining payments for the CURRENT year
     let holdingRemainingThisYear = 0.0;
@@ -222,6 +359,9 @@ function calculateDividendForecast(activeHoldings = [], transactions = [], asset
 
         if (!alreadyPaid) {
           holdingRemainingThisYear += perPayment;
+          const day = sched && sched.dayOfMonth ? sched.dayOfMonth : null;
+          const dateLabel = day ? `${day} ${MONTH_SHORT_NAMES[m - 1]}` : MONTH_SHORT_NAMES[m - 1];
+
           expectedRemainingPayments.push({
             ticker: tkr,
             name: a.name || h.name || tkr,
@@ -229,7 +369,10 @@ function calculateDividendForecast(activeHoldings = [], transactions = [], asset
             month: m,
             monthName: MONTH_NAMES[m - 1],
             monthShort: MONTH_SHORT_NAMES[m - 1],
-            expectedAmount: Number(perPayment.toFixed(2))
+            dayOfMonth: day,
+            dateLabel,
+            expectedAmount: Number(perPayment.toFixed(2)),
+            note: sched && sched.note ? sched.note : ''
           });
         }
       }
@@ -260,9 +403,12 @@ function calculateDividendForecast(activeHoldings = [], transactions = [], asset
   // Sort holding projections descending by annual income
   holdingProjections.sort((a, b) => b.projectedAnnualIncome - a.projectedAnnualIncome);
 
-  // Sort expected remaining payments by month ascending, then amount descending
+  // Sort expected remaining payments by month ascending, then dayOfMonth ascending (or amount descending)
   expectedRemainingPayments.sort((a, b) => {
     if (a.month !== b.month) return a.month - b.month;
+    if (a.dayOfMonth && b.dayOfMonth) return a.dayOfMonth - b.dayOfMonth;
+    if (a.dayOfMonth && !b.dayOfMonth) return -1;
+    if (!a.dayOfMonth && b.dayOfMonth) return 1;
     return b.expectedAmount - a.expectedAmount;
   });
 
@@ -310,6 +456,7 @@ function calculateDividendForecast(activeHoldings = [], transactions = [], asset
 module.exports = {
   MONTH_NAMES,
   MONTH_SHORT_NAMES,
+  KNOWN_ASSET_SCHEDULES,
   calculateAnnualDividendsHistory,
   calculateDividendForecast
 };

@@ -445,10 +445,11 @@
             const badgeBg = isBond
               ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
               : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300';
+            const dateDisplay = p.dateLabel || p.monthShort;
             return `
               <div class="flex items-center justify-between p-1.5 rounded bg-white dark:bg-[#141416] border border-gray-100 dark:border-white/5 text-[10px]">
                 <div class="flex items-center space-x-1.5 truncate">
-                  <span class="px-1 py-0.2 rounded font-bold ${badgeBg}">${p.monthShort}</span>
+                  <span class="px-1.5 py-0.2 rounded font-bold ${badgeBg} whitespace-nowrap">${dateDisplay}</span>
                   <span class="font-bold text-gray-900 dark:text-white">${p.ticker}</span>
                   <span class="text-gray-400 truncate max-w-[100px]">${p.name}</span>
                 </div>

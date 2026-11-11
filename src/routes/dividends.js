@@ -8,7 +8,7 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, checkPortfolioAccess, getAssetsMap } = require('./portfolios');
-const { calculateAnnualDividendsHistory, calculateDividendForecast } = require('../utils/dividendForecast');
+const { calculateAnnualDividendsHistory, calculateDividendForecast, KNOWN_ASSET_SCHEDULES } = require('../utils/dividendForecast');
 
 const router = express.Router();
 
@@ -54,18 +54,26 @@ function recalculateDividendProjections(portfolioId) {
         const currentPrice = Number(h.currentPrice) || 0.0;
         let annualIncome = (yieldPct > 0) ? (h.quantity * currentPrice * (yieldPct / 100.0)) : 0.0;
 
-        // Deducing coupon/dividend yield from historical payments for bonds/assets with 0 yield
+        // Deducing coupon/dividend yield from known schedules or historical payments
         if (annualIncome <= 0) {
-          const hist = db.prepare(`
-            SELECT SUM(amount) as total
-            FROM transactions
-            WHERE UPPER(assetTicker) = ? AND type IN ('DIVIDEND', 'INTEREST')
-              AND date >= date('now', '-1 year')
-          `).get(tkr);
-          if (hist && hist.total > 0) {
-            annualIncome = Number(hist.total) || 0.0;
+          const sched = KNOWN_ASSET_SCHEDULES && KNOWN_ASSET_SCHEDULES[tkr];
+          if (sched && sched.expectedPayment && sched.payoutMonths) {
+            annualIncome = sched.expectedPayment * sched.payoutMonths.length;
             if (h.quantity * currentPrice > 0) {
               yieldPct = Number(((annualIncome / (h.quantity * currentPrice)) * 100).toFixed(2));
+            }
+          } else {
+            const hist = db.prepare(`
+              SELECT SUM(amount) as total
+              FROM transactions
+              WHERE UPPER(assetTicker) = ? AND type IN ('DIVIDEND', 'INTEREST')
+                AND date >= date('now', '-1 year')
+            `).get(tkr);
+            if (hist && hist.total > 0) {
+              annualIncome = Number(hist.total) || 0.0;
+              if (h.quantity * currentPrice > 0) {
+                yieldPct = Number(((annualIncome / (h.quantity * currentPrice)) * 100).toFixed(2));
+              }
             }
           }
         }

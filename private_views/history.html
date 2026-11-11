@@ -762,18 +762,20 @@
             const badgeBg = isBond
               ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-500/20'
               : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-500/20';
+            const dateDisplay = p.dateLabel || p.monthShort;
+            const noteText = p.note ? `<span class="text-[9px] text-gray-400 block">${p.note}</span>` : `<div class="text-[9px] text-gray-400">${p.monthName}</div>`;
             return `
               <div class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#141416] border border-gray-100 dark:border-white/5 font-mono text-xs">
                 <div class="flex items-center space-x-2 min-w-0">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${badgeBg} border">${p.monthShort}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${badgeBg} border whitespace-nowrap">${dateDisplay}</span>
                   <div class="truncate">
                     <span class="font-bold text-gray-900 dark:text-white">${p.ticker}</span>
-                    <span class="text-[10px] text-gray-400 block truncate max-w-[140px]">${p.name}</span>
+                    <span class="text-[10px] text-gray-400 block truncate max-w-[150px]">${p.name}</span>
                   </div>
                 </div>
-                <div class="text-right">
+                <div class="text-right whitespace-nowrap pl-2">
                   <div class="font-bold text-blue-600 dark:text-blue-400 tabular-nums">~ ${fmtEur(p.expectedAmount)}</div>
-                  <div class="text-[9px] text-gray-400">${p.monthName}</div>
+                  ${noteText}
                 </div>
               </div>
             `;

@@ -165,6 +165,66 @@ describe('Dividend Annual History & Dynamic Projections Engine', () => {
       assert.strictEqual(result.nextYearForecast.monthlyAverage, Number((1000 / 12).toFixed(2)));
       assert.strictEqual(result.nextYearForecast.holdingProjections.length, 2);
     });
+
+    test('calculateDividendForecast respects verified calendar (BTP Mg30 Nov, BTP Mz30 Dic, ISP Nov, excludes RWAY/NEXI)', () => {
+      // In November 2026:
+      const options = { currentDate: new Date('2026-11-10T10:00:00Z') };
+
+      const activeHoldings = [
+        { ticker: 'IT0005594483', name: 'BTP Valore Mg30', type: 'BOND', quantity: 300, currentPrice: 100, dividendYield: 0 },
+        { ticker: 'IT0005583486', name: 'BTP Valore Mz30', type: 'BOND', quantity: 300, currentPrice: 100, dividendYield: 0 },
+        { ticker: 'ISP.MI', name: 'Intesa Sanpaolo', type: 'EQUITY', quantity: 2000, currentPrice: 6.30, dividendYield: 6.88 },
+        { ticker: 'RWAY.MI', name: 'Rai Way', type: 'EQUITY', quantity: 2350, currentPrice: 4.10, dividendYield: 7.91 },
+        { ticker: 'NEXI.MI', name: 'Nexi', type: 'EQUITY', quantity: 1200, currentPrice: 4.50, dividendYield: 6.63 },
+        { ticker: 'PRX.AS', name: 'Prosus', type: 'EQUITY', quantity: 127, currentPrice: 37.0, dividendYield: 0.75 },
+        { ticker: 'NOMD', name: 'Nomad Foods', type: 'EQUITY', quantity: 200, currentPrice: 15.0, dividendYield: 5.77 },
+        { ticker: 'PYPL', name: 'PayPal', type: 'EQUITY', quantity: 70, currentPrice: 70.0, dividendYield: 0.95 }
+      ];
+
+      const result = calculateDividendForecast(activeHoldings, [], {}, options);
+      const rem = result.currentYearForecast.expectedRemainingPayments;
+
+      // 1. Check BTP Mg30 (IT0005594483) is scheduled for November (14 Nov)
+      const btpMg = rem.find(p => p.ticker === 'IT0005594483');
+      assert.ok(btpMg, 'BTP Mg30 must be in remaining payments');
+      assert.strictEqual(btpMg.month, 11);
+      assert.strictEqual(btpMg.dateLabel, '14 Nov');
+
+      // 2. Check BTP Mz30 (IT0005583486) is scheduled for December (5 Dic)
+      const btpMz = rem.find(p => p.ticker === 'IT0005583486');
+      assert.ok(btpMz, 'BTP Mz30 must be in remaining payments');
+      assert.strictEqual(btpMz.month, 12);
+      assert.strictEqual(btpMz.dateLabel, '5 Dic');
+
+      // 3. Check Intesa Sanpaolo (ISP.MI) is scheduled for November (25 Nov) with 0.17/share acconto
+      const isp = rem.find(p => p.ticker === 'ISP.MI');
+      assert.ok(isp, 'ISP.MI must be in remaining payments');
+      assert.strictEqual(isp.month, 11);
+      assert.strictEqual(isp.dateLabel, '25 Nov');
+      assert.strictEqual(isp.expectedAmount, 340); // 2000 * 0.17
+
+      // 4. Check RWAY.MI and NEXI.MI are EXCLUDED from current year remainder (only pay in May)
+      const rway = rem.find(p => p.ticker === 'RWAY.MI');
+      const nexi = rem.find(p => p.ticker === 'NEXI.MI');
+      assert.strictEqual(rway, undefined, 'RWAY.MI must NOT appear in Nov/Dec remaining payments');
+      assert.strictEqual(nexi, undefined, 'NEXI.MI must NOT appear in Nov/Dec remaining payments');
+
+      // 5. Check PRX.AS is scheduled in December
+      const prx = rem.find(p => p.ticker === 'PRX.AS');
+      assert.ok(prx);
+      assert.strictEqual(prx.month, 12);
+
+      // 6. Check PYPL is scheduled for December (23 Dic)
+      const pypl = rem.find(p => p.ticker === 'PYPL');
+      assert.ok(pypl);
+      assert.strictEqual(pypl.month, 12);
+      assert.strictEqual(pypl.dateLabel, '23 Dic');
+
+      // 7. Check that RWAY and NEXI DO appear in next year forecast in May
+      const nextRway = result.nextYearForecast.holdingProjections.find(h => h.ticker === 'RWAY.MI');
+      assert.ok(nextRway);
+      assert.deepStrictEqual(nextRway.payoutMonths, [5]);
+    });
   });
 
   describe('2. Integration: Recalculation on Buy / Sell / Modify Operations', () => {
