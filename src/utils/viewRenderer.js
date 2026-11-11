@@ -79,6 +79,11 @@ function readFileCached(filePath) {
  * @param {string} viewName - Name of the view (e.g. 'dashboard', 'portfolios')
  */
 function serveWithSidebar(req, res, viewName) {
+  // Prevent browser caching of dynamic views across releases
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   const isMobileClient = isMobile(req);
   const viewsPath = path.join(__dirname, '..', '..', 'private_views');
   const mobileFile = path.join(viewsPath, `${viewName}_mobile.html`);
