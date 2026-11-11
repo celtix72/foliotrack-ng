@@ -49,6 +49,90 @@
       </div>
     </div>
 
+    <!-- Previsione Dividendi Card (Mobile) -->
+    <div class="signature-card p-3 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-1.5">
+          <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          <span class="font-bold text-xs text-gray-900 dark:text-white">Previsione Dividendi</span>
+        </div>
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+          <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
+          Auto-ricalcolo
+        </span>
+      </div>
+
+      <!-- Anno Corrente Sub-Card -->
+      <div class="bg-gray-50/70 dark:bg-white/[0.02] p-2.5 rounded-lg border border-gray-100 dark:border-white/5 space-y-1.5 font-mono text-xs">
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="font-bold text-gray-900 dark:text-white uppercase">Anno Corrente (<span id="mForecastCurYear">--</span>)</span>
+          <span id="mForecastRemainingMonths" class="text-[9px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.2 rounded font-bold">-- mesi rim.</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 text-center">
+          <div class="bg-white dark:bg-[#141416] p-1.5 rounded border border-gray-100 dark:border-white/5">
+            <div class="text-[9px] text-gray-400">Incassato</div>
+            <div id="mForecastCollectedSoFar" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">€ 0</div>
+          </div>
+          <div class="bg-white dark:bg-[#141416] p-1.5 rounded border border-gray-100 dark:border-white/5">
+            <div class="text-[9px] text-gray-400">Stima Rim.</div>
+            <div id="mForecastRemainingExpected" class="text-xs font-bold text-blue-600 dark:text-blue-400 tabular-nums">€ 0</div>
+          </div>
+          <div class="bg-white dark:bg-[#141416] p-1.5 rounded border border-emerald-500/20 bg-emerald-500/[0.03]">
+            <div class="text-[9px] text-gray-400">Prev. Anno</div>
+            <div id="mForecastProjectedYearEnd" class="text-xs font-bold text-gray-900 dark:text-white tabular-nums">€ 0</div>
+          </div>
+        </div>
+        <button id="mToggleRemainingPaymentsBtn" type="button" class="w-full flex items-center justify-between text-[10px] text-gray-500 hover:text-emerald-600 pt-1 border-t border-gray-100 dark:border-white/5 transition">
+          <span>Stacchi attesi nei mesi mancanti (<span id="mForecastRemainingCount">0</span>)</span>
+          <span id="mToggleRemainingPaymentsIcon" class="text-[9px]">▼</span>
+        </button>
+        <div id="mRemainingPaymentsList" class="hidden space-y-1 pt-1 max-h-44 overflow-y-auto"></div>
+      </div>
+
+      <!-- Anno Prossimo Sub-Card -->
+      <div class="bg-gray-50/70 dark:bg-white/[0.02] p-2.5 rounded-lg border border-gray-100 dark:border-white/5 space-y-1.5 font-mono text-xs">
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="font-bold text-gray-900 dark:text-white uppercase">Anno Prossimo (<span id="mForecastNextYear">--</span>)</span>
+          <span id="mForecastYieldBadge" class="text-[9px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded font-bold">Yield: --%</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 text-center">
+          <div class="bg-white dark:bg-[#141416] p-1.5 rounded border border-gray-100 dark:border-white/5">
+            <div class="text-[9px] text-gray-400">Totale Previsto</div>
+            <div id="mForecastNextYearTotal" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">€ 0</div>
+          </div>
+          <div class="bg-white dark:bg-[#141416] p-1.5 rounded border border-gray-100 dark:border-white/5">
+            <div class="text-[9px] text-gray-400">Media/Mese</div>
+            <div id="mForecastNextYearMonthly" class="text-xs font-bold text-blue-600 dark:text-blue-400 tabular-nums">€ 0</div>
+          </div>
+          <div class="bg-white dark:bg-[#141416] p-1.5 rounded border border-gray-100 dark:border-white/5">
+            <div class="text-[9px] text-gray-400">Crescita vs '26</div>
+            <div id="mForecastNextYearGrowth" class="text-xs font-bold tabular-nums">--</div>
+          </div>
+        </div>
+        <button id="mToggleNextYearHoldingsBtn" type="button" class="w-full flex items-center justify-between text-[10px] text-gray-500 hover:text-emerald-600 pt-1 border-t border-gray-100 dark:border-white/5 transition">
+          <span>Dettaglio titoli in portafoglio (<span id="mForecastHoldingsCount">0</span>)</span>
+          <span id="mToggleNextYearHoldingsIcon" class="text-[9px]">▼</span>
+        </button>
+        <div id="mNextYearHoldingsList" class="hidden space-y-1 pt-1 max-h-44 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- Dividendi per Anno Card (Mobile) -->
+    <div class="signature-card p-3 space-y-2">
+      <div class="flex items-center justify-between text-xs">
+        <div>
+          <span class="font-bold text-gray-900 dark:text-white">Dividendi per Anno</span>
+          <p class="text-[10px] font-mono text-gray-400">Totale, cedole e crescita YoY</p>
+        </div>
+        <span id="mAnnualCountBadge" class="text-[10px] font-mono text-gray-400">-- anni</span>
+      </div>
+      <div id="mAnnualDividendsContainer" class="space-y-2 pt-1 font-mono text-xs">
+        <div class="text-center text-gray-400 py-3">Caricamento storico...</div>
+      </div>
+    </div>
+
     <!-- Monthly Dividends Bar Chart Card -->
     <div class="signature-card p-4 space-y-2">
       <div class="flex items-center justify-between text-xs">
@@ -101,6 +185,7 @@
     let mPerfChart = null;
 
     const fmtEur = (v) => '€ ' + Math.round(Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const fmtPct = (v) => (Number(v) || 0).toFixed(1) + '%';
 
     async function loadPortfolios() {
       try {
@@ -148,6 +233,13 @@
           document.getElementById('mStatIncomeBreakdown').textContent = `${fmtEur(s.byType.dividends)} div • ${fmtEur(s.byType.interest)} cedole`;
           document.getElementById('mStatProjectedAnnual').textContent = fmtEur(s.projectedNext12Months);
           document.getElementById('mStatProjectedMonthly').textContent = `Media: ${fmtEur(s.projectedMonthlyAverage)}/m`;
+
+          if (s.currentYearForecast && s.nextYearForecast) {
+            renderMobileDividendForecast(s.currentYearForecast, s.nextYearForecast);
+          }
+          if (s.annualDividends) {
+            renderMobileAnnualDividends(s.annualDividends);
+          }
 
           renderMobileIncomeChart(s.byMonth);
         }
@@ -328,6 +420,182 @@
           </div>
         </div>
       `).join('');
+    }
+
+    function renderMobileDividendForecast(curForecast, nextForecast) {
+      if (!curForecast || !nextForecast) return;
+
+      // Current Year
+      document.getElementById('mForecastCurYear').textContent = curForecast.currentYear;
+      document.getElementById('mForecastRemainingMonths').textContent = `${curForecast.remainingMonthsCount} ${curForecast.remainingMonthsCount === 1 ? 'mese rim.' : 'mesi rim.'}`;
+      document.getElementById('mForecastCollectedSoFar').textContent = fmtEur(curForecast.collectedSoFar);
+      document.getElementById('mForecastRemainingExpected').textContent = fmtEur(curForecast.remainingExpected);
+      document.getElementById('mForecastProjectedYearEnd').textContent = fmtEur(curForecast.projectedYearEndTotal);
+
+      const remCountEl = document.getElementById('mForecastRemainingCount');
+      if (remCountEl) remCountEl.textContent = (curForecast.expectedRemainingPayments || []).length;
+
+      const remList = document.getElementById('mRemainingPaymentsList');
+      if (remList) {
+        if (!curForecast.expectedRemainingPayments || curForecast.expectedRemainingPayments.length === 0) {
+          remList.innerHTML = '<div class="text-[10px] text-gray-400 py-1 text-center">Nessun accredito atteso.</div>';
+        } else {
+          remList.innerHTML = curForecast.expectedRemainingPayments.map(p => {
+            const isBond = p.type === 'BOND';
+            const badgeBg = isBond
+              ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+              : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300';
+            return `
+              <div class="flex items-center justify-between p-1.5 rounded bg-white dark:bg-[#141416] border border-gray-100 dark:border-white/5 text-[10px]">
+                <div class="flex items-center space-x-1.5 truncate">
+                  <span class="px-1 py-0.2 rounded font-bold ${badgeBg}">${p.monthShort}</span>
+                  <span class="font-bold text-gray-900 dark:text-white">${p.ticker}</span>
+                  <span class="text-gray-400 truncate max-w-[100px]">${p.name}</span>
+                </div>
+                <div class="font-bold text-blue-600 dark:text-blue-400 tabular-nums whitespace-nowrap pl-1">
+                  ~ ${fmtEur(p.expectedAmount)}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // Next Year
+      document.getElementById('mForecastNextYear').textContent = nextForecast.nextYear;
+      document.getElementById('mForecastYieldBadge').textContent = `Yield: ${fmtPct(nextForecast.portfolioYield)}`;
+      document.getElementById('mForecastNextYearTotal').textContent = fmtEur(nextForecast.totalProjected);
+      document.getElementById('mForecastNextYearMonthly').textContent = `${fmtEur(nextForecast.monthlyAverage)}/m`;
+
+      const growthEl = document.getElementById('mForecastNextYearGrowth');
+      const gVal = nextForecast.yoyGrowthVsCurrentYear || 0;
+      growthEl.textContent = `${gVal >= 0 ? '+' : ''}${fmtPct(gVal)}`;
+      growthEl.className = `text-xs font-bold tabular-nums ${gVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+
+      const holdingsCountEl = document.getElementById('mForecastHoldingsCount');
+      if (holdingsCountEl) holdingsCountEl.textContent = (nextForecast.holdingProjections || []).length;
+
+      const holdingsList = document.getElementById('mNextYearHoldingsList');
+      if (holdingsList) {
+        if (!nextForecast.holdingProjections || nextForecast.holdingProjections.length === 0) {
+          holdingsList.innerHTML = '<div class="text-[10px] text-gray-400 py-1 text-center">Nessun titolo a reddito attivo.</div>';
+        } else {
+          holdingsList.innerHTML = nextForecast.holdingProjections.map(h => {
+            const monthsStr = (h.payoutMonths || []).map(m => ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][m - 1]).join(',');
+            return `
+              <div class="flex items-center justify-between p-1.5 rounded bg-white dark:bg-[#141416] border border-gray-100 dark:border-white/5 text-[10px]">
+                <div class="truncate pr-1">
+                  <div class="flex items-center space-x-1">
+                    <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
+                    <span class="text-emerald-600 dark:text-emerald-400 font-semibold">${fmtPct(h.dividendYield)}</span>
+                  </div>
+                  <div class="text-[9px] text-gray-400 truncate max-w-[130px]">${h.name} (${monthsStr})</div>
+                </div>
+                <div class="text-right whitespace-nowrap">
+                  <div class="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">${fmtEur(h.projectedAnnualIncome)}</div>
+                  <div class="text-[8px] text-gray-400">${fmtEur(h.projectedMonthlyIncome)}/m</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    function renderMobileAnnualDividends(annualDividends) {
+      const container = document.getElementById('mAnnualDividendsContainer');
+      if (!container) return;
+
+      if (!annualDividends || annualDividends.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 py-2">Nessun accredito registrato</div>';
+        return;
+      }
+
+      const countBadge = document.getElementById('mAnnualCountBadge');
+      if (countBadge) countBadge.textContent = `${annualDividends.length} ${annualDividends.length === 1 ? 'anno' : 'anni'}`;
+
+      const monthNameShort = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+      container.innerHTML = annualDividends.map(row => {
+        const yoyHtml = row.yoyGrowthRate !== null
+          ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${row.yoyGrowthRate >= 0 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'}">${row.yoyGrowthRate >= 0 ? '+' : ''}${fmtPct(row.yoyGrowthRate)}</span>`
+          : '';
+
+        const assetItems = (row.assets || []).map(a => {
+          const mths = (a.months || []).map(m => monthNameShort[parseInt(m, 10) - 1] || m).join(', ');
+          return `
+            <div class="flex items-center justify-between py-1 border-b border-gray-100/50 dark:border-white/5 last:border-0 text-[10px]">
+              <div class="truncate pr-1">
+                <span class="font-bold text-gray-800 dark:text-gray-200">${a.ticker}</span>
+                <span class="text-[9px] text-gray-400">(${mths})</span>
+              </div>
+              <div class="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                ${fmtEur(a.amount)}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="p-2.5 rounded-xl bg-gray-50/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 space-y-1">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-sm font-bold text-gray-900 dark:text-white">${row.year}</span>
+                ${yoyHtml}
+              </div>
+              <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">${fmtEur(row.total)}</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-gray-400">
+              <span>${fmtEur(row.dividends)} div • ${fmtEur(row.interest)} cedole</span>
+              <span>${row.count} accrediti</span>
+            </div>
+            <button type="button" data-m-toggle-year="${row.year}" class="w-full flex items-center justify-between text-[10px] text-emerald-600 dark:text-emerald-400 pt-1 border-t border-gray-100 dark:border-white/5 transition">
+              <span>Mostra titoli staccati (${row.assets ? row.assets.length : 0})</span>
+              <span class="m-year-icon text-[9px] transition-transform duration-200">▼</span>
+            </button>
+            <div id="m-year-details-${row.year}" class="hidden space-y-0.5 pt-1">
+              ${assetItems}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('button[data-m-toggle-year]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const yr = btn.getAttribute('data-m-toggle-year');
+          const details = document.getElementById(`m-year-details-${yr}`);
+          const icon = btn.querySelector('.m-year-icon');
+          if (details) {
+            const isHidden = details.classList.toggle('hidden');
+            if (icon) icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+          }
+        });
+      });
+    }
+
+    // Toggle handlers for mobile forecast details
+    const mToggleRem = document.getElementById('mToggleRemainingPaymentsBtn');
+    if (mToggleRem) {
+      mToggleRem.addEventListener('click', () => {
+        const list = document.getElementById('mRemainingPaymentsList');
+        const icon = document.getElementById('mToggleRemainingPaymentsIcon');
+        if (list) {
+          const isHidden = list.classList.toggle('hidden');
+          if (icon) icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+      });
+    }
+
+    const mToggleNext = document.getElementById('mToggleNextYearHoldingsBtn');
+    if (mToggleNext) {
+      mToggleNext.addEventListener('click', () => {
+        const list = document.getElementById('mNextYearHoldingsList');
+        const icon = document.getElementById('mToggleNextYearHoldingsIcon');
+        if (list) {
+          const isHidden = list.classList.toggle('hidden');
+          if (icon) icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+      });
     }
 
     document.getElementById('mPortfolioSelect').addEventListener('change', (e) => {

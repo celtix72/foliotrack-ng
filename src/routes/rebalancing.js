@@ -8,6 +8,7 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, checkPortfolioAccess } = require('./portfolios');
+const { recalculateDividendProjections } = require('./dividends');
 const {
   PRESET_TARGET_MODELS,
   DYNAMIC_PRESET_MODELS,
@@ -479,8 +480,11 @@ router.post('/apply', (req, res) => {
 
     const appliedCount = applyBatch(validTrades);
 
-    // Recalculate portfolio
+    // Recalculate portfolio & dividend projections
     recalculatePortfolio(pId);
+    try {
+      recalculateDividendProjections(pId);
+    } catch {}
 
     return res.json({
       success: true,

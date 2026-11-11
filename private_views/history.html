@@ -69,6 +69,148 @@
         </div>
       </div>
 
+      <!-- Previsione Dividendi: Anno Corrente (Mesi Rimanenti) & Anno Prossimo (Proiezione Titoli) -->
+      <div class="signature-card p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 border-b border-gray-100 dark:border-white/5">
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              <span>Previsione & Stima Dividendi</span>
+            </h3>
+            <p class="text-xs text-gray-500 font-mono">Proiezioni dinamiche ricalcolate istantaneamente su acquisti, vendite e ribilanciamenti</p>
+          </div>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Ricalcolo automatico attivo
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Col 1: Previsione Anno Corrente -->
+          <div class="bg-gray-50/70 dark:bg-white/[0.02] p-4 rounded-xl border border-gray-100 dark:border-white/5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono">Anno Corrente (<span id="forecastCurYearLabel">--</span>)</span>
+                <p class="text-[11px] text-gray-500 font-mono">Incassato finora + stima mesi mancanti</p>
+              </div>
+              <span id="forecastRemainingBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+                -- mesi rimanenti
+              </span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-1 font-mono">
+              <div class="bg-white dark:bg-[#141416] p-2.5 rounded-lg border border-gray-100 dark:border-white/5">
+                <div class="text-[10px] text-gray-400">Incassato Finora</div>
+                <div id="forecastCollectedSoFar" class="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">€ 0</div>
+              </div>
+              <div class="bg-white dark:bg-[#141416] p-2.5 rounded-lg border border-gray-100 dark:border-white/5">
+                <div class="text-[10px] text-gray-400">Stima Rimanente</div>
+                <div id="forecastRemainingExpected" class="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">€ 0</div>
+              </div>
+              <div class="bg-white dark:bg-[#141416] p-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.03]">
+                <div class="text-[10px] text-gray-400">Totale Previsto Anno</div>
+                <div id="forecastProjectedYearEnd" class="text-sm font-bold text-gray-900 dark:text-white tabular-nums">€ 0</div>
+              </div>
+            </div>
+
+            <!-- Toggle Dettaglio Stacchi Mesi Rimanenti -->
+            <div>
+              <button id="toggleRemainingPaymentsBtn" type="button" class="w-full flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-mono pt-2 border-t border-gray-100 dark:border-white/5 transition">
+                <span class="flex items-center gap-1 font-semibold">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  <span>Stacchi attesi nei mesi mancanti (<span id="forecastRemainingCount">0</span>)</span>
+                </span>
+                <span id="toggleRemainingPaymentsIcon" class="text-xs transition-transform duration-200">▼</span>
+              </button>
+              <div id="remainingPaymentsList" class="hidden mt-2 max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Col 2: Previsione Anno Prossimo -->
+          <div class="bg-gray-50/70 dark:bg-white/[0.02] p-4 rounded-xl border border-gray-100 dark:border-white/5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono">Anno Prossimo (<span id="forecastNextYearLabel">--</span>)</span>
+                <p class="text-[11px] text-gray-500 font-mono">Proiezione full-year sui titoli attualmente posseduti</p>
+              </div>
+              <span id="forecastYieldBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                Yield: --%
+              </span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-1 font-mono">
+              <div class="bg-white dark:bg-[#141416] p-2.5 rounded-lg border border-gray-100 dark:border-white/5">
+                <div class="text-[10px] text-gray-400">Totale Annuo Previsto</div>
+                <div id="forecastNextYearTotal" class="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">€ 0</div>
+              </div>
+              <div class="bg-white dark:bg-[#141416] p-2.5 rounded-lg border border-gray-100 dark:border-white/5">
+                <div class="text-[10px] text-gray-400">Media Mensile</div>
+                <div id="forecastNextYearMonthly" class="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">€ 0 /m</div>
+              </div>
+              <div class="bg-white dark:bg-[#141416] p-2.5 rounded-lg border border-gray-100 dark:border-white/5">
+                <div class="text-[10px] text-gray-400">Crescita vs Anno Corr.</div>
+                <div id="forecastNextYearGrowth" class="text-sm font-bold tabular-nums">--</div>
+              </div>
+            </div>
+
+            <!-- Toggle Dettaglio Proiezioni per Titolo -->
+            <div>
+              <button id="toggleNextYearHoldingsBtn" type="button" class="w-full flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-mono pt-2 border-t border-gray-100 dark:border-white/5 transition">
+                <span class="flex items-center gap-1 font-semibold">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  <span>Dettaglio titoli in portafoglio (<span id="forecastHoldingsCount">0</span>)</span>
+                </span>
+                <span id="toggleNextYearHoldingsIcon" class="text-xs transition-transform duration-200">▼</span>
+              </button>
+              <div id="nextYearHoldingsList" class="hidden mt-2 max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabella Dividendi e Cedole Staccati per Anno -->
+      <div class="signature-card overflow-hidden flex flex-col justify-between">
+        <div class="p-5 border-b border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>Dividendi e Cedole Staccati per Anno</span>
+            </h3>
+            <p class="text-xs text-gray-500 font-mono">Storico annuale flussi di cassa, ripartizione azioni/cedole, variazione YoY ed elenco titoli staccati</p>
+          </div>
+          <span id="annualDividendsCountBadge" class="text-xs font-mono text-gray-400">
+            -- anni registrati
+          </span>
+        </div>
+
+        <div class="overflow-x-auto flex-1">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
+            <thead class="bg-gray-50 dark:bg-white/5 text-gray-500">
+              <tr>
+                <th class="px-4 py-3">Anno</th>
+                <th class="px-3 py-3 text-right">Totale Incassato</th>
+                <th class="px-3 py-3 text-right">Dividendi Azioni/ETF</th>
+                <th class="px-3 py-3 text-right">Cedole / Interessi</th>
+                <th class="px-3 py-3 text-center">Accrediti</th>
+                <th class="px-3 py-3 text-center">Crescita YoY</th>
+                <th class="px-4 py-3 text-right">Dettaglio Titoli</th>
+              </tr>
+            </thead>
+            <tbody id="annualDividendsTbody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums">
+              <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Caricamento storico dividendi...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Main Section: Monthly Dividends Bar Chart (Grouped by Year: 1-12) -->
       <div class="signature-card p-6 space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -272,6 +414,13 @@
         yoyEl.textContent = `${yoyVal >= 0 ? '+' : ''}${fmtPct(yoyVal)}`;
         yoyEl.className = `text-xl font-bold font-mono tabular-nums ${yoyVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
         document.getElementById('statYoyComparison').textContent = `${fmtEur(s.yoyGrowth.currentYear)} vs ${fmtEur(s.yoyGrowth.previousYear)}`;
+
+        if (s.currentYearForecast && s.nextYearForecast) {
+          renderDividendForecast(s.currentYearForecast, s.nextYearForecast);
+        }
+        if (s.annualDividends) {
+          renderAnnualDividendsTable(s.annualDividends);
+        }
 
         renderMonthlyIncomeChart(s.byMonth);
         renderTopAssetsTable(s.byAsset);
@@ -590,6 +739,199 @@
       `).join('');
     }
 
+    function renderDividendForecast(curForecast, nextForecast) {
+      if (!curForecast || !nextForecast) return;
+
+      // Current Year
+      document.getElementById('forecastCurYearLabel').textContent = curForecast.currentYear;
+      document.getElementById('forecastRemainingBadge').textContent = `${curForecast.remainingMonthsCount} ${curForecast.remainingMonthsCount === 1 ? 'mese rimanente' : 'mesi rimanenti'}`;
+      document.getElementById('forecastCollectedSoFar').textContent = fmtEur(curForecast.collectedSoFar);
+      document.getElementById('forecastRemainingExpected').textContent = fmtEur(curForecast.remainingExpected);
+      document.getElementById('forecastProjectedYearEnd').textContent = fmtEur(curForecast.projectedYearEndTotal);
+
+      const remCountEl = document.getElementById('forecastRemainingCount');
+      if (remCountEl) remCountEl.textContent = curForecast.expectedRemainingPayments.length;
+
+      const remList = document.getElementById('remainingPaymentsList');
+      if (remList) {
+        if (!curForecast.expectedRemainingPayments || curForecast.expectedRemainingPayments.length === 0) {
+          remList.innerHTML = '<div class="text-xs text-gray-400 font-mono py-2 text-center">Nessun accredito atteso nei mesi rimanenti.</div>';
+        } else {
+          remList.innerHTML = curForecast.expectedRemainingPayments.map(p => {
+            const isBond = p.type === 'BOND';
+            const badgeBg = isBond
+              ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-500/20'
+              : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-500/20';
+            return `
+              <div class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#141416] border border-gray-100 dark:border-white/5 font-mono text-xs">
+                <div class="flex items-center space-x-2 min-w-0">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${badgeBg} border">${p.monthShort}</span>
+                  <div class="truncate">
+                    <span class="font-bold text-gray-900 dark:text-white">${p.ticker}</span>
+                    <span class="text-[10px] text-gray-400 block truncate max-w-[140px]">${p.name}</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold text-blue-600 dark:text-blue-400 tabular-nums">~ ${fmtEur(p.expectedAmount)}</div>
+                  <div class="text-[9px] text-gray-400">${p.monthName}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // Next Year
+      document.getElementById('forecastNextYearLabel').textContent = nextForecast.nextYear;
+      document.getElementById('forecastYieldBadge').textContent = `Yield: ${fmtPct(nextForecast.portfolioYield)}`;
+      document.getElementById('forecastNextYearTotal').textContent = fmtEur(nextForecast.totalProjected);
+      document.getElementById('forecastNextYearMonthly').textContent = `${fmtEur(nextForecast.monthlyAverage)} /m`;
+
+      const growthEl = document.getElementById('forecastNextYearGrowth');
+      const gVal = nextForecast.yoyGrowthVsCurrentYear || 0;
+      growthEl.textContent = `${gVal >= 0 ? '+' : ''}${fmtPct(gVal)}`;
+      growthEl.className = `text-sm font-bold tabular-nums ${gVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+
+      const holdingsCountEl = document.getElementById('forecastHoldingsCount');
+      if (holdingsCountEl) holdingsCountEl.textContent = nextForecast.holdingProjections.length;
+
+      const holdingsList = document.getElementById('nextYearHoldingsList');
+      if (holdingsList) {
+        if (!nextForecast.holdingProjections || nextForecast.holdingProjections.length === 0) {
+          holdingsList.innerHTML = '<div class="text-xs text-gray-400 font-mono py-2 text-center">Nessun titolo a reddito attivo in portafoglio.</div>';
+        } else {
+          holdingsList.innerHTML = nextForecast.holdingProjections.map(h => {
+            const monthsStr = (h.payoutMonths || []).map(m => ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][m - 1]).join(', ');
+            return `
+              <div class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#141416] border border-gray-100 dark:border-white/5 font-mono text-xs">
+                <div class="min-w-0 pr-2">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
+                    <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">${fmtPct(h.dividendYield)}</span>
+                  </div>
+                  <span class="text-[10px] text-gray-400 block truncate max-w-[150px]">${h.name}</span>
+                  <span class="text-[9px] text-gray-500">Mesi: ${monthsStr}</span>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">${fmtEur(h.projectedAnnualIncome)}/anno</div>
+                  <div class="text-[10px] text-gray-400">${fmtEur(h.projectedMonthlyIncome)}/m</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    function renderAnnualDividendsTable(annualDividends) {
+      const tbody = document.getElementById('annualDividendsTbody');
+      if (!tbody) return;
+
+      if (!annualDividends || annualDividends.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nessun dividendo o cedola registrata nei conti</td></tr>';
+        return;
+      }
+
+      const badgeCount = document.getElementById('annualDividendsCountBadge');
+      if (badgeCount) badgeCount.textContent = `${annualDividends.length} ${annualDividends.length === 1 ? 'anno registrato' : 'anni registrati'}`;
+
+      tbody.innerHTML = annualDividends.map(row => {
+        const yoyHtml = row.yoyGrowthRate !== null
+          ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${row.yoyGrowthRate >= 0 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'}">${row.yoyGrowthRate >= 0 ? '+' : ''}${fmtPct(row.yoyGrowthRate)}</span>`
+          : '<span class="text-gray-400 text-[10px]">-</span>';
+
+        const monthNameShort = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+        const assetsDetailsRows = (row.assets || []).map(a => {
+          const mthsFormatted = (a.months || []).map(m => monthNameShort[parseInt(m, 10) - 1] || m).join(', ');
+          const pctOfYr = row.total > 0 ? ((a.amount / row.total) * 100).toFixed(1) : '0.0';
+          return `
+            <tr class="text-[11px] hover:bg-gray-100/50 dark:hover:bg-white/[0.03]">
+              <td class="py-1.5 pl-6 pr-2">
+                <span class="font-bold text-gray-800 dark:text-gray-200">${a.ticker}</span>
+                <span class="text-[10px] text-gray-400 ml-1.5 font-sans">${a.name}</span>
+              </td>
+              <td class="py-1.5 px-2">
+                <span class="px-1.5 py-0.2 rounded text-[9px] bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300">${a.type}</span>
+              </td>
+              <td class="py-1.5 px-2 text-gray-500">${mthsFormatted}</td>
+              <td class="py-1.5 px-2 text-center text-gray-400">${a.count}</td>
+              <td class="py-1.5 px-2 text-right font-bold text-emerald-600 dark:text-emerald-400">${fmtEur(a.amount)}</td>
+              <td class="py-1.5 pr-6 pl-2 text-right text-gray-400">${pctOfYr}%</td>
+            </tr>
+          `;
+        }).join('');
+
+        return `
+          <tr class="hover:bg-gray-50/50 dark:hover:bg-white/5 transition border-t border-gray-100 dark:border-white/5">
+            <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">
+              <span class="text-sm">${row.year}</span>
+            </td>
+            <td class="px-3 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+              ${fmtEur(row.total)}
+            </td>
+            <td class="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
+              ${fmtEur(row.dividends)}
+            </td>
+            <td class="px-3 py-3 text-right text-gray-700 dark:text-gray-300">
+              ${fmtEur(row.interest)}
+            </td>
+            <td class="px-3 py-3 text-center text-gray-500">
+              ${row.count}
+            </td>
+            <td class="px-3 py-3 text-center">
+              ${yoyHtml}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <button type="button" data-toggle-year="${row.year}" class="btn-toggle-year inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-500/20 transition">
+                <span>${row.assets ? row.assets.length : 0} Titoli</span>
+                <span class="toggle-icon text-[9px] transition-transform duration-200">▼</span>
+              </button>
+            </td>
+          </tr>
+          <tr id="year-details-${row.year}" class="hidden bg-gray-50/40 dark:bg-black/20">
+            <td colspan="7" class="p-0">
+              <div class="py-2.5 px-4">
+                <div class="text-[11px] font-bold text-gray-700 dark:text-gray-300 pb-1.5 border-b border-gray-200/50 dark:border-white/5">
+                  Dettaglio titoli staccati nel ${row.year} (${row.assets ? row.assets.length : 0} asset)
+                </div>
+                <table class="min-w-full text-left font-mono">
+                  <thead>
+                    <tr class="text-[10px] text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-white/5">
+                      <th class="py-1.5 pl-6 pr-2">Titolo</th>
+                      <th class="py-1.5 px-2">Tipo</th>
+                      <th class="py-1.5 px-2">Mesi Stacco</th>
+                      <th class="py-1.5 px-2 text-center">Accrediti</th>
+                      <th class="py-1.5 px-2 text-right">Incassato</th>
+                      <th class="py-1.5 pr-6 pl-2 text-right">% Anno</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100 dark:divide-white/5">
+                    ${assetsDetailsRows}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Wire up toggle buttons
+      document.querySelectorAll('.btn-toggle-year').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const yr = btn.getAttribute('data-toggle-year');
+          const detailRow = document.getElementById(`year-details-${yr}`);
+          const icon = btn.querySelector('.toggle-icon');
+          if (detailRow) {
+            const isHidden = detailRow.classList.toggle('hidden');
+            if (icon) {
+              icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+          }
+        });
+      });
+    }
+
     // Modal controls for manual loss
     const lossModal = document.getElementById('addLossModal');
     document.getElementById('addLossBtn').addEventListener('click', () => lossModal.classList.remove('hidden'));
@@ -639,6 +981,31 @@
       currentPerfRange = btn.getAttribute('data-range');
       loadPerformanceData();
     });
+
+    // Toggle buttons for dividend forecast details
+    const toggleRemBtn = document.getElementById('toggleRemainingPaymentsBtn');
+    if (toggleRemBtn) {
+      toggleRemBtn.addEventListener('click', () => {
+        const list = document.getElementById('remainingPaymentsList');
+        const icon = document.getElementById('toggleRemainingPaymentsIcon');
+        if (list) {
+          const isHidden = list.classList.toggle('hidden');
+          if (icon) icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+      });
+    }
+
+    const toggleNextBtn = document.getElementById('toggleNextYearHoldingsBtn');
+    if (toggleNextBtn) {
+      toggleNextBtn.addEventListener('click', () => {
+        const list = document.getElementById('nextYearHoldingsList');
+        const icon = document.getElementById('toggleNextYearHoldingsIcon');
+        if (list) {
+          const isHidden = list.classList.toggle('hidden');
+          if (icon) icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+      });
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
       await loadPortfolios();

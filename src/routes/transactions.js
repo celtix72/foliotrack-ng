@@ -698,6 +698,11 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
       }
 
       const updatedPortfolio = recalculatePortfolio(pId);
+      try {
+        recalculateDividendProjections(pId);
+      } catch (divErr) {
+        console.warn('[Transactions Warning] Dividend projections recalculation error:', divErr.message);
+      }
       return { inserted, updatedPortfolio };
     });
 
@@ -1072,6 +1077,9 @@ router.put('/:id', (req, res) => {
     try {
       reconstructPortfolioHistoryFromQuotes(existingTx.portfolioId, 1825);
     } catch {}
+    try {
+      recalculateDividendProjections(existingTx.portfolioId);
+    } catch {}
     const updatedTx = db.prepare('SELECT * FROM transactions WHERE id = ?').get(txId);
 
     return res.json({
@@ -1117,6 +1125,9 @@ router.delete('/:id', (req, res) => {
     const updatedPortfolio = deleteAtomic();
     try {
       reconstructPortfolioHistoryFromQuotes(existingTx.portfolioId, 1825);
+    } catch {}
+    try {
+      recalculateDividendProjections(existingTx.portfolioId);
     } catch {}
 
     return res.json({

@@ -1,0 +1,347 @@
+const { test, describe, before, after } = require('node:test');
+const assert = require('node:assert');
+const path = require('node:path');
+const fs = require('node:fs');
+const http = require('node:http');
+
+const TEST_DB = path.join(__dirname, 'test_dividends_forecast.db');
+process.env.DB_PATH = TEST_DB;
+process.env.JWT_SECRET = 'test-jwt-secret-dividends-forecast';
+process.env.ADMIN_PASSWORD = 'adminForecastPassword123!';
+process.env.NODE_ENV = 'test';
+
+const { initDb, closeDb, db } = require('../src/db');
+const app = require('../src/app');
+const { calculateAnnualDividendsHistory, calculateDividendForecast } = require('../src/utils/dividendForecast');
+const { recalculateDividendProjections } = require('../src/routes/dividends');
+
+let server;
+let baseUrl;
+let authToken;
+let portfolioId;
+
+describe('Dividend Annual History & Dynamic Projections Engine', () => {
+  before(async () => {
+    if (fs.existsSync(TEST_DB)) fs.unlinkSync(TEST_DB);
+    initDb(TEST_DB);
+
+    await new Promise((resolve) => {
+      server = http.createServer(app);
+      server.listen(0, '127.0.0.1', () => {
+        const port = server.address().port;
+        baseUrl = `http://127.0.0.1:${port}`;
+        resolve();
+      });
+    });
+
+    // Login as admin
+    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'admin', password: 'adminForecastPassword123!' })
+    });
+    const loginData = await loginRes.json();
+    authToken = loginData.token;
+
+    // Create a portfolio
+    const portRes = await fetch(`${baseUrl}/api/portfolios`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        name: 'Dividendi & Cash Flow Test',
+        type: 'Investimento',
+        currency: 'EUR',
+        initialCash: 100000
+      })
+    });
+    const portData = await portRes.json();
+    portfolioId = portData.portfolio.id;
+  });
+
+  after(async () => {
+    if (server) await new Promise((r) => server.close(r));
+    closeDb();
+    if (fs.existsSync(TEST_DB)) fs.unlinkSync(TEST_DB);
+  });
+
+  describe('1. Unit Tests: Forecast Engine Functions (src/utils/dividendForecast.js)', () => {
+    test('calculateAnnualDividendsHistory aggregates by year, calculates YoY, and splits dividends vs interest', () => {
+      const mockTx = [
+        { type: 'DIVIDEND', date: '2024-05-15', amount: 500, assetTicker: 'AAPL' },
+        { type: 'INTEREST', date: '2024-11-01', amount: 300, assetTicker: 'BTP1' },
+        { type: 'DIVIDEND', date: '2025-05-15', amount: 600, assetTicker: 'AAPL' },
+        { type: 'INTEREST', date: '2025-11-01', amount: 400, assetTicker: 'BTP1' },
+        { type: 'DIVIDEND', date: '2026-03-10', amount: 700, assetTicker: 'AAPL' },
+        { type: 'INTEREST', date: '2026-06-01', amount: 500, assetTicker: 'BTP1' }
+      ];
+
+      const assetsMap = {
+        AAPL: { name: 'Apple Inc.', type: 'EQUITY' },
+        BTP1: { name: 'BTP Italia', type: 'BOND' }
+      };
+
+      const history = calculateAnnualDividendsHistory(mockTx, assetsMap);
+
+      assert.strictEqual(history.length, 3);
+      assert.strictEqual(history[0].year, 2026);
+      assert.strictEqual(history[0].total, 1200);
+      assert.strictEqual(history[0].dividends, 700);
+      assert.strictEqual(history[0].interest, 500);
+      assert.strictEqual(history[0].count, 2);
+      // 2026 vs 2025: (1200 - 1000) / 1000 = +20%
+      assert.strictEqual(history[0].yoyGrowthRate, 20);
+
+      assert.strictEqual(history[1].year, 2025);
+      assert.strictEqual(history[1].total, 1000);
+      // 2025 vs 2024: (1000 - 800) / 800 = +25%
+      assert.strictEqual(history[1].yoyGrowthRate, 25);
+
+      assert.strictEqual(history[2].year, 2024);
+      assert.strictEqual(history[2].total, 800);
+      assert.strictEqual(history[2].yoyGrowthRate, null);
+    });
+
+    test('calculateDividendForecast accurately forecasts remaining current year months and projects next year', () => {
+      // Set current date to 2026-10-15 (October 2026, so Nov and Dec remain)
+      const options = { currentDate: new Date('2026-10-15T12:00:00Z') };
+
+      const activeHoldings = [
+        {
+          ticker: 'AAPL',
+          name: 'Apple Inc.',
+          type: 'EQUITY',
+          quantity: 100,
+          currentPrice: 200,
+          dividendYield: 2.0 // Annual income = 100 * 200 * 0.02 = 400
+        },
+        {
+          ticker: 'BTP1',
+          name: 'BTP Italia',
+          type: 'BOND',
+          quantity: 1000,
+          currentPrice: 100,
+          dividendYield: 0 // Yield 0, deduced from history
+        }
+      ];
+
+      const transactions = [
+        // AAPL historical: paid in Mar, Jun, Sep, Dec
+        { type: 'DIVIDEND', date: '2025-03-15', amount: 100, assetTicker: 'AAPL' },
+        { type: 'DIVIDEND', date: '2025-06-15', amount: 100, assetTicker: 'AAPL' },
+        { type: 'DIVIDEND', date: '2025-09-15', amount: 100, assetTicker: 'AAPL' },
+        { type: 'DIVIDEND', date: '2025-12-15', amount: 100, assetTicker: 'AAPL' },
+        { type: 'DIVIDEND', date: '2026-03-15', amount: 100, assetTicker: 'AAPL' },
+        { type: 'DIVIDEND', date: '2026-06-15', amount: 100, assetTicker: 'AAPL' },
+        { type: 'DIVIDEND', date: '2026-09-15', amount: 100, assetTicker: 'AAPL' },
+        // BTP1 paid in May and Nov: 300 each (annual 600)
+        { type: 'INTEREST', date: '2025-05-01', amount: 300, assetTicker: 'BTP1' },
+        { type: 'INTEREST', date: '2025-11-01', amount: 300, assetTicker: 'BTP1' },
+        { type: 'INTEREST', date: '2026-05-01', amount: 300, assetTicker: 'BTP1' }
+      ];
+
+      const result = calculateDividendForecast(activeHoldings, transactions, {}, options);
+
+      // Current Year checks (collected so far in 2026: AAPL 100*3 + BTP1 300 = 600)
+      assert.strictEqual(result.currentYearForecast.collectedSoFar, 600);
+      assert.strictEqual(result.currentYearForecast.currentYear, 2026);
+      assert.strictEqual(result.currentYearForecast.remainingMonthsCount, 3); // Oct, Nov, Dec
+
+      // Remaining expected:
+      // AAPL pays in Dec: 400 / 4 = 100
+      // BTP1 pays in Nov: 600 / 2 = 300
+      // Total remaining expected = 100 + 300 = 400
+      assert.strictEqual(result.currentYearForecast.remainingExpected, 400);
+      assert.strictEqual(result.currentYearForecast.projectedYearEndTotal, 1000); // 600 + 400
+
+      // Next Year checks (2027)
+      // AAPL full year: 400
+      // BTP1 full year: 600
+      // Total projected = 1000
+      assert.strictEqual(result.nextYearForecast.nextYear, 2027);
+      assert.strictEqual(result.nextYearForecast.totalProjected, 1000);
+      assert.strictEqual(result.nextYearForecast.monthlyAverage, Number((1000 / 12).toFixed(2)));
+      assert.strictEqual(result.nextYearForecast.holdingProjections.length, 2);
+    });
+  });
+
+  describe('2. Integration: Recalculation on Buy / Sell / Modify Operations', () => {
+    test('Buying an income-generating asset creates dividend projections', async () => {
+      // Insert asset metadata
+      db.prepare(`
+        INSERT OR REPLACE INTO assets (ticker, name, type, currentPrice, dividendYield)
+        VALUES ('ENI.MI', 'Eni S.p.A.', 'EQUITY', 14.50, 6.20)
+      `).run();
+
+      // Execute a BUY transaction
+      const buyRes = await fetch(`${baseUrl}/api/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          type: 'BUY',
+          date: '2026-01-10',
+          assetTicker: 'ENI.MI',
+          quantity: 1000,
+          price: 14.50,
+          amount: 14500,
+          notes: 'Acquisto 1000 quote Eni'
+        })
+      });
+
+      const buyData = await buyRes.json();
+      assert.strictEqual(buyData.success, true);
+
+      // Verify dividend_projections has been updated
+      const proj = db.prepare('SELECT * FROM dividend_projections WHERE portfolioId = ? AND assetTicker = ?')
+        .get(portfolioId, 'ENI.MI');
+      assert.ok(proj);
+      assert.strictEqual(proj.sharesHeld, 1000);
+      // Expected annual income: 1000 * 14.50 * 0.062 = 899
+      assert.strictEqual(Math.round(proj.projectedAnnualIncome), 899);
+
+      // Verify GET /api/dividends/income-summary reflects the updated holdings projection
+      const sumRes = await fetch(`${baseUrl}/api/dividends/income-summary?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const sumData = await sumRes.json();
+      assert.strictEqual(sumData.success, true);
+      assert.ok(sumData.summary.nextYearForecast);
+      assert.ok(sumData.summary.nextYearForecast.totalProjected >= 899);
+    });
+
+    test('Selling part of the asset reduces the projected dividend income dynamically', async () => {
+      // Execute a SELL transaction of 500 shares (leaving 500)
+      const sellRes = await fetch(`${baseUrl}/api/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          type: 'SELL',
+          date: '2026-05-15',
+          assetTicker: 'ENI.MI',
+          quantity: 500,
+          price: 15.00,
+          amount: 7500,
+          notes: 'Vendita parziale 500 quote Eni'
+        })
+      });
+
+      const sellData = await sellRes.json();
+      assert.strictEqual(sellData.success, true);
+
+      // Verify dividend_projections updated to 500 shares
+      const proj = db.prepare('SELECT * FROM dividend_projections WHERE portfolioId = ? AND assetTicker = ?')
+        .get(portfolioId, 'ENI.MI');
+      assert.ok(proj);
+      assert.strictEqual(proj.sharesHeld, 500);
+      // 500 * 14.50 * 0.062 = 449.5
+      assert.strictEqual(Math.round(proj.projectedAnnualIncome), 450);
+
+      // Verify income-summary nextYearForecast reflects the halving
+      const sumRes = await fetch(`${baseUrl}/api/dividends/income-summary?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const sumData = await sumRes.json();
+      assert.strictEqual(sumData.success, true);
+      assert.strictEqual(Math.round(sumData.summary.nextYearForecast.totalProjected), 450);
+    });
+
+    test('Selling all remaining shares completely removes the ticker from projections', async () => {
+      // Execute a SELL transaction of the remaining 500 shares
+      const sellAllRes = await fetch(`${baseUrl}/api/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          type: 'SELL',
+          date: '2026-06-01',
+          assetTicker: 'ENI.MI',
+          quantity: 500,
+          price: 15.20,
+          amount: 7600,
+          notes: 'Chiusura posizione Eni'
+        })
+      });
+
+      const sellAllData = await sellAllRes.json();
+      assert.strictEqual(sellAllData.success, true);
+
+      // Verify projection row is deleted
+      const proj = db.prepare('SELECT * FROM dividend_projections WHERE portfolioId = ? AND assetTicker = ?')
+        .get(portfolioId, 'ENI.MI');
+      assert.strictEqual(proj, undefined);
+
+      // Verify income-summary nextYearForecast is now 0
+      const sumRes = await fetch(`${baseUrl}/api/dividends/income-summary?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const sumData = await sumRes.json();
+      assert.strictEqual(sumData.success, true);
+      assert.strictEqual(sumData.summary.nextYearForecast.totalProjected, 0);
+    });
+  });
+
+  describe('3. Frontend HTML Template Verification', () => {
+    test('Desktop view history.html contains annual dividends table and forecast widgets', async () => {
+      const res = await fetch(`${baseUrl}/history`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          Cookie: `foliotrack_token=${authToken}`
+        }
+      });
+      assert.strictEqual(res.status, 200);
+      const html = await res.text();
+
+      // Verify elements for annual dividends
+      assert.ok(html.includes('Dividendi e Cedole Staccati per Anno'));
+      assert.ok(html.includes('annualDividendsTbody'));
+
+      // Verify elements for current year forecast
+      assert.ok(html.includes('forecastCurYearLabel'));
+      assert.ok(html.includes('forecastRemainingBadge'));
+      assert.ok(html.includes('forecastCollectedSoFar'));
+      assert.ok(html.includes('forecastRemainingExpected'));
+      assert.ok(html.includes('forecastProjectedYearEnd'));
+      assert.ok(html.includes('remainingPaymentsList'));
+
+      // Verify elements for next year forecast
+      assert.ok(html.includes('forecastNextYearLabel'));
+      assert.ok(html.includes('forecastYieldBadge'));
+      assert.ok(html.includes('forecastNextYearTotal'));
+      assert.ok(html.includes('forecastNextYearMonthly'));
+      assert.ok(html.includes('nextYearHoldingsList'));
+    });
+
+    test('Mobile view history_mobile.html contains mobile forecast cards and annual list', async () => {
+      const res = await fetch(`${baseUrl}/history?view=mobile`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          Cookie: `foliotrack_token=${authToken}`
+        }
+      });
+      assert.strictEqual(res.status, 200);
+      const html = await res.text();
+
+      // Verify mobile elements
+      assert.ok(html.includes('mForecastCurYear'));
+      assert.ok(html.includes('mForecastRemainingExpected'));
+      assert.ok(html.includes('mForecastProjectedYearEnd'));
+      assert.ok(html.includes('mRemainingPaymentsList'));
+      assert.ok(html.includes('mForecastNextYearTotal'));
+      assert.ok(html.includes('mNextYearHoldingsList'));
+      assert.ok(html.includes('mAnnualDividendsContainer'));
+    });
+  });
+});

@@ -7,7 +7,8 @@
 const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
-const { recalculatePortfolio, checkPortfolioAccess } = require('./portfolios');
+const { recalculatePortfolio, checkPortfolioAccess, getAssetsMap } = require('./portfolios');
+const { calculateAnnualDividendsHistory, calculateDividendForecast } = require('../utils/dividendForecast');
 
 const router = express.Router();
 
@@ -47,16 +48,33 @@ function recalculateDividendProjections(portfolioId) {
   const runAtomic = db.transaction(() => {
     for (const h of holdings) {
       if (h.quantity > 1e-6) {
-        currentTickers.add(h.ticker.toUpperCase());
-        const yieldPct = Number(h.dividendYield) || 0.0;
-        const annualRate = yieldPct / 100.0;
+        const tkr = h.ticker.toUpperCase();
+        currentTickers.add(tkr);
+        let yieldPct = Number(h.dividendYield) || 0.0;
         const currentPrice = Number(h.currentPrice) || 0.0;
-        const annualIncome = h.quantity * currentPrice * annualRate;
+        let annualIncome = (yieldPct > 0) ? (h.quantity * currentPrice * (yieldPct / 100.0)) : 0.0;
+
+        // Deducing coupon/dividend yield from historical payments for bonds/assets with 0 yield
+        if (annualIncome <= 0) {
+          const hist = db.prepare(`
+            SELECT SUM(amount) as total
+            FROM transactions
+            WHERE UPPER(assetTicker) = ? AND type IN ('DIVIDEND', 'INTEREST')
+              AND date >= date('now', '-1 year')
+          `).get(tkr);
+          if (hist && hist.total > 0) {
+            annualIncome = Number(hist.total) || 0.0;
+            if (h.quantity * currentPrice > 0) {
+              yieldPct = Number(((annualIncome / (h.quantity * currentPrice)) * 100).toFixed(2));
+            }
+          }
+        }
+
         const monthlyIncome = annualIncome / 12.0;
 
         upsertStmt.run(
           pId,
-          h.ticker.toUpperCase(),
+          tkr,
           annualIncome,
           monthlyIncome,
           yieldPct,
@@ -276,18 +294,87 @@ router.get('/income-summary', (req, res) => {
     projectedMonthlyAverage += Number(p.projectedMonthlyIncome) || 0.0;
   }
 
+  // 8. Historical Annual Dividends & Dynamic Projections
+  const allFilteredTx = db.prepare(`
+    SELECT t.*
+    FROM transactions t
+    ${whereClause}
+    ORDER BY t.date ASC
+  `).all(...params);
+
+  const assetsMap = getAssetsMap ? getAssetsMap() : {};
+
+  let activeHoldings = [];
+  if (portfolioId && portfolioId !== 'all') {
+    const pId = parseInt(portfolioId, 10);
+    if (!isNaN(pId)) {
+      const snap = recalculatePortfolio(pId, assetsMap);
+      if (snap && snap.metrics && snap.metrics.holdings) {
+        activeHoldings = snap.metrics.holdings.filter(h => h.quantity > 1e-6);
+      }
+    }
+  } else {
+    let userPortfolios = [];
+    if (userRole === 'admin') {
+      userPortfolios = db.prepare('SELECT id, name, currency FROM portfolios').all();
+    } else {
+      userPortfolios = db.prepare(`
+        SELECT p.id, p.name, p.currency
+        FROM portfolios p
+        INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
+        WHERE pu.user_id = ?
+      `).all(userId);
+    }
+    const mergedMap = new Map();
+    for (const p of userPortfolios) {
+      const snap = recalculatePortfolio(p.id, assetsMap);
+      if (!snap || !snap.metrics || !snap.metrics.holdings) continue;
+      for (const h of snap.metrics.holdings) {
+        if (h.quantity <= 1e-6) continue;
+        const tkr = h.ticker.toUpperCase();
+        if (!mergedMap.has(tkr)) {
+          mergedMap.set(tkr, {
+            ticker: tkr,
+            name: h.name || tkr,
+            type: h.type || 'EQUITY',
+            quantity: 0,
+            marketValue: 0,
+            currentPrice: h.currentPrice || 0,
+            dividendYield: Number(h.dividendYield) || 0
+          });
+        }
+        const existing = mergedMap.get(tkr);
+        existing.quantity += Number(h.quantity) || 0;
+        existing.marketValue += Number(h.marketValue) || 0;
+        if (Number(h.dividendYield) > 0) existing.dividendYield = Number(h.dividendYield);
+        if (Number(h.currentPrice) > 0) existing.currentPrice = Number(h.currentPrice);
+      }
+    }
+    activeHoldings = Array.from(mergedMap.values());
+  }
+
+  const annualDividends = calculateAnnualDividendsHistory(allFilteredTx, assetsMap);
+  const forecast = calculateDividendForecast(activeHoldings, allFilteredTx, assetsMap);
+
   return res.json({
     success: true,
     summary: {
       totalReceived,
-      projectedNext12Months,
-      projectedMonthlyAverage,
+      projectedNext12Months: (forecast.nextYearForecast && forecast.nextYearForecast.totalProjected > 0)
+        ? forecast.nextYearForecast.totalProjected
+        : projectedNext12Months,
+      projectedMonthlyAverage: (forecast.nextYearForecast && forecast.nextYearForecast.monthlyAverage > 0)
+        ? forecast.nextYearForecast.monthlyAverage
+        : projectedMonthlyAverage,
       byMonth,
       byAsset,
       byAccount,
       byType,
       yoyGrowth,
-      projections
+      projections,
+      annualDividends,
+      currentYearForecast: forecast.currentYearForecast,
+      nextYearForecast: forecast.nextYearForecast
     }
   });
 });
