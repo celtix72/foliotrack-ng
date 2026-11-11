@@ -378,7 +378,7 @@
     }
 
     // Only active when the regular market session is closed or in PRE state
-    const isClosed = isAssetMarketClosed(h);
+    const isClosed = !isHoldingQuotedToday(h) || isAssetMarketClosed(h);
     const ms = String(h.marketState || '').toUpperCase();
     const isPreState = ms === 'PRE' || ms === 'PREPRE';
 
@@ -428,7 +428,7 @@
       };
     }
 
-    const isClosed = isAssetMarketClosed(h, refDate);
+    const isClosed = !isHoldingQuotedToday(h) || isAssetMarketClosed(h, refDate);
     const curr = (h.currency || 'EUR').toUpperCase();
     const exchange = (h.exchange || '').toUpperCase();
     const isUS = curr === 'USD' || ['NASDAQ', 'NYSE', 'NMS', 'NYQ', 'AMEX', 'OTC', 'BATS', 'ARCA'].some(ex => exchange.includes(ex));

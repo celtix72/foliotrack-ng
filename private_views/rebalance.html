@@ -88,21 +88,37 @@
           </div>
         </div>
 
-        <!-- Strategy Pill Selector & Advanced Settings Toggle -->
+        <!-- Strategy Pill Selector, Mode Toggle & Advanced Settings -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 border-t border-gray-100 dark:border-white/5 gap-3">
-          <div class="flex items-center space-x-2">
-            <span class="text-xs text-gray-500 font-mono">Strategia:</span>
-            <div class="inline-flex rounded-xl p-0.5 bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-xs font-mono">
-              <button type="button" data-strategy-btn="CASH_FIRST" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white shadow-sm font-semibold transition">
-                🟢 Solo Acquisti (Cash-First)
-              </button>
-              <button type="button" data-strategy-btn="FULL_REBALANCE" class="px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">
-                🔄 Compra e Vendi (Totale)
-              </button>
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Modalità Livello Target: Categoria vs Singolo Titolo -->
+            <div class="flex items-center space-x-1.5">
+              <span class="text-xs text-gray-500 font-mono">Visualizzazione:</span>
+              <div class="inline-flex rounded-xl p-0.5 bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-xs font-mono">
+                <button type="button" id="btnModeAssetClass" class="px-2.5 py-1.5 rounded-lg font-medium transition cursor-pointer">
+                  📂 Per Categoria
+                </button>
+                <button type="button" id="btnModeHoldings" class="px-2.5 py-1.5 rounded-lg font-medium transition cursor-pointer">
+                  🏷️ Per Singolo Titolo
+                </button>
+              </div>
+            </div>
+
+            <!-- Strategy Pill Selector -->
+            <div class="flex items-center space-x-1.5">
+              <span class="text-xs text-gray-500 font-mono">Strategia:</span>
+              <div class="inline-flex rounded-xl p-0.5 bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-xs font-mono">
+                <button type="button" data-strategy-btn="CASH_FIRST" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white shadow-sm font-semibold transition cursor-pointer">
+                  🟢 Solo Acquisti (Cash-First)
+                </button>
+                <button type="button" data-strategy-btn="FULL_REBALANCE" class="px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition cursor-pointer">
+                  🔄 Compra e Vendi (Totale)
+                </button>
+              </div>
             </div>
           </div>
 
-          <button type="button" id="btnToggleAdvancedSettings" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center space-x-1 font-mono">
+          <button type="button" id="btnToggleAdvancedSettings" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center space-x-1 font-mono cursor-pointer">
             <span>⚙️ Parametri & Tolleranze</span>
           </button>
         </div>

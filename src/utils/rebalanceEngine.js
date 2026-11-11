@@ -93,17 +93,88 @@ const PRESET_TARGET_MODELS = [
   }
 ];
 
+const DYNAMIC_PRESET_MODELS = [
+  {
+    id: 'all_holdings',
+    name: 'Pesi Attuali Portafoglio (Tutti i Titoli)',
+    description: 'Ribilanciamento analitico di ogni singolo titolo presente in portafoglio in base ai pesi attuali.',
+    type: 'HOLDING',
+    toleranceBand: 1.5,
+    rebalanceMode: 'CASH_FIRST',
+    isDynamic: true,
+    allocations: []
+  },
+  {
+    id: 'equal_weight_holdings',
+    name: 'Equipesato su Tutti i Titoli (Equal Weight)',
+    description: 'Distribuzione del capitale in parti uguali tra tutti i titoli attualmente detenuti.',
+    type: 'HOLDING',
+    toleranceBand: 1.5,
+    rebalanceMode: 'CASH_FIRST',
+    isDynamic: true,
+    allocations: []
+  }
+];
+
 /**
- * Normalizes asset type to standard taxonomy for asset class rebalancing.
+ * Normalizes asset type or holding object to standard taxonomy for asset class rebalancing.
  */
-function normalizeAssetClass(type) {
-  const t = (type || 'EQUITY').toUpperCase().trim();
-  if (t.includes('BOND') || t.includes('BTP') || t.includes('BOT') || t.includes('TREASURY') || t === 'FIXED_INCOME') return 'BOND';
-  if (t.includes('COMMODIT') || t.includes('GOLD') || t.includes('METAL') || t.includes('OIL')) return 'COMMODITY';
-  if (t.includes('CRYPTO') || t.includes('BTC') || t.includes('ETH')) return 'CRYPTO';
-  if (t.includes('CASH') || t.includes('LIQUID')) return 'CASH';
-  if (t.includes('REAL_ESTATE') || t.includes('REIT')) return 'REAL_ESTATE';
-  if (t === 'ETF' || t === 'STOCK' || t === 'EQUITY' || t === 'SHARE') return 'EQUITY';
+function normalizeAssetClass(h) {
+  if (!h) return 'EQUITY';
+  if (typeof h === 'string') {
+    const t = h.toUpperCase().trim();
+    if (t.includes('BOND') || t.includes('BTP') || t.includes('BOT') || t.includes('TREASURY') || t === 'FIXED_INCOME') return 'BOND';
+    if (t.includes('COMMODIT') || t.includes('GOLD') || t.includes('METAL') || t.includes('OIL')) return 'COMMODITY';
+    if (t.includes('CRYPTO') || t.includes('BTC') || t.includes('ETH')) return 'CRYPTO';
+    if (t.includes('CASH') || t.includes('LIQUID')) return 'CASH';
+    if (t.includes('REAL_ESTATE') || t.includes('REIT')) return 'REAL_ESTATE';
+    if (t === 'ETF' || t === 'STOCK' || t === 'EQUITY' || t === 'SHARE') return 'EQUITY';
+    return 'EQUITY';
+  }
+
+  const ticker = String(h.ticker || '').toUpperCase().trim();
+  const name = String(h.name || '').toUpperCase().trim();
+  const type = String(h.type || 'EQUITY').toUpperCase().trim();
+  const sector = String(h.sector || '').toUpperCase().trim();
+
+  // Cash / Liquidity / Money Market (e.g. XEON, C3M, SMART, overnight rate, conto deposito)
+  if (
+    type === 'CASH' || type === 'LIQUIDITY' ||
+    ticker === 'XEON.DE' || ticker === 'XEON' || ticker === 'C3M.MI' || ticker === 'SMART.MI' ||
+    name.includes('OVERNIGHT') || name.includes('OVER.RATE') || name.includes('MONEY MARKET') ||
+    name.includes('LIQUIDIT') || name.includes('CONTO DEPOSITO')
+  ) {
+    return 'CASH';
+  }
+
+  // Bonds / Fixed Income (BTP, BOT, Government, Corporate bonds, Bond ETFs)
+  if (
+    type.includes('BOND') || type.includes('BTP') || type.includes('BOT') || type === 'FIXED_INCOME' ||
+    sector === 'GOVERNMENT' || sector.includes('TREASURY') || sector.includes('FIXED INCOME') ||
+    name.includes('BTP') || name.includes('BOT') || name.includes('BOND') || name.includes('GOVT') ||
+    name.includes('TREASURY') || name.includes('OBBLIGAZION') || ticker.startsWith('IT000') || ticker.startsWith('XS')
+  ) {
+    return 'BOND';
+  }
+
+  // Commodities (Gold, Oil, Gas, Metals)
+  if (
+    type.includes('COMMODIT') || type === 'GOLD' ||
+    name.includes('GOLD') || name.includes('NATURAL GAS') || name.includes('COMMODITY') || name.includes('METALS') || name.includes('OIL')
+  ) {
+    return 'COMMODITY';
+  }
+
+  // Cryptocurrencies
+  if (type === 'CRYPTO' || ticker.includes('BTC') || ticker.includes('ETH')) {
+    return 'CRYPTO';
+  }
+
+  // Real Estate / REITs
+  if (type.includes('REAL_ESTATE') || sector.includes('REAL ESTATE') || type === 'REIT') {
+    return 'REAL_ESTATE';
+  }
+
   return 'EQUITY';
 }
 
@@ -237,7 +308,7 @@ function calculateRebalanceWorksheet(params) {
 
     // Aggregate holdings into categories
     for (const h of holdings) {
-      const cls = normalizeAssetClass(h.type);
+      const cls = normalizeAssetClass(h);
       let cat = catMap.get(cls);
       if (!cat) {
         cat = {
@@ -268,9 +339,8 @@ function calculateRebalanceWorksheet(params) {
       // Choose representative price or holding for trading suggestions
       const firstHolding = cat.holdings[0];
       const curPrice = firstHolding ? (Number(firstHolding.currentPrice) || Number(firstHolding.rawPrice) || 1.0) : 1.0;
-      const curQty = cat.holdings.reduce((sum, h) => sum + (Number(h.quantity) || 0.0), 0.0);
       const repTicker = firstHolding ? firstHolding.ticker : id;
-      const repName = firstHolding ? `${cat.label} (${firstHolding.ticker})` : cat.label;
+      const repName = cat.label;
 
       lines.push({
         id,
@@ -278,10 +348,19 @@ function calculateRebalanceWorksheet(params) {
         name: repName,
         type: id,
         category: id,
-        categoryHoldings: cat.holdings,
+        isAssetClass: true,
+        holdingCount: cat.holdings.length,
+        categoryHoldings: cat.holdings.map(h => ({
+          ticker: h.ticker,
+          name: h.name || h.ticker,
+          quantity: Number(h.quantity) || 0,
+          currentPrice: Number(h.currentPrice) || Number(h.rawPrice) || 0,
+          marketValue: Number(h.marketValue) || 0,
+          weight: totalPortfolioValue > 0 ? ((Number(h.marketValue) || 0) / totalPortfolioValue) * 100 : 0
+        })),
         currency: firstHolding?.currency || 'EUR',
         currentPrice: curPrice,
-        currentQuantity: curQty,
+        currentQuantity: cat.holdings.length,
         currentValue: curVal,
         currentPercent: curWeight,
         targetPercent: targetWeight,
@@ -445,12 +524,24 @@ function calculateRebalanceWorksheet(params) {
   const newTotalPortfolioValue = totalPortfolioValue; // asset value + net trades + funding
 
   for (const line of lines) {
-    const qtyChange = line.action === 'BUY'
-      ? line.suggestedQuantity
-      : (line.action === 'SELL' ? -line.suggestedQuantity : 0.0);
+    let projVal = 0.0;
+    let projQty = line.currentQuantity;
 
-    const projQty = Math.max(0.0, line.currentQuantity + qtyChange);
-    const projVal = projQty * line.currentPrice;
+    if (line.isAssetClass || targetType === 'ASSET_CLASS') {
+      const orderAmount = Number(line.suggestedAmount) || 0.0;
+      const amountChange = line.action === 'BUY'
+        ? orderAmount
+        : (line.action === 'SELL' ? -orderAmount : 0.0);
+      projVal = Math.max(0.0, line.currentValue + amountChange);
+      projQty = line.currentQuantity;
+    } else {
+      const qtyChange = line.action === 'BUY'
+        ? line.suggestedQuantity
+        : (line.action === 'SELL' ? -line.suggestedQuantity : 0.0);
+      projQty = Math.max(0.0, line.currentQuantity + qtyChange);
+      projVal = projQty * line.currentPrice;
+    }
+
     const projWeight = newTotalPortfolioValue > 0 ? (projVal / newTotalPortfolioValue) * 100.0 : 0.0;
     const projDrift = projWeight - line.targetPercent;
     const projInBand = Math.abs(projDrift) <= toleranceBand;
@@ -564,7 +655,8 @@ function generateClipboardOrderText(worksheet, portfolioName = 'Portafoglio') {
   } else {
     trades.forEach((t, i) => {
       const verb = t.action === 'BUY' ? '🟢 COMPRA' : '🔴 VENDI';
-      text += `${i + 1}. ${verb} ${t.ticker}: ${t.suggestedQuantity} quote @ ~€${Number(t.currentPrice).toFixed(2)} (Totale: €${Number(t.suggestedAmount).toFixed(2)})\n`;
+      const label = t.isAssetClass ? `${t.name} (${t.ticker})` : t.ticker;
+      text += `${i + 1}. ${verb} ${label}: ${t.suggestedQuantity} quote @ ~€${Number(t.currentPrice).toFixed(2)} (Totale: €${Number(t.suggestedAmount).toFixed(2)})\n`;
     });
   }
 
@@ -578,6 +670,7 @@ function generateClipboardOrderText(worksheet, portfolioName = 'Portafoglio') {
 
 module.exports = {
   PRESET_TARGET_MODELS,
+  DYNAMIC_PRESET_MODELS,
   normalizeAssetClass,
   calculateRebalanceWorksheet,
   generateRebalanceCsv,

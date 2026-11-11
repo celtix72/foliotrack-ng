@@ -150,21 +150,40 @@
 
     sel.innerHTML = '';
 
-    // 1. Presets Group
-    const presetGroup = document.createElement('optgroup');
-    presetGroup.label = 'Modelli Predefiniti (Wealthfolio Models)';
-    state.presets.forEach((p) => {
-      const opt = document.createElement('option');
-      opt.value = `preset:${p.id}`;
-      opt.textContent = p.name;
-      presetGroup.appendChild(opt);
-    });
-    sel.appendChild(presetGroup);
+    // Group presets into Categories vs Holdings
+    const categoryPresets = state.presets.filter(p => p.type !== 'HOLDING');
+    const holdingPresets = state.presets.filter(p => p.type === 'HOLDING');
 
-    // 2. Custom Targets Group
+    // 1. Single Holdings Group (All Holdings, Equal Weight)
+    if (holdingPresets.length > 0) {
+      const holdingGroup = document.createElement('optgroup');
+      holdingGroup.label = '🏷️ Modelli per Singolo Titolo (Tutti i Titoli)';
+      holdingPresets.forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = `preset:${p.id}`;
+        opt.textContent = p.name;
+        holdingGroup.appendChild(opt);
+      });
+      sel.appendChild(holdingGroup);
+    }
+
+    // 2. Category Presets Group (60/40, All Weather, etc.)
+    if (categoryPresets.length > 0) {
+      const presetGroup = document.createElement('optgroup');
+      presetGroup.label = '📂 Modelli per Categoria (Macro Asset Class)';
+      categoryPresets.forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = `preset:${p.id}`;
+        opt.textContent = p.name;
+        presetGroup.appendChild(opt);
+      });
+      sel.appendChild(presetGroup);
+    }
+
+    // 3. Custom Targets Group
     if (state.customTargets.length > 0) {
       const customGroup = document.createElement('optgroup');
-      customGroup.label = 'Modelli Personalizzati';
+      customGroup.label = '⭐ Modelli Personalizzati';
       state.customTargets.forEach((t) => {
         const opt = document.createElement('option');
         opt.value = `target:${t.id}`;
@@ -180,6 +199,32 @@
         ? state.selectedTargetKey
         : `preset:${state.selectedTargetKey}`;
     }
+  }
+
+  function updateModeButtons(targetType) {
+    const isAssetClass = targetType === 'ASSET_CLASS';
+    const activeClasses = ['bg-white', 'dark:bg-white/10', 'text-gray-900', 'dark:text-white', 'shadow-sm', 'font-bold'];
+    const inactiveClasses = ['text-gray-500', 'hover:text-gray-900', 'dark:hover:text-white', 'font-normal'];
+
+    document.querySelectorAll('#btnModeAssetClass').forEach((btn) => {
+      if (isAssetClass) {
+        btn.classList.add(...activeClasses);
+        btn.classList.remove(...inactiveClasses);
+      } else {
+        btn.classList.remove(...activeClasses);
+        btn.classList.add(...inactiveClasses);
+      }
+    });
+
+    document.querySelectorAll('#btnModeHoldings').forEach((btn) => {
+      if (!isAssetClass) {
+        btn.classList.add(...activeClasses);
+        btn.classList.remove(...inactiveClasses);
+      } else {
+        btn.classList.remove(...activeClasses);
+        btn.classList.add(...inactiveClasses);
+      }
+    });
   }
 
   // --- CALCULATION ---
@@ -224,6 +269,7 @@
         state.portfolioName = data.portfolioName;
         state.currency = data.currency || 'EUR';
 
+        updateModeButtons(data.worksheet.targetType);
         renderSummaryKpis(data.worksheet);
         renderWorksheetTable(data.worksheet);
         renderDriftChart(data.worksheet);
@@ -311,13 +357,15 @@
     if (!w.lines || w.lines.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-10 text-gray-400 font-mono text-xs">
+          <td colspan="7" class="text-center py-10 text-gray-400 font-mono text-xs">
             Nessuna posizione trovata per il portafoglio selezionato.
           </td>
         </tr>
       `;
       return;
     }
+
+    const isAssetClassMode = w.targetType === 'ASSET_CLASS';
 
     tbody.innerHTML = w.lines.map((line, idx) => {
       // Status badge
@@ -349,21 +397,57 @@
         ? 'text-emerald-600 dark:text-emerald-400 font-bold'
         : (line.projectedDriftPercent > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400');
 
-      return `
-        <tr class="hover:bg-gray-50/70 dark:hover:bg-white/5 transition border-b border-gray-100 dark:border-white/5 text-xs font-mono" data-line-index="${idx}">
-          <!-- 1. Category / Ticker -->
-          <td class="px-4 py-3 whitespace-nowrap">
+      // Asset Class vs Single Holding presentation
+      let col1Html = '';
+      let col2Html = '';
+
+      if (isAssetClassMode || line.isAssetClass) {
+        const count = line.holdingCount || (line.categoryHoldings ? line.categoryHoldings.length : 0);
+        col1Html = `
+          <div>
             <div class="flex items-center space-x-2">
-              <span class="font-bold text-gray-900 dark:text-white">${line.ticker}</span>
+              <span class="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">${line.name}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">${count} titoli</span>
+            </div>
+            ${count > 0 ? `
+              <button type="button" class="btn-toggle-cat-detail text-[11px] text-emerald-600 hover:text-emerald-500 font-sans mt-0.5 flex items-center space-x-1 cursor-pointer focus:outline-none" data-cat-idx="${idx}">
+                <span class="cat-toggle-label">Mostra titoli (${count}) ▾</span>
+              </button>
+            ` : `<div class="text-[10px] text-gray-400 font-mono mt-0.5">Nessun titolo attivo</div>`}
+          </div>
+        `;
+
+        col2Html = `
+          <div class="font-bold text-gray-900 dark:text-white">${fmtEur(line.currentValue)}</div>
+          <div class="text-[11px] text-gray-500">${fmtPct(line.currentPercent)} (${count} posizioni)</div>
+        `;
+      } else {
+        col1Html = `
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-bold text-gray-900 dark:text-white font-mono text-xs sm:text-sm">${line.ticker}</span>
               <span class="text-gray-400 text-[11px] font-sans truncate max-w-[150px]" title="${line.name}">${line.name}</span>
             </div>
             <div class="text-[10px] text-gray-400 font-mono mt-0.5">Prezzo: ${fmtPrice(line.currentPrice)}</div>
+          </div>
+        `;
+
+        col2Html = `
+          <div class="font-bold text-gray-900 dark:text-white">${fmtEur(line.currentValue)}</div>
+          <div class="text-[11px] text-gray-500">${fmtPct(line.currentPercent)} (${fmtQty(line.currentQuantity, w.allowFractional)} quote)</div>
+        `;
+      }
+
+      let html = `
+        <tr class="hover:bg-gray-50/70 dark:hover:bg-white/5 transition border-b border-gray-100 dark:border-white/5 text-xs font-mono" data-line-index="${idx}">
+          <!-- 1. Category / Ticker -->
+          <td class="px-4 py-3 whitespace-nowrap">
+            ${col1Html}
           </td>
 
           <!-- 2. Current State (Valore & Peso) -->
           <td class="px-4 py-3 whitespace-nowrap text-right">
-            <div class="font-bold text-gray-900 dark:text-white">${fmtEur(line.currentValue)}</div>
-            <div class="text-[11px] text-gray-500">${fmtPct(line.currentPercent)} (${fmtQty(line.currentQuantity, w.allowFractional)} quote)</div>
+            ${col2Html}
           </td>
 
           <!-- 3. Target Weight -->
@@ -387,10 +471,10 @@
           <!-- 6. Interactive Order Quantity & Amount -->
           <td class="px-4 py-3 whitespace-nowrap">
             <div class="flex items-center justify-center space-x-1">
-              <button type="button" class="btn-qty-minus p-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-bold leading-none w-6 h-6 flex items-center justify-center text-xs" data-idx="${idx}">-</button>
+              <button type="button" class="btn-qty-minus p-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-bold leading-none w-6 h-6 flex items-center justify-center text-xs cursor-pointer" data-idx="${idx}">-</button>
               <input type="number" step="${w.allowFractional ? '0.01' : '1'}" min="0" value="${line.suggestedQuantity}" 
                 class="input-qty w-16 px-1.5 py-1 text-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" data-idx="${idx}">
-              <button type="button" class="btn-qty-plus p-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-bold leading-none w-6 h-6 flex items-center justify-center text-xs" data-idx="${idx}">+</button>
+              <button type="button" class="btn-qty-plus p-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-bold leading-none w-6 h-6 flex items-center justify-center text-xs cursor-pointer" data-idx="${idx}">+</button>
             </div>
             <div class="text-center text-[10px] text-gray-400 mt-1 font-mono">
               Tot: <span class="line-order-amount font-bold text-gray-800 dark:text-gray-200">${fmtEur(line.suggestedAmount)}</span>
@@ -407,6 +491,56 @@
           </td>
         </tr>
       `;
+
+      // Collapsible category holdings table
+      if (isAssetClassMode || line.isAssetClass) {
+        const holdingsList = line.categoryHoldings || [];
+        html += `
+          <tr id="cat-detail-${idx}" class="cat-detail-row hidden bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5">
+            <td colspan="7" class="px-4 py-3">
+              <div class="p-3 rounded-xl bg-white dark:bg-[#141416] border border-gray-200/70 dark:border-white/10 shadow-inner">
+                <div class="text-[11px] font-bold text-gray-700 dark:text-gray-300 font-mono mb-2 flex items-center justify-between">
+                  <span>Dettaglio Titoli per "${line.name}" (${holdingsList.length} titoli)</span>
+                  <span class="text-gray-400 font-normal">Quota categoria: ${fmtPct(line.currentPercent)} (${fmtEur(line.currentValue)})</span>
+                </div>
+                ${holdingsList.length > 0 ? `
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-[11px] font-mono">
+                      <thead>
+                        <tr class="text-gray-400 uppercase text-[9px] border-b border-gray-100 dark:border-white/5">
+                          <th class="py-1 px-2">Ticker / Nome</th>
+                          <th class="py-1 px-2 text-right">Quantità</th>
+                          <th class="py-1 px-2 text-right">Prezzo</th>
+                          <th class="py-1 px-2 text-right">Controvalore</th>
+                          <th class="py-1 px-2 text-right">Peso Portafoglio</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100 dark:divide-white/5">
+                        ${holdingsList.map(h => `
+                          <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+                            <td class="py-1.5 px-2">
+                              <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
+                              <span class="text-gray-400 font-sans ml-1 text-[10px]">${h.name}</span>
+                            </td>
+                            <td class="py-1.5 px-2 text-right">${fmtQty(h.quantity, true)}</td>
+                            <td class="py-1.5 px-2 text-right">${fmtPrice(h.currentPrice)}</td>
+                            <td class="py-1.5 px-2 text-right font-bold text-gray-900 dark:text-white">${fmtEur(h.marketValue)}</td>
+                            <td class="py-1.5 px-2 text-right text-emerald-600 dark:text-emerald-400 font-semibold">${fmtPct(h.weight)}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                ` : `
+                  <div class="text-gray-400 text-xs py-2 italic font-sans">Nessun titolo attualmente presente in questa categoria.</div>
+                `}
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      return html;
     }).join('');
 
     // Attach interactive listeners for quantity tweaking
@@ -429,6 +563,23 @@
         const idx = parseInt(inp.getAttribute('data-idx'), 10);
         const val = parseFloat(inp.value) || 0;
         setLineQuantity(idx, val);
+      });
+    });
+
+    // Toggle category detail accordion
+    tbody.querySelectorAll('.btn-toggle-cat-detail').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const catIdx = btn.getAttribute('data-cat-idx');
+        const detailRow = document.getElementById(`cat-detail-${catIdx}`);
+        const label = btn.querySelector('.cat-toggle-label');
+        if (detailRow) {
+          const isHidden = detailRow.classList.contains('hidden');
+          detailRow.classList.toggle('hidden');
+          if (label) {
+            const count = state.worksheet?.lines[catIdx]?.holdingCount || 0;
+            label.textContent = isHidden ? `Nascondi titoli (${count}) ▴` : `Mostra titoli (${count}) ▾`;
+          }
+        }
       });
     });
   }
@@ -456,12 +607,20 @@
     }
 
     // Recalculate projected values
-    const qtyChange = line.action === 'BUY'
-      ? line.suggestedQuantity
-      : (line.action === 'SELL' ? -line.suggestedQuantity : 0.0);
-
-    line.projectedQuantity = Math.max(0, line.currentQuantity + qtyChange);
-    line.projectedValue = line.projectedQuantity * line.currentPrice;
+    const isCat = Boolean(line.isAssetClass || (state.worksheet && state.worksheet.targetType === 'ASSET_CLASS'));
+    if (isCat) {
+      const orderAmt = line.action === 'BUY'
+        ? line.suggestedAmount
+        : (line.action === 'SELL' ? -line.suggestedAmount : 0.0);
+      line.projectedValue = Math.max(0, line.currentValue + orderAmt);
+      line.projectedQuantity = line.currentQuantity;
+    } else {
+      const qtyChange = line.action === 'BUY'
+        ? line.suggestedQuantity
+        : (line.action === 'SELL' ? -line.suggestedQuantity : 0.0);
+      line.projectedQuantity = Math.max(0, line.currentQuantity + qtyChange);
+      line.projectedValue = line.projectedQuantity * line.currentPrice;
+    }
 
     // Recalculate total buys / sells and funding left
     let totalBuys = 0.0;
@@ -481,6 +640,31 @@
       l.projectedDriftPercent = l.projectedPercent - l.targetPercent;
       l.projectedInBand = Math.abs(l.projectedDriftPercent) <= state.worksheet.toleranceBand;
     }
+
+    state.worksheet.maxDriftAfter = state.worksheet.lines.reduce((max, l) => Math.max(max, Math.abs(l.projectedDriftPercent)), 0);
+    state.worksheet.inBandAfter = state.worksheet.lines.filter(l => l.projectedInBand).length;
+
+    // Update UI elements in-place without losing input focus
+    renderSummaryKpis(state.worksheet);
+
+    const tr = document.querySelector(`tr[data-line-index="${idx}"]`);
+    if (tr) {
+      const inp = tr.querySelector('.input-qty');
+      if (inp && parseFloat(inp.value) !== newQty) inp.value = newQty;
+
+      const amtEl = tr.querySelector('.line-order-amount');
+      if (amtEl) amtEl.textContent = fmtEur(line.suggestedAmount);
+
+      const valEl = tr.querySelector('.line-proj-val');
+      if (valEl) valEl.textContent = fmtEur(line.projectedValue);
+
+      const pctEl = tr.querySelector('.line-proj-pct');
+      if (pctEl) pctEl.textContent = fmtPct(line.projectedPercent);
+
+      const driftEl = tr.querySelector('.line-proj-drift');
+      if (driftEl) driftEl.textContent = fmtPctSigned(line.projectedDriftPercent);
+    }
+  }
 
     state.worksheet.maxDriftAfter = state.worksheet.lines.reduce((max, l) => Math.max(max, Math.abs(l.projectedDriftPercent)), 0);
     state.worksheet.inBandAfter = state.worksheet.lines.filter(l => l.projectedInBand).length;
@@ -527,7 +711,7 @@
           return `
             <div class="space-y-1">
               <div class="flex items-center justify-between text-[11px] font-mono">
-                <span class="font-bold text-gray-900 dark:text-white truncate">${l.ticker}</span>
+                <span class="font-bold text-gray-900 dark:text-white truncate">${l.isAssetClass ? l.name : l.ticker}</span>
                 <span class="text-gray-400">Attuale: <strong class="text-gray-700 dark:text-gray-200">${curPct.toFixed(1)}%</strong> ➔ Previsto: <strong class="text-emerald-500">${projPct.toFixed(1)}%</strong> (Target: ${targetPct.toFixed(1)}%)</span>
               </div>
               <div class="relative w-full h-3 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
@@ -814,6 +998,34 @@
     document.getElementById('rebalanceTargetSelect')?.addEventListener('change', (e) => {
       state.selectedTargetKey = e.target.value;
       calculateWorksheet();
+    });
+
+    // Mode Switcher buttons (Asset Class vs Holdings)
+    const handleModeSwitch = (mode) => {
+      if (mode === 'ASSET_CLASS') {
+        const isCurrentlyAssetClass = state.worksheet && state.worksheet.targetType === 'ASSET_CLASS';
+        if (!isCurrentlyAssetClass) {
+          state.selectedTargetKey = 'preset:classic_60_40';
+          const sel = document.getElementById('rebalanceTargetSelect');
+          if (sel) sel.value = 'preset:classic_60_40';
+        }
+      } else {
+        const isCurrentlyHolding = state.worksheet && state.worksheet.targetType === 'HOLDING';
+        if (!isCurrentlyHolding) {
+          state.selectedTargetKey = 'preset:all_holdings';
+          const sel = document.getElementById('rebalanceTargetSelect');
+          if (sel) sel.value = 'preset:all_holdings';
+        }
+      }
+      calculateWorksheet();
+    };
+
+    document.querySelectorAll('#btnModeAssetClass').forEach((btn) => {
+      btn.addEventListener('click', () => handleModeSwitch('ASSET_CLASS'));
+    });
+
+    document.querySelectorAll('#btnModeHoldings').forEach((btn) => {
+      btn.addEventListener('click', () => handleModeSwitch('HOLDING'));
     });
 
     // Strategy pill buttons (CASH_FIRST vs FULL_REBALANCE)

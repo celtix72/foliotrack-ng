@@ -151,6 +151,62 @@ describe('Wealthfolio-Compatible Target Allocation & Rebalancing Engine Tests', 
     assert.strictEqual(normalizeAssetClass('CASH'), 'CASH');
   });
 
+  test('normalizeAssetClass: XEON.DE and money market funds classify as CASH, bond ETFs as BOND', () => {
+    assert.strictEqual(normalizeAssetClass({ ticker: 'XEON.DE', name: 'Xtrackers II EUR Overnight Rate Swap UCITS ETF', type: 'ETF' }), 'CASH');
+    assert.strictEqual(normalizeAssetClass({ ticker: 'C3M.MI', name: 'Amundi Euro Liquidity SRI UCITS ETF', type: 'ETF' }), 'CASH');
+    assert.strictEqual(normalizeAssetClass({ ticker: 'SMART.MI', name: 'Lyxor Smart Cash UCITS ETF', type: 'ETF' }), 'CASH');
+    assert.strictEqual(normalizeAssetClass({ ticker: 'X25E.MI', name: 'Xtrackers II Eurozone Government Bond 25+ UCITS ETF', type: 'ETF', sector: 'Government' }), 'BOND');
+    assert.strictEqual(normalizeAssetClass({ ticker: 'IT0004532559', name: 'BTP 5% 01st 2040', type: 'BOND' }), 'BOND');
+    assert.strictEqual(normalizeAssetClass({ ticker: 'AAPL', name: 'Apple Inc', type: 'STOCK' }), 'EQUITY');
+    assert.strictEqual(normalizeAssetClass({ ticker: 'SGLD.MI', name: 'Invesco Physical Gold', type: 'ETC' }), 'COMMODITY');
+  });
+
+  test('calculateRebalanceWorksheet: ASSET_CLASS mode computes exact projected value without quantity explosion', () => {
+    const holdings = [
+      { ticker: 'XEON.DE', name: 'Xtrackers Overnight', type: 'ETF', quantity: 200, currentPrice: 150.76, marketValue: 30152.0 },
+      { ticker: 'META', name: 'Meta Platforms', type: 'STOCK', quantity: 100, currentPrice: 500.0, marketValue: 50000.0 },
+      { ticker: 'AAPL', name: 'Apple Inc', type: 'STOCK', quantity: 800, currentPrice: 200.0, marketValue: 160000.0 },
+      { ticker: 'IT0004532559', name: 'BTP 2040', type: 'BOND', quantity: 1000, currentPrice: 105.23, marketValue: 105230.0 }
+    ];
+
+    const targetAllocations = [
+      { id: 'EQUITY', label: 'Azioni (Equity)', targetPercent: 60.0 },
+      { id: 'BOND', label: 'Obbligazioni (Bond)', targetPercent: 30.0 },
+      { id: 'CASH', label: 'Liquidità (Cash)', targetPercent: 10.0 }
+    ];
+
+    const worksheet = calculateRebalanceWorksheet({
+      holdings,
+      currentCash: 0,
+      addedCash: 0,
+      targetAllocations,
+      targetType: 'ASSET_CLASS',
+      strategy: 'FULL_REBALANCE',
+      options: { toleranceBand: 2.0 }
+    });
+
+    const equityLine = worksheet.lines.find(l => l.id === 'EQUITY');
+    assert.ok(equityLine);
+    assert.strictEqual(equityLine.isAssetClass, true);
+    assert.strictEqual(equityLine.holdingCount, 2); // META, AAPL (XEON.DE is CASH)
+    assert.strictEqual(equityLine.currentValue, 210000.0);
+
+    // Projected value must equal currentValue + orderAmount, NEVER projectedQuantity * currentPrice
+    const orderAmt = equityLine.action === 'BUY'
+      ? equityLine.suggestedAmount
+      : (equityLine.action === 'SELL' ? -equityLine.suggestedAmount : 0);
+    const expectedProjVal = equityLine.currentValue + orderAmt;
+    assert.strictEqual(Math.round(equityLine.projectedValue), Math.round(expectedProjVal));
+
+    // Projected percent must be close to target
+    assert.ok(Math.abs(equityLine.projectedPercent - 60.0) <= 2.0);
+
+    const cashLine = worksheet.lines.find(l => l.id === 'CASH');
+    assert.ok(cashLine);
+    assert.strictEqual(cashLine.holdingCount, 1); // XEON.DE is here!
+    assert.strictEqual(cashLine.categoryHoldings[0].ticker, 'XEON.DE');
+  });
+
   test('calculateRebalanceWorksheet: CASH_FIRST strategy (Buy-Only) with deposit', () => {
     const holdings = [
       { ticker: 'VWCE.DE', name: 'Vanguard All-World', type: 'ETF', quantity: 80, currentPrice: 100.0, marketValue: 8000.0 },
@@ -389,6 +445,51 @@ describe('Wealthfolio-Compatible Target Allocation & Rebalancing Engine Tests', 
     assert.ok(Array.isArray(data.worksheet.lines));
     assert.ok(data.worksheet.totalPortfolioValue > 0);
     assert.ok(data.clipboardText);
+  });
+
+  test('POST /api/rebalancing/calculate with dynamic presets all_holdings and equal_weight_holdings', async () => {
+    const resAll = await fetch(`${baseUrl}/api/rebalancing/calculate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        portfolioId,
+        presetId: 'all_holdings',
+        strategy: 'CASH_FIRST'
+      })
+    });
+
+    assert.strictEqual(resAll.status, 200);
+    const dataAll = await resAll.json();
+    assert.strictEqual(dataAll.success, true);
+    assert.strictEqual(dataAll.worksheet.targetType, 'HOLDING');
+    assert.ok(dataAll.worksheet.lines.some(l => l.ticker === 'VWCE.DE'));
+    assert.ok(dataAll.worksheet.lines.some(l => l.ticker === 'AGGH.MI'));
+
+    const resEq = await fetch(`${baseUrl}/api/rebalancing/calculate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        portfolioId,
+        presetId: 'equal_weight_holdings',
+        strategy: 'CASH_FIRST'
+      })
+    });
+
+    assert.strictEqual(resEq.status, 200);
+    const dataEq = await resEq.json();
+    assert.strictEqual(dataEq.success, true);
+    assert.strictEqual(dataEq.worksheet.targetType, 'HOLDING');
+    const vwce = dataEq.worksheet.lines.find(l => l.ticker === 'VWCE.DE');
+    const aggh = dataEq.worksheet.lines.find(l => l.ticker === 'AGGH.MI');
+    assert.ok(vwce && aggh);
+    assert.strictEqual(Math.round(vwce.targetPercent), 50);
+    assert.strictEqual(Math.round(aggh.targetPercent), 50);
   });
 
   test('POST /api/rebalancing/apply: executes rebalance trades on portfolio', async () => {

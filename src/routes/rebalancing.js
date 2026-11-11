@@ -10,6 +10,7 @@ const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, checkPortfolioAccess } = require('./portfolios');
 const {
   PRESET_TARGET_MODELS,
+  DYNAMIC_PRESET_MODELS,
   calculateRebalanceWorksheet,
   generateRebalanceCsv,
   generateClipboardOrderText
@@ -26,7 +27,7 @@ router.use(requireAuth);
 router.get('/presets', (req, res) => {
   return res.json({
     success: true,
-    presets: PRESET_TARGET_MODELS
+    presets: [...PRESET_TARGET_MODELS, ...DYNAMIC_PRESET_MODELS]
   });
 });
 
@@ -64,7 +65,7 @@ router.get('/targets', (req, res) => {
   return res.json({
     success: true,
     targets,
-    presets: PRESET_TARGET_MODELS
+    presets: [...PRESET_TARGET_MODELS, ...DYNAMIC_PRESET_MODELS]
   });
 });
 
@@ -317,8 +318,52 @@ router.post('/calculate', (req, res) => {
 
     if (customAllocations && Array.isArray(customAllocations) && customAllocations.length > 0) {
       resolvedAllocations = customAllocations;
+    } else if (presetId === 'all_holdings' || presetId === 'equal_weight_holdings') {
+      effectiveTargetType = 'HOLDING';
+      const count = holdings.length;
+      if (count > 0) {
+        if (presetId === 'equal_weight_holdings') {
+          targetName = 'Equipesato su Tutti i Titoli (Equal Weight)';
+          const eqWeight = Number((100.0 / count).toFixed(2));
+          let running = 0.0;
+          resolvedAllocations = holdings.map((h, i) => {
+            const w = (i === count - 1) ? Number((100.0 - running).toFixed(2)) : eqWeight;
+            running += w;
+            return {
+              id: h.ticker,
+              ticker: h.ticker,
+              label: h.name || h.ticker,
+              targetPercent: w
+            };
+          });
+        } else {
+          targetName = 'Pesi Attuali Portafoglio (Tutti i Titoli)';
+          const totalHoldingsVal = holdings.reduce((sum, h) => sum + (Number(h.marketValue) || 0), 0);
+          let runningSum = 0.0;
+          resolvedAllocations = holdings.map((h, i) => {
+            const curVal = Number(h.marketValue) || 0;
+            const w = totalHoldingsVal > 0 ? Number(((curVal / totalHoldingsVal) * 100).toFixed(2)) : 0;
+            if (i === count - 1) {
+              return {
+                id: h.ticker,
+                ticker: h.ticker,
+                label: h.name || h.ticker,
+                targetPercent: Number(Math.max(0, 100.0 - runningSum).toFixed(2))
+              };
+            }
+            runningSum += w;
+            return {
+              id: h.ticker,
+              ticker: h.ticker,
+              label: h.name || h.ticker,
+              targetPercent: w
+            };
+          });
+        }
+      }
     } else if (presetId) {
-      const preset = PRESET_TARGET_MODELS.find((p) => p.id === presetId);
+      const allPresets = [...PRESET_TARGET_MODELS, ...DYNAMIC_PRESET_MODELS];
+      const preset = allPresets.find((p) => p.id === presetId);
       if (preset) {
         resolvedAllocations = preset.allocations;
         effectiveTargetType = preset.type;
