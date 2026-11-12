@@ -106,16 +106,137 @@
     { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 98 }
   ];
 
+  const PERFORMANCE_WIDGET_IDS = new Set([
+    'performanceChart',
+    'twrr',
+    'mwrr',
+    'drawdown',
+    'riskMetrics',
+    'performanceMatrix',
+    'moversAllTime'
+  ]);
+
+  function isPerformancePage() {
+    if (typeof window === 'undefined') return false;
+    const p = (window.location && window.location.pathname) || '';
+    if (p.startsWith('/performance')) return true;
+    if (typeof document !== 'undefined' && document.body) {
+      if (document.body.getAttribute('data-page') === 'performance') return true;
+    }
+    return false;
+  }
+
+  const PERFORMANCE_DESKTOP_LAYOUT = [
+    { id: 'twrr', name: 'Rendimento TWRR (Time-Weighted)', category: 'Performance', w: 3, h: 2, minW: 2, minH: 2, x: 0, y: 0 },
+    { id: 'mwrr', name: 'Rendimento MWRR / XIRR', category: 'Performance', w: 3, h: 2, minW: 2, minH: 2, x: 3, y: 0 },
+    { id: 'drawdown', name: 'Drawdown & Picco ATH', category: 'Rischio', w: 3, h: 2, minW: 2, minH: 2, x: 6, y: 0 },
+    { id: 'riskMetrics', name: 'Rischio & Efficienza (Sharpe, Volatilità)', category: 'Rischio', w: 3, h: 2, minW: 2, minH: 2, x: 9, y: 0 },
+    { id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 12, h: 5, minW: 6, minH: 4, x: 0, y: 2 },
+    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4, x: 0, y: 7 },
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4, x: 6, y: 7 }
+  ];
+
+  const PERFORMANCE_MOBILE_LAYOUT = [
+    { id: 'twrr', name: 'Rendimento TWRR (Time-Weighted)', category: 'Performance', w: 1, h: 2, x: 0, y: 0 },
+    { id: 'mwrr', name: 'Rendimento MWRR / XIRR', category: 'Performance', w: 1, h: 2, x: 1, y: 0 },
+    { id: 'drawdown', name: 'Drawdown & Picco ATH', category: 'Rischio', w: 1, h: 2, x: 0, y: 2 },
+    { id: 'riskMetrics', name: 'Rischio & Efficienza (Sharpe, Volatilità)', category: 'Rischio', w: 1, h: 2, x: 1, y: 2 },
+    { id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 2, h: 6, minW: 2, minH: 5, x: 0, y: 4 },
+    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 5, x: 0, y: 10 },
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 15 }
+  ];
+
+  const DASHBOARD_DESKTOP_LAYOUT = [
+    { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 4, h: 2, minW: 3, minH: 2, x: 0, y: 0 },
+    { id: 'dayChange', name: 'Variazione Giornaliera (Oggi)', category: 'Performance', w: 3, h: 2, minW: 2, minH: 2, x: 4, y: 0 },
+    { id: 'cash', name: 'Liquidità', category: 'KPI', w: 2, h: 2, minW: 2, minH: 2, x: 7, y: 0 },
+    { id: 'pnl', name: 'P&L Totale', category: 'KPI', w: 3, h: 2, minW: 2, minH: 2, x: 9, y: 0 },
+    { id: 'invested', name: 'Versato', category: 'KPI', w: 6, h: 2, minW: 2, minH: 2, x: 0, y: 2 },
+    { id: 'bookCost', name: 'Carico (PMC)', category: 'KPI', w: 6, h: 2, minW: 2, minH: 2, x: 6, y: 2 },
+    { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5, x: 0, y: 4 },
+    { id: 'categoryGains', name: 'Gain Categorie (Aperte / Chiuse)', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5, x: 0, y: 12 },
+    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 12, h: 6, minW: 4, minH: 3, x: 0, y: 20 },
+    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 9, h: 8, minW: 6, minH: 6, x: 0, y: 26 },
+    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 3, h: 8, minW: 3, minH: 6, x: 9, y: 26 },
+    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4, x: 0, y: 34 },
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 6, h: 6, minW: 4, minH: 4, x: 6, y: 34 },
+    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 0, y: 40 },
+    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 3, y: 40 },
+    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 6, y: 40 },
+    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 9, y: 40 },
+    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 12, h: 5, minW: 8, minH: 4, x: 0, y: 44 },
+    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 12, h: 6, minW: 4, minH: 4, x: 0, y: 49 }
+  ];
+
+  const DASHBOARD_MOBILE_LAYOUT = (() => {
+    const list = MOBILE_DEFAULT_LAYOUT.filter(item => !PERFORMANCE_WIDGET_IDS.has(item.id));
+    let curY = 0;
+    let col = 0;
+    return list.map(item => {
+      const w = item.w || 1;
+      let x = 0;
+      let y = curY;
+      if (w === 2) {
+        if (col === 1) { curY += 2; }
+        x = 0;
+        y = curY;
+        curY += (item.h || 2);
+        col = 0;
+      } else {
+        if (col === 0) {
+          x = 0;
+          y = curY;
+          col = 1;
+        } else {
+          x = 1;
+          y = curY;
+          curY += (item.h || 2);
+          col = 0;
+        }
+      }
+      return { ...item, x, y };
+    });
+  })();
+
   function isMobileDashboard() {
     return document.querySelector('.grid-stack-2') !== null || document.getElementById('mDashboardPortfolioSelect') !== null;
   }
 
   function getLayoutSettingKey() {
+    if (isPerformancePage()) {
+      return isMobileDashboard() ? 'insightsPerformanceLayoutMobile' : 'insightsPerformanceLayout';
+    }
     return isMobileDashboard() ? 'insightsOverviewLayoutMobile' : 'insightsOverviewLayout';
   }
 
   function getLayoutStorageKey() {
+    if (isPerformancePage()) {
+      return isMobileDashboard() ? 'foliotrack_perf_layout_mobile' : 'foliotrack_perf_layout';
+    }
     return isMobileDashboard() ? 'foliotrack_dashboard_layout_mobile' : 'foliotrack_dashboard_layout';
+  }
+
+  function getHiddenWidgetsStorageKey() {
+    return isPerformancePage() ? 'foliotrack_perf_hidden_widgets' : 'foliotrack_hidden_widgets';
+  }
+
+  function getHiddenWidgetsSettingKey() {
+    return isPerformancePage() ? 'hiddenWidgetsPerf' : 'hiddenWidgets';
+  }
+
+  function getActiveWidgetDefinitions() {
+    if (isPerformancePage()) {
+      return WIDGET_DEFINITIONS.filter(w => PERFORMANCE_WIDGET_IDS.has(w.id));
+    }
+    return WIDGET_DEFINITIONS.filter(w => !PERFORMANCE_WIDGET_IDS.has(w.id));
+  }
+
+  function getActiveDefaultLayout() {
+    const isMobile = isMobileDashboard();
+    if (isPerformancePage()) {
+      return isMobile ? PERFORMANCE_MOBILE_LAYOUT : PERFORMANCE_DESKTOP_LAYOUT;
+    }
+    return isMobile ? DASHBOARD_MOBILE_LAYOUT : DASHBOARD_DESKTOP_LAYOUT;
   }
 
   const PASTEL_COLORS = [
@@ -130,11 +251,21 @@
   let activeTwrrPeriod = localStorage.getItem('foliotrack_twrr_period') || '1Y';
   let currentPerformanceMetrics = null;
   let widgetSearchQuery = '';
-  let hiddenWidgets = new Set(JSON.parse(localStorage.getItem('foliotrack_hidden_widgets') || '[]'));
-  if (hiddenWidgets.has('movers')) {
-    hiddenWidgets.delete('movers');
-    hiddenWidgets.add('moversDay');
+
+  function getInitialHiddenWidgets() {
+    const storageKey = getHiddenWidgetsStorageKey();
+    let set = new Set();
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
+      if (raw) set = new Set(JSON.parse(raw));
+    } catch {}
+    if (set.has('movers')) {
+      set.delete('movers');
+      set.add('moversDay');
+    }
+    return set;
   }
+  let hiddenWidgets = getInitialHiddenWidgets();
   let currentSavedLayout = null;
   let autoSaveTimer = null;
 
@@ -4026,7 +4157,7 @@
    */
   async function moveWidgetUp(widgetId) {
     const isMobile = isMobileDashboard();
-    const layout = getCurrentGridLayout() || (isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS);
+    const layout = getCurrentGridLayout() || getActiveDefaultLayout();
     const sorted = [...layout].sort((a, b) => {
       const yDiff = (a.y ?? 0) - (b.y ?? 0);
       if (yDiff !== 0) return yDiff;
@@ -4062,7 +4193,7 @@
    */
   async function moveWidgetDown(widgetId) {
     const isMobile = isMobileDashboard();
-    const layout = getCurrentGridLayout() || (isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS);
+    const layout = getCurrentGridLayout() || getActiveDefaultLayout();
     const sorted = [...layout].sort((a, b) => {
       const yDiff = (a.y ?? 0) - (b.y ?? 0);
       if (yDiff !== 0) return yDiff;
@@ -4101,7 +4232,8 @@
     const drawerCountEl = document.getElementById('drawer-visible-count');
     const headerCountEl = document.getElementById('visible-widgets-count');
 
-    const totalCount = WIDGET_DEFINITIONS.length;
+    const activeDefs = getActiveWidgetDefinitions();
+    const totalCount = activeDefs.length;
     const visibleCount = totalCount - hiddenWidgets.size;
 
     if (drawerCountEl) drawerCountEl.textContent = `${visibleCount} / ${totalCount}`;
@@ -4109,8 +4241,7 @@
 
     if (!listContainer) return;
 
-    const isMobile = isMobileDashboard();
-    const activeLayout = currentSavedLayout || (isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS);
+    const activeLayout = currentSavedLayout || getActiveDefaultLayout();
     const orderMap = new Map();
     activeLayout.forEach((item, index) => {
       orderMap.set(item.id, index);
@@ -4118,8 +4249,8 @@
 
     const query = (widgetSearchQuery || '').toLowerCase().trim();
     const baseList = query
-      ? WIDGET_DEFINITIONS.filter(item => (item.name || '').toLowerCase().includes(query) || (item.category || '').toLowerCase().includes(query))
-      : WIDGET_DEFINITIONS;
+      ? activeDefs.filter(item => (item.name || '').toLowerCase().includes(query) || (item.category || '').toLowerCase().includes(query))
+      : activeDefs;
 
     const sortedWidgets = [...baseList].sort((a, b) => {
       const orderA = orderMap.has(a.id) ? orderMap.get(a.id) : 999;
@@ -4179,7 +4310,7 @@
     } else {
       hiddenWidgets.add(widgetId);
     }
-    localStorage.setItem('foliotrack_hidden_widgets', JSON.stringify([...hiddenWidgets]));
+    localStorage.setItem(getHiddenWidgetsStorageKey(), JSON.stringify([...hiddenWidgets]));
     saveHiddenWidgetsSetting();
     scheduleAutoSaveLayout(true);
     await initGrid(currentSavedLayout);
@@ -4194,7 +4325,7 @@
       currentSavedLayout = current;
     }
     hiddenWidgets.clear();
-    localStorage.setItem('foliotrack_hidden_widgets', JSON.stringify([]));
+    localStorage.setItem(getHiddenWidgetsStorageKey(), JSON.stringify([]));
     saveHiddenWidgetsSetting();
     scheduleAutoSaveLayout(true);
     await initGrid(currentSavedLayout);
@@ -4205,21 +4336,24 @@
    */
   async function resetDefaultWidgets() {
     hiddenWidgets.clear();
-    localStorage.setItem('foliotrack_hidden_widgets', JSON.stringify([]));
+    localStorage.setItem(getHiddenWidgetsStorageKey(), JSON.stringify([]));
     saveHiddenWidgetsSetting();
-    const isMobile = isMobileDashboard();
-    currentSavedLayout = (isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS).map(d => ({ ...d }));
+    const defaultList = getActiveDefaultLayout();
+    currentSavedLayout = defaultList.map(d => ({ ...d }));
     scheduleAutoSaveLayout(true);
     await initGrid(currentSavedLayout);
   }
 
   async function saveHiddenWidgetsSetting() {
+    const storageKey = getHiddenWidgetsStorageKey();
+    const settingKey = getHiddenWidgetsSettingKey();
     try {
+      localStorage.setItem(storageKey, JSON.stringify([...hiddenWidgets]));
       await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          key: 'hiddenWidgets',
+          key: settingKey,
           value: JSON.stringify([...hiddenWidgets]),
           encrypted: false
         })
@@ -4228,8 +4362,10 @@
   }
 
   async function loadHiddenWidgets() {
+    const storageKey = getHiddenWidgetsStorageKey();
+    const settingKey = getHiddenWidgetsSettingKey();
     try {
-      const local = localStorage.getItem('foliotrack_hidden_widgets');
+      const local = localStorage.getItem(storageKey);
       if (local) {
         const arr = JSON.parse(local);
         if (Array.isArray(arr)) {
@@ -4239,14 +4375,14 @@
     } catch {}
 
     try {
-      const res = await fetch('/api/settings/hiddenWidgets');
+      const res = await fetch(`/api/settings/${settingKey}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.value) {
           const arr = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
           if (Array.isArray(arr)) {
             hiddenWidgets = new Set(arr);
-            localStorage.setItem('foliotrack_hidden_widgets', JSON.stringify(arr));
+            localStorage.setItem(storageKey, JSON.stringify(arr));
           }
         }
       }
@@ -4254,12 +4390,11 @@
   }
 
   /**
-   * Extracts current grid coordinates for all 21 widgets, guaranteeing
+   * Extracts current grid coordinates for all active widgets, guaranteeing
    * integer positions and preserving positions of hidden widgets.
    */
   function getCurrentGridLayout() {
-    const isMobile = isMobileDashboard();
-    const defaultList = isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS;
+    const defaultList = getActiveDefaultLayout();
     if (!grid) return currentSavedLayout;
 
     const nodeMap = new Map();
@@ -4340,7 +4475,7 @@
     // 1. Immediately store in localStorage for instant access
     try {
       localStorage.setItem(storageKey, JSON.stringify(layoutArray));
-      if (!isMobileDashboard()) {
+      if (!isPerformancePage() && !isMobileDashboard()) {
         localStorage.setItem('foliotrack_dashboard_layout', JSON.stringify(layoutArray));
       }
     } catch {}
@@ -4396,13 +4531,15 @@
     if (!gridContainer || !window.GridStack) return;
 
     const isMobile = isMobileDashboard();
-    const defaultList = isMobile ? MOBILE_DEFAULT_LAYOUT : WIDGET_DEFINITIONS;
+    const defaultList = getActiveDefaultLayout();
+    const allowedIds = new Set(defaultList.map(d => d.id));
 
     if (savedLayout && Array.isArray(savedLayout) && savedLayout.length > 0) {
       if (isMobile && savedLayout.some(item => (item.w || 0) > 2)) {
         currentSavedLayout = defaultList.map(d => ({ ...d }));
       } else {
-        currentSavedLayout = savedLayout;
+        const filtered = savedLayout.filter(item => allowedIds.has(item.id === 'movers' ? 'moversDay' : item.id));
+        currentSavedLayout = filtered.length > 0 ? filtered : defaultList.map(d => ({ ...d }));
       }
     } else if (!currentSavedLayout || (isMobile && currentSavedLayout.some(item => (item.w || 0) > 2))) {
       currentSavedLayout = defaultList.map(d => ({ ...d }));
@@ -4452,7 +4589,9 @@
 
     let layoutToApply = [];
     if (currentSavedLayout && Array.isArray(currentSavedLayout) && currentSavedLayout.length > 0) {
-      layoutToApply = currentSavedLayout.map(item => {
+      const filtered = currentSavedLayout.filter(item => allowedIds.has(item.id === 'movers' ? 'moversDay' : item.id));
+      const effectiveSaved = filtered.length > 0 ? filtered : defaultList.map(d => ({ ...d }));
+      layoutToApply = effectiveSaved.map(item => {
         const effectiveId = item.id === 'movers' ? 'moversDay' : item.id;
         const def = defaultList.find(d => d.id === effectiveId) || {};
         let w = (Number.isInteger(item.w) && item.w > 0) ? item.w : (def.w || (isMobile ? 1 : 2));
@@ -4601,6 +4740,8 @@
     const isMobile = isMobileDashboard();
     const settingKey = getLayoutSettingKey();
     const storageKey = getLayoutStorageKey();
+    const defaultList = getActiveDefaultLayout();
+    const allowedIds = new Set(defaultList.map(d => d.id));
 
     // 1. Try fetching persisted layout from backend settings API
     try {
@@ -4613,14 +4754,15 @@
             if (isMobile && parsed.some(item => (item.w || 0) > 2)) {
               console.info('[Dashboard] Saved layout for mobile contained desktop width > 2, using mobile default.');
             } else {
-              currentSavedLayout = parsed;
+              const filtered = parsed.filter(item => allowedIds.has(item.id === 'movers' ? 'moversDay' : item.id));
+              currentSavedLayout = filtered.length > 0 ? filtered : defaultList.map(d => ({ ...d }));
               try {
-                localStorage.setItem(storageKey, JSON.stringify(parsed));
-                if (!isMobile) {
-                  localStorage.setItem('foliotrack_dashboard_layout', JSON.stringify(parsed));
+                localStorage.setItem(storageKey, JSON.stringify(currentSavedLayout));
+                if (!isPerformancePage() && !isMobile) {
+                  localStorage.setItem('foliotrack_dashboard_layout', JSON.stringify(currentSavedLayout));
                 }
               } catch {}
-              return parsed;
+              return currentSavedLayout;
             }
           }
         }
@@ -4638,19 +4780,16 @@
           if (isMobile && parsed.some(item => (item.w || 0) > 2)) {
             console.info('[Dashboard] Local layout for mobile contained desktop width > 2, skipping.');
           } else {
-            currentSavedLayout = parsed;
-            return parsed;
+            const filtered = parsed.filter(item => allowedIds.has(item.id === 'movers' ? 'moversDay' : item.id));
+            currentSavedLayout = filtered.length > 0 ? filtered : defaultList.map(d => ({ ...d }));
+            return currentSavedLayout;
           }
         }
       }
     } catch {}
 
-    if (isMobile) {
-      currentSavedLayout = MOBILE_DEFAULT_LAYOUT.map(d => ({ ...d }));
-      return currentSavedLayout;
-    }
-
-    return null;
+    currentSavedLayout = defaultList.map(d => ({ ...d }));
+    return currentSavedLayout;
   }
 
   /**
@@ -4879,6 +5018,21 @@
     });
     document.getElementById('mobileRefreshMarketBtn')?.addEventListener('click', (e) => {
       handleManualMarketRefresh(e.currentTarget);
+    });
+    document.getElementById('btn-recalculate-perf')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<span class="animate-spin inline-block mr-1">↻</span> Calcolo...`;
+      try {
+        await fetchPerformanceMetrics(selectedPortfolioId);
+        const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+        updateWidgetContents(activeView);
+        renderPerformanceChart(selectedPortfolioId, activeHistoryRange, activeHistoryMetric);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
     });
 
     // Bind search filter for widgets in drawer
@@ -5308,6 +5462,14 @@
     WIDGET_RENDERERS,
     MOBILE_DEFAULT_LAYOUT,
     isMobileDashboard,
+    isPerformancePage,
+    getActiveWidgetDefinitions,
+    getActiveDefaultLayout,
+    PERFORMANCE_WIDGET_IDS,
+    PERFORMANCE_DESKTOP_LAYOUT,
+    PERFORMANCE_MOBILE_LAYOUT,
+    DASHBOARD_DESKTOP_LAYOUT,
+    DASHBOARD_MOBILE_LAYOUT,
     moveWidgetUp,
     moveWidgetDown,
     repackMobileCoordinates

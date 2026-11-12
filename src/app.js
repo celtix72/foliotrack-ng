@@ -146,6 +146,10 @@ app.get(['/', '/dashboard'], requireViewAuth, (req, res) => {
   serveWithSidebar(req, res, 'dashboard');
 });
 
+app.get(['/performance'], requireViewAuth, (req, res) => {
+  serveWithSidebar(req, res, 'performance');
+});
+
 app.get('/portfolios', requireViewAuth, (req, res) => {
   serveWithSidebar(req, res, 'portfolios');
 });
