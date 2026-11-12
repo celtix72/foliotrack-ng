@@ -347,6 +347,6 @@ describe('Mobile Custom Widgets: Category Quotes & Top Winner/Loser 1D (Photos 1
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.ok(html.includes('grid-stack-2'), 'Must have grid-stack-2');
-    assert.ok(html.includes('19 / 19') || html.includes('25 / 25') || html.includes('24 / 24'), 'Drawer count must be present');
+    assert.ok(html.includes('18 / 18') || html.includes('19 / 19') || html.includes('25 / 25') || html.includes('24 / 24'), 'Drawer count must be present');
   });
 });

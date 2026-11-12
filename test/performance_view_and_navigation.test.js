@@ -90,7 +90,7 @@ describe('Performance Menu & Dedicated Multi-Period Views', () => {
     assert.ok(text.includes('>PERF</h1>'), 'Header tag must display PERF');
     assert.ok(text.includes('id="dashboardPortfolioSelect"'), 'Must have portfolio select dropdown');
     assert.ok(text.includes('id="btn-recalculate-perf"'), 'Must have recalculate metrics button');
-    assert.ok(text.includes('7 / 7'), 'Visible widgets count badge should initialize to 7 / 7');
+    assert.ok(text.includes('8 / 8'), 'Visible widgets count badge should initialize to 8 / 8');
     assert.ok(text.includes('id="app-sidebar"'), 'Must contain injected sidebar partial');
     assert.ok(text.includes('href="/performance"'), 'Sidebar in response must include /performance');
   });
@@ -105,19 +105,19 @@ describe('Performance Menu & Dedicated Multi-Period Views', () => {
     assert.ok(text.includes('data-page="performance"'), 'Mobile view must have data-page="performance"');
     assert.ok(text.includes('>PERF</span>'), 'Mobile portfolio selector bar must show PERF');
     assert.ok(text.includes('id="mDashboardPortfolioSelect"'), 'Must have mobile portfolio select dropdown');
-    assert.ok(text.includes('7 / 7'), 'Mobile drawer badge should initialize to 7 / 7');
+    assert.ok(text.includes('8 / 8'), 'Mobile drawer badge should initialize to 8 / 8');
     assert.ok(text.includes('id="mobile-bottom-nav"'), 'Must contain injected mobile nav partial');
     assert.ok(text.includes('data-mobile-page="performance"'), 'Mobile nav in response must have performance item');
   });
 
-  test('GET / serves dashboard view with 19 widgets and DASH title', async () => {
+  test('GET / serves dashboard view with 18 widgets and DASH title', async () => {
     const res = await fetch(`${baseUrl}/`, {
       headers: { Cookie: authCookie }
     });
     assert.equal(res.status, 200);
     const text = await res.text();
     assert.ok(text.includes('>DASH</h1>'), 'Dashboard header must show DASH');
-    assert.ok(text.includes('19 / 19'), 'Dashboard drawer badge should show 19 / 19');
+    assert.ok(text.includes('18 / 18'), 'Dashboard drawer badge should show 18 / 18');
     assert.ok(text.includes('id="app-sidebar"'), 'Dashboard must contain injected sidebar');
   });
 
@@ -153,7 +153,7 @@ describe('Performance Menu & Dedicated Multi-Period Views', () => {
 
     // Verify widget groups
     const perfIds = Array.from(api.PERFORMANCE_WIDGET_IDS);
-    assert.equal(perfIds.length, 7, 'Must have exactly 7 performance widgets');
+    assert.equal(perfIds.length, 8, 'Must have exactly 8 performance widgets');
     assert.ok(perfIds.includes('performanceChart'), 'performanceChart must be in Performance');
     assert.ok(perfIds.includes('twrr'), 'twrr must be in Performance');
     assert.ok(perfIds.includes('mwrr'), 'mwrr must be in Performance');
@@ -161,14 +161,15 @@ describe('Performance Menu & Dedicated Multi-Period Views', () => {
     assert.ok(perfIds.includes('riskMetrics'), 'riskMetrics must be in Performance');
     assert.ok(perfIds.includes('performanceMatrix'), 'performanceMatrix must be in Performance');
     assert.ok(perfIds.includes('moversAllTime'), 'moversAllTime must be in Performance');
+    assert.ok(perfIds.includes('categoryGains'), 'categoryGains must be in Performance');
 
     // Verify Performance desktop & mobile layout lengths
-    assert.equal(api.PERFORMANCE_DESKTOP_LAYOUT.length, 7);
-    assert.equal(api.PERFORMANCE_MOBILE_LAYOUT.length, 7);
+    assert.equal(api.PERFORMANCE_DESKTOP_LAYOUT.length, 8);
+    assert.equal(api.PERFORMANCE_MOBILE_LAYOUT.length, 8);
 
-    // Verify Dashboard desktop & mobile layout lengths (26 - 7 = 19)
-    assert.equal(api.DASHBOARD_DESKTOP_LAYOUT.length, 19);
-    assert.equal(api.DASHBOARD_MOBILE_LAYOUT.length, 19);
+    // Verify Dashboard desktop & mobile layout lengths (26 - 8 = 18)
+    assert.equal(api.DASHBOARD_DESKTOP_LAYOUT.length, 18);
+    assert.equal(api.DASHBOARD_MOBILE_LAYOUT.length, 18);
     assert.equal(api.WIDGET_DEFINITIONS.length, 26);
 
     // Verify none of the performance widgets are in Dashboard layouts
@@ -190,19 +191,19 @@ describe('Performance Menu & Dedicated Multi-Period Views', () => {
     assert.ok(dashIds.includes('cash'), 'cash must remain in Dashboard');
     assert.ok(dashIds.includes('invested'), 'invested must remain in Dashboard');
     assert.ok(dashIds.includes('bookCost'), 'bookCost must remain in Dashboard');
-    assert.ok(dashIds.includes('categoryGains'), 'categoryGains must remain in Dashboard');
+    assert.ok(!dashIds.includes('categoryGains'), 'categoryGains must NOT be in Dashboard');
 
     // Verify isPerformancePage detection
     assert.equal(api.isPerformancePage(), true, 'isPerformancePage() should return true when pathname is /performance');
     const perfDefs = api.getActiveWidgetDefinitions();
-    assert.equal(perfDefs.length, 7, 'getActiveWidgetDefinitions() on performance page must return 7 widgets');
+    assert.equal(perfDefs.length, 8, 'getActiveWidgetDefinitions() on performance page must return 8 widgets');
 
     // Simulate switching to dashboard page
     dom.location.pathname = '/';
     dom.document.body.getAttribute = () => null;
     assert.equal(api.isPerformancePage(), false, 'isPerformancePage() should return false on /');
     const dashDefs = api.getActiveWidgetDefinitions();
-    assert.equal(dashDefs.length, 19, 'getActiveWidgetDefinitions() on dashboard page must return 19 widgets');
+    assert.equal(dashDefs.length, 18, 'getActiveWidgetDefinitions() on dashboard page must return 18 widgets');
   });
 });
 

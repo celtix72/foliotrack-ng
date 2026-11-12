@@ -113,7 +113,8 @@
     'drawdown',
     'riskMetrics',
     'performanceMatrix',
-    'moversAllTime'
+    'moversAllTime',
+    'categoryGains'
   ]);
 
   function isPerformancePage() {
@@ -133,7 +134,8 @@
     { id: 'riskMetrics', name: 'Rischio & Efficienza (Sharpe, Volatilità)', category: 'Rischio', w: 3, h: 2, minW: 2, minH: 2, x: 9, y: 0 },
     { id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 12, h: 5, minW: 6, minH: 4, x: 0, y: 2 },
     { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4, x: 0, y: 7 },
-    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4, x: 6, y: 7 }
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4, x: 6, y: 7 },
+    { id: 'categoryGains', name: 'Gain Categorie (Aperte / Chiuse)', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5, x: 0, y: 13 }
   ];
 
   const PERFORMANCE_MOBILE_LAYOUT = [
@@ -143,7 +145,8 @@
     { id: 'riskMetrics', name: 'Rischio & Efficienza (Sharpe, Volatilità)', category: 'Rischio', w: 1, h: 2, x: 1, y: 2 },
     { id: 'performanceChart', name: 'Andamento Patrimonio & Performance', category: 'Grafici', w: 2, h: 6, minW: 2, minH: 5, x: 0, y: 4 },
     { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 5, x: 0, y: 10 },
-    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 15 }
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 15 },
+    { id: 'categoryGains', name: 'Gain Categorie (Aperte / Chiuse)', category: 'Dettaglio', w: 2, h: 8, x: 0, y: 20 }
   ];
 
   const DASHBOARD_DESKTOP_LAYOUT = [
@@ -154,18 +157,17 @@
     { id: 'invested', name: 'Versato', category: 'KPI', w: 6, h: 2, minW: 2, minH: 2, x: 0, y: 2 },
     { id: 'bookCost', name: 'Carico (PMC)', category: 'KPI', w: 6, h: 2, minW: 2, minH: 2, x: 6, y: 2 },
     { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5, x: 0, y: 4 },
-    { id: 'categoryGains', name: 'Gain Categorie (Aperte / Chiuse)', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5, x: 0, y: 12 },
-    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 12, h: 6, minW: 4, minH: 3, x: 0, y: 20 },
-    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 9, h: 8, minW: 6, minH: 6, x: 0, y: 26 },
-    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 3, h: 8, minW: 3, minH: 6, x: 9, y: 26 },
-    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4, x: 0, y: 34 },
-    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 6, h: 6, minW: 4, minH: 4, x: 6, y: 34 },
-    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 0, y: 40 },
-    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 3, y: 40 },
-    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 6, y: 40 },
-    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 9, y: 40 },
-    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 12, h: 5, minW: 8, minH: 4, x: 0, y: 44 },
-    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 12, h: 6, minW: 4, minH: 4, x: 0, y: 49 }
+    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 12, h: 6, minW: 4, minH: 3, x: 0, y: 12 },
+    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 9, h: 8, minW: 6, minH: 6, x: 0, y: 18 },
+    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 3, h: 8, minW: 3, minH: 6, x: 9, y: 18 },
+    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4, x: 0, y: 26 },
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 6, h: 6, minW: 4, minH: 4, x: 6, y: 26 },
+    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 0, y: 32 },
+    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 3, y: 32 },
+    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 6, y: 32 },
+    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 3, h: 4, minW: 3, minH: 3, x: 9, y: 32 },
+    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 12, h: 5, minW: 8, minH: 4, x: 0, y: 36 },
+    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 12, h: 6, minW: 4, minH: 4, x: 0, y: 41 }
   ];
 
   const DASHBOARD_MOBILE_LAYOUT = (() => {

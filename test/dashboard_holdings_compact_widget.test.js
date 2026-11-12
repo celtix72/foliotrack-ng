@@ -176,7 +176,7 @@ describe('Compact 1-Row Holdings Widget (Titoli Compatti - Var. Day)', () => {
     });
     assert.equal(res.status, 200);
     const html = await res.text();
-    assert.ok(html.includes('19 / 19') || html.includes('25 / 25') || html.includes('24 / 24'), 'Drawer visible count badge must be present');
+    assert.ok(html.includes('18 / 18') || html.includes('19 / 19') || html.includes('25 / 25') || html.includes('24 / 24'), 'Drawer visible count badge must be present');
   });
 });
 
