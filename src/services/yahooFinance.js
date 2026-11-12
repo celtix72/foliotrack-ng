@@ -48,7 +48,9 @@ async function search(query) {
         ticker: q.symbol,
         name: q.shortname || q.longname || q.symbol,
         exchange: q.exchange || '',
+        exchDisp: q.exchDisp || q.exchange || '',
         type: mapQuoteType(q.quoteType),
+        typeDisp: q.typeDisp || '',
         currency: q.currency || 'EUR'
       }));
   } catch (err) {

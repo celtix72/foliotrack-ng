@@ -1743,25 +1743,318 @@
     }
   }
 
+  // HTML escaping helper
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Market & Exchange detector for badge display
+  function getMarketInfo(exchange, exchDisp, ticker) {
+    const rawEx = (exchange || '').toUpperCase();
+    const rawDisp = (exchDisp || '').toUpperCase();
+    const t = (ticker || '').toUpperCase();
+
+    if (
+      rawEx === 'MIL' || rawEx === 'BIT' || rawEx === 'MTA' || rawEx === 'MCE' ||
+      rawDisp.includes('MILAN') || rawDisp.includes('BORSA ITALIANA') ||
+      t.endsWith('.MI')
+    ) {
+      return { flag: '🇮🇹', name: 'Borsa Italiana (Milano)' };
+    }
+
+    if (rawEx === 'NMS' || rawEx === 'NGM' || rawEx === 'NCM' || rawEx === 'NASDAQ' || rawDisp.includes('NASDAQ')) {
+      return { flag: '🇺🇸', name: 'NASDAQ' };
+    }
+    if (rawEx === 'NYQ' || rawEx === 'NYSE' || rawEx === 'ASE' || rawDisp.includes('NYSE')) {
+      return { flag: '🇺🇸', name: 'NYSE' };
+    }
+
+    if (rawEx === 'GER' || rawEx === 'FRA' || rawEx === 'ETR' || rawEx === 'XETRA' || rawDisp.includes('XETRA') || rawDisp.includes('FRANKFURT') || t.endsWith('.DE')) {
+      return { flag: '🇩🇪', name: 'XETRA (Francoforte)' };
+    }
+
+    if (rawEx === 'PAR' || rawEx === 'EPA' || rawDisp.includes('PARIS') || t.endsWith('.PA')) {
+      return { flag: '🇫🇷', name: 'Euronext Paris' };
+    }
+
+    if (rawEx === 'AMS' || rawEx === 'AEX' || rawDisp.includes('AMSTERDAM') || t.endsWith('.AS')) {
+      return { flag: '🇳🇱', name: 'Euronext Amsterdam' };
+    }
+
+    if (rawEx === 'LSE' || rawEx === 'LON' || rawDisp.includes('LONDON') || t.endsWith('.L')) {
+      return { flag: '🇬🇧', name: 'London Stock Exchange' };
+    }
+
+    if (rawEx === 'SWX' || rawEx === 'VTX' || rawEx === 'EBS' || rawDisp.includes('SWISS') || rawDisp.includes('SIX') || t.endsWith('.SW')) {
+      return { flag: '🇨🇭', name: 'SIX Swiss Exchange' };
+    }
+
+    if (rawEx === 'MAD' || rawDisp.includes('MADRID') || t.endsWith('.MC')) {
+      return { flag: '🇪🇸', name: 'Bolsa de Madrid' };
+    }
+
+    if (rawEx === 'BRU' || rawDisp.includes('BRUSSELS') || t.endsWith('.BR')) {
+      return { flag: '🇧🇪', name: 'Euronext Brussels' };
+    }
+
+    if (rawEx === 'JPX' || rawEx === 'TYO' || rawDisp.includes('TOKYO') || t.endsWith('.T')) {
+      return { flag: '🇯🇵', name: 'Tokyo Stock Exchange' };
+    }
+
+    const fallbackName = exchDisp || exchange || 'Mercato Globale';
+    return { flag: '🌐', name: fallbackName };
+  }
+
+  function getAssetTypeBadge(type) {
+    const t = (type || 'EQUITY').toUpperCase();
+    if (t === 'EQUITY' || t === 'AZIONE') return 'Azione';
+    if (t === 'ETF') return 'ETF';
+    if (t === 'BOND' || t === 'OBBLIGAZIONE') return 'Obbligazione';
+    if (t === 'CRYPTO') return 'Crypto';
+    if (t === 'COMMODITY') return 'Materia Prima';
+    if (t === 'INDEX') return 'Indice';
+    if (t === 'MUTUAL_FUND') return 'Fondo';
+    return t;
+  }
+
+  async function selectSearchSuggestion(ticker, name) {
+    const tickerInput = document.getElementById('addTickerInput');
+    const nameInput = document.getElementById('addNameInput');
+    const dropdown = document.getElementById('addTickerDropdown');
+    const quoteHint = document.getElementById('addAssetQuoteHint');
+
+    if (tickerInput) tickerInput.value = ticker;
+    if (nameInput && name) nameInput.value = name;
+    if (dropdown) dropdown.classList.add('hidden');
+
+    if (!quoteHint) return;
+
+    quoteHint.classList.remove('hidden');
+    quoteHint.innerHTML = `
+      <div class="flex items-center space-x-2 text-gray-500">
+        <span class="animate-spin w-3 h-3 border-2 border-emerald-500 border-t-transparent rounded-full"></span>
+        <span>Recupero quotazione live per <b>${escapeHtml(ticker)}</b>...</span>
+      </div>
+    `;
+
+    try {
+      const res = await fetch(`/api/market/quote/${encodeURIComponent(ticker)}`);
+      const data = await res.json();
+      if (data.success && data.quote) {
+        const q = data.quote;
+        const cur = q.currency || 'EUR';
+        const price = q.currentPrice;
+        const chgPct = q.changePercent;
+        const isUp = (chgPct || 0) >= 0;
+
+        let slSuggestion = '';
+        if (price && price > 0) {
+          const slVal = (price * 0.95).toFixed(2);
+          const tpVal = (price * 1.10).toFixed(2);
+          slSuggestion = `
+            <div class="mt-2 pt-2 border-t border-emerald-500/20 flex flex-wrap items-center gap-2 text-[10px]">
+              <span class="text-gray-500 font-sans">Suggerimenti rapidi:</span>
+              <button type="button" class="quick-sl-btn px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-200 transition font-mono font-medium"
+                data-sl="${slVal}">
+                SL -5% (${fmtPrice(slVal, cur)})
+              </button>
+              <button type="button" class="quick-tp-btn px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 transition font-mono font-medium"
+                data-tp="${tpVal}">
+                TP +10% (${fmtPrice(tpVal, cur)})
+              </button>
+            </div>
+          `;
+        }
+
+        quoteHint.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="font-bold text-gray-900 dark:text-white">Prezzo Attuale:</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400 ml-1.5">${fmtPrice(price, cur)}</span>
+              <span class="text-[10px] ml-1.5 font-bold ${isUp ? 'text-emerald-500' : 'text-rose-500'}">
+                ${isUp ? '+' : ''}${Number(chgPct || 0).toFixed(2)}%
+              </span>
+            </div>
+            <span class="text-[10px] text-gray-400 uppercase font-sans">${escapeHtml(q.exchange || '')}</span>
+          </div>
+          ${slSuggestion}
+        `;
+
+        quoteHint.querySelector('.quick-sl-btn')?.addEventListener('click', (e) => {
+          e.preventDefault();
+          const slInput = document.getElementById('addSlInput');
+          if (slInput) slInput.value = e.currentTarget.getAttribute('data-sl');
+        });
+        quoteHint.querySelector('.quick-tp-btn')?.addEventListener('click', (e) => {
+          e.preventDefault();
+          const tpInput = document.getElementById('addTpInput');
+          if (tpInput) tpInput.value = e.currentTarget.getAttribute('data-tp');
+        });
+      } else {
+        quoteHint.innerHTML = `
+          <div class="text-gray-400">Quotazione live non disponibile per <b>${escapeHtml(ticker)}</b>. Puoi comunque monitorarlo.</div>
+        `;
+      }
+    } catch {
+      quoteHint.classList.add('hidden');
+    }
+  }
+
+  function renderSearchDropdown(results) {
+    const dropdown = document.getElementById('addTickerDropdown');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = results.map(item => {
+      const market = getMarketInfo(item.exchange, item.exchDisp, item.ticker);
+      const typeLabel = getAssetTypeBadge(item.type);
+      const priceHtml = (item.price && item.price > 0)
+        ? `<span class="text-[10px] font-mono font-medium text-gray-700 dark:text-gray-300">${fmtPrice(item.price, item.currency)}</span>`
+        : '';
+
+      return `
+        <div class="px-3.5 py-2 hover:bg-emerald-50 dark:hover:bg-white/5 cursor-pointer flex items-center justify-between transition group"
+             data-select-ticker="${escapeHtml(item.ticker)}"
+             data-select-name="${escapeHtml(item.name || '')}">
+          <div class="min-w-0 pr-2">
+            <div class="flex items-center space-x-1.5 flex-wrap gap-y-1">
+              <span class="font-bold font-mono text-xs text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                ${escapeHtml(item.ticker)}
+              </span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-sans font-medium bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300">
+                <span class="text-xs leading-none">${market.flag}</span>
+                <span>${escapeHtml(market.name)}</span>
+              </span>
+            </div>
+            <span class="text-[11px] text-gray-500 dark:text-gray-400 truncate block mt-0.5 font-sans">
+              ${escapeHtml(item.name || item.ticker)}
+            </span>
+          </div>
+          <div class="flex flex-col items-end shrink-0 space-y-0.5">
+            <span class="badge-profit uppercase text-[9px] font-mono px-1.5 py-0.5">${typeLabel}</span>
+            ${priceHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    dropdown.classList.remove('hidden');
+
+    dropdown.querySelectorAll('[data-select-ticker]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const ticker = el.getAttribute('data-select-ticker');
+        const name = el.getAttribute('data-select-name');
+        selectSearchSuggestion(ticker, name);
+      });
+    });
+  }
+
+  let searchDebounceTimer = null;
+  let activeSearchQuery = '';
+
+  function setupTickerAutocomplete() {
+    const input = document.getElementById('addTickerInput');
+    const dropdown = document.getElementById('addTickerDropdown');
+    const spinner = document.getElementById('addTickerSpinner');
+    const quoteHint = document.getElementById('addAssetQuoteHint');
+
+    if (!input || !dropdown) return;
+
+    input.addEventListener('input', () => {
+      const q = input.value.trim();
+      clearTimeout(searchDebounceTimer);
+
+      if (q.length === 0) {
+        if (spinner) spinner.classList.add('hidden');
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = '';
+        if (quoteHint) {
+          quoteHint.classList.add('hidden');
+          quoteHint.innerHTML = '';
+        }
+        return;
+      }
+
+      if (spinner) spinner.classList.remove('hidden');
+
+      searchDebounceTimer = setTimeout(async () => {
+        activeSearchQuery = q;
+        try {
+          const res = await fetch(`/api/market/search?q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+
+          if (activeSearchQuery !== q) return;
+          if (spinner) spinner.classList.add('hidden');
+
+          if (data.success && Array.isArray(data.results) && data.results.length > 0) {
+            renderSearchDropdown(data.results.slice(0, 10));
+          } else {
+            dropdown.innerHTML = `
+              <div class="p-3 text-xs text-gray-400 text-center font-mono">
+                Nessun titolo trovato per "${escapeHtml(q)}"
+              </div>
+            `;
+            dropdown.classList.remove('hidden');
+          }
+        } catch {
+          if (spinner) spinner.classList.add('hidden');
+        }
+      }, 250);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('addAssetModal')?.addEventListener('close', () => {
+      dropdown.classList.add('hidden');
+      if (spinner) spinner.classList.add('hidden');
+      if (quoteHint) {
+        quoteHint.classList.add('hidden');
+        quoteHint.innerHTML = '';
+      }
+    });
+  }
+
   // Setup event listeners
   document.addEventListener('DOMContentLoaded', () => {
     loadAnalysisData();
+    setupTickerAutocomplete();
 
     // Refresh buttons
     document.getElementById('refreshQuotesBtn')?.addEventListener('click', loadAnalysisData);
     document.getElementById('mRefreshBtn')?.addEventListener('click', loadAnalysisData);
 
     // Open Add Asset Modal
-    const openAddBtn = document.getElementById('openAddAssetBtn') || document.getElementById('mOpenAddAssetBtn');
-    if (openAddBtn) {
-      openAddBtn.addEventListener('click', () => {
+    const openAddButtons = document.querySelectorAll('#openAddAssetBtn, #mOpenAddAssetBtn');
+    openAddButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
         const addModal = document.getElementById('addAssetModal');
         if (addModal) {
           document.getElementById('addAssetForm')?.reset();
+          document.getElementById('addTickerDropdown')?.classList.add('hidden');
+          document.getElementById('addTickerSpinner')?.classList.add('hidden');
+          const hint = document.getElementById('addAssetQuoteHint');
+          if (hint) { hint.classList.add('hidden'); hint.innerHTML = ''; }
           addModal.showModal();
         }
       });
-    }
+    });
 
     // Submit Add Asset Form
     const addForm = document.getElementById('addAssetForm');
@@ -1789,6 +2082,9 @@
 
           if (data.success) {
             document.getElementById('addAssetModal')?.close();
+            document.getElementById('addTickerDropdown')?.classList.add('hidden');
+            const hint = document.getElementById('addAssetQuoteHint');
+            if (hint) { hint.classList.add('hidden'); hint.innerHTML = ''; }
             await loadAnalysisData();
           } else {
             alert('Errore: ' + (data.error || 'Impossibile aggiungere il titolo'));

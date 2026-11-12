@@ -399,39 +399,87 @@ router.get('/search', optionalAuth, async (req, res) => {
   }
 
   const cleanQuery = query.trim();
+  if (!cleanQuery) {
+    return res.json({ success: true, results: [] });
+  }
 
-  // If query is an ISIN, try Borsa Italiana first
+  const seenTickers = new Set();
+  const results = [];
+
+  // 1. If query is an ISIN, try Borsa Italiana first
   if (borsa.isIsin(cleanQuery)) {
     try {
       const borsaQuote = await borsa.fetchRealtimeQuote(cleanQuery);
-      if (borsaQuote) {
-        return res.json({
-          success: true,
-          results: [{
-            ticker: borsaQuote.ticker,
-            name: borsaQuote.name,
-            type: borsaQuote.type,
-            exchange: borsaQuote.exchange,
-            currency: borsaQuote.currency,
-            price: borsaQuote.currentPrice
-          }]
+      if (borsaQuote && borsaQuote.ticker) {
+        seenTickers.add(borsaQuote.ticker.toUpperCase());
+        results.push({
+          ticker: borsaQuote.ticker,
+          name: borsaQuote.name,
+          type: borsaQuote.type || 'BOND',
+          exchange: borsaQuote.exchange || 'BIT',
+          exchDisp: 'Borsa Italiana',
+          currency: borsaQuote.currency || 'EUR',
+          price: borsaQuote.currentPrice
         });
       }
     } catch {}
   }
 
+  // 2. Search local database assets table
   try {
-    const results = await yahoo.search(cleanQuery);
-    return res.json({
-      success: true,
-      results
-    });
+    const localAssets = db.prepare(`
+      SELECT ticker, name, type, exchange, currency, currentPrice AS price
+      FROM assets
+      WHERE ticker LIKE ? OR name LIKE ?
+      ORDER BY
+        CASE WHEN UPPER(ticker) = UPPER(?) THEN 0 ELSE 1 END,
+        CASE WHEN ticker LIKE ? THEN 0 ELSE 1 END,
+        ticker ASC
+      LIMIT 10
+    `).all(`%${cleanQuery}%`, `%${cleanQuery}%`, cleanQuery, `${cleanQuery}%`);
+
+    for (const a of localAssets) {
+      const upper = (a.ticker || '').toUpperCase();
+      if (upper && !seenTickers.has(upper)) {
+        seenTickers.add(upper);
+        results.push({
+          ticker: a.ticker,
+          name: a.name,
+          type: a.type || 'EQUITY',
+          exchange: a.exchange || '',
+          exchDisp: a.exchange || '',
+          currency: a.currency || 'EUR',
+          price: a.price || undefined
+        });
+      }
+    }
   } catch (err) {
-    return res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    // Non-fatal if local db search query fails
   }
+
+  // 3. Search Yahoo Finance (multi-market global coverage)
+  try {
+    const yfResults = await yahoo.search(cleanQuery);
+    for (const r of yfResults) {
+      const upper = (r.ticker || '').toUpperCase();
+      if (upper && !seenTickers.has(upper)) {
+        seenTickers.add(upper);
+        results.push(r);
+      }
+    }
+  } catch (err) {
+    if (results.length === 0) {
+      return res.status(500).json({
+        success: false,
+        error: err.message
+      });
+    }
+  }
+
+  return res.json({
+    success: true,
+    results
+  });
 });
 
 /**

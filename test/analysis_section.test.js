@@ -571,4 +571,53 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     const yf = require('../src/services/yahooFinance');
     assert.equal(typeof yf.fetchFinvizPeg, 'function', 'yahooFinance must export fetchFinvizPeg');
   });
+
+  test('Analysis modal UI contains real-time ticker search input, spinner, dropdown and quote hint on desktop and mobile', () => {
+    const desktopHtml = fs.readFileSync(path.join(__dirname, '../private_views/analysis.html'), 'utf8');
+    const mobileHtml = fs.readFileSync(path.join(__dirname, '../private_views/analysis_mobile.html'), 'utf8');
+
+    for (const html of [desktopHtml, mobileHtml]) {
+      assert.ok(html.includes('id="addTickerInput"'), 'Modal must have addTickerInput');
+      assert.ok(html.includes('id="addTickerSpinner"'), 'Modal must have addTickerSpinner');
+      assert.ok(html.includes('id="addTickerDropdown"'), 'Modal must have addTickerDropdown');
+      assert.ok(html.includes('id="addAssetQuoteHint"'), 'Modal must have addAssetQuoteHint');
+    }
+  });
+
+  test('Frontend analysis.js implements real-time multi-market search autocomplete and live price hint', () => {
+    const js = fs.readFileSync(path.join(__dirname, '../public/analysis.js'), 'utf8');
+
+    assert.ok(js.includes('setupTickerAutocomplete'), 'analysis.js must define setupTickerAutocomplete');
+    assert.ok(js.includes('renderSearchDropdown'), 'analysis.js must define renderSearchDropdown');
+    assert.ok(js.includes('getMarketInfo'), 'analysis.js must define getMarketInfo for multi-market badges');
+    assert.ok(js.includes('Borsa Italiana'), 'analysis.js must support Borsa Italiana');
+    assert.ok(js.includes('NASDAQ'), 'analysis.js must support NASDAQ');
+    assert.ok(js.includes('NYSE'), 'analysis.js must support NYSE');
+    assert.ok(js.includes('XETRA'), 'analysis.js must support XETRA');
+    assert.ok(js.includes('selectSearchSuggestion'), 'analysis.js must define selectSearchSuggestion');
+    assert.ok(js.includes('/api/market/search?q='), 'analysis.js must query multi-market search endpoint');
+    assert.ok(js.includes('/api/market/quote/'), 'analysis.js must query live quote on suggestion select');
+  });
+
+  test('GET /api/market/search returns multi-market equity search results for company name and ticker', async () => {
+    // 1. Search by name 'Intesa' (Borsa Italiana)
+    const resName = await fetch(`${baseUrl}/api/market/search?q=Intesa`);
+    assert.equal(resName.status, 200);
+    const dataName = await resName.json();
+    assert.equal(dataName.success, true);
+    assert.ok(Array.isArray(dataName.results));
+    assert.ok(dataName.results.length > 0);
+    const isp = dataName.results.find(r => r.ticker === 'ISP.MI');
+    assert.ok(isp, 'Searching "Intesa" should include ISP.MI');
+    assert.equal(isp.type, 'EQUITY');
+
+    // 2. Search by ticker 'NVDA' (NASDAQ / US)
+    const resTicker = await fetch(`${baseUrl}/api/market/search?q=NVDA`);
+    assert.equal(resTicker.status, 200);
+    const dataTicker = await resTicker.json();
+    assert.equal(dataTicker.success, true);
+    assert.ok(Array.isArray(dataTicker.results));
+    const nvda = dataTicker.results.find(r => r.ticker === 'NVDA');
+    assert.ok(nvda, 'Searching "NVDA" should include NVDA');
+  });
 });
