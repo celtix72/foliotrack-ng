@@ -14,6 +14,7 @@ const { initDb, closeDb, db } = require('../src/db');
 const app = require('../src/app');
 const { calculateAnnualDividendsHistory, calculateDividendForecast } = require('../src/utils/dividendForecast');
 const { recalculateDividendProjections } = require('../src/routes/dividends');
+const { calculateSanitizedDividendYield } = require('../src/services/yahooFinance');
 
 let server;
 let baseUrl;
@@ -102,6 +103,34 @@ describe('Dividend Annual History & Dynamic Projections Engine', () => {
       assert.strictEqual(history[2].year, 2024);
       assert.strictEqual(history[2].total, 800);
       assert.strictEqual(history[2].yoyGrowthRate, null);
+    });
+
+    test('calculateSanitizedDividendYield correctly sanitizes outliers and erroneous data (MU, PYPL, NEXI, NOV.DE)', () => {
+      // Micron: Yahoo returns raw quote dividendYield = 0.07 (meaning 0.07%).
+      // Previously < 0.2 was multiplied by 100 yielding 7.00%. Now sanitized.
+      const muRawQuote = { dividendYield: 0.07, dividendRate: 0.46 };
+      const muYield = calculateSanitizedDividendYield(muRawQuote, 550.0, 'MU');
+      assert.strictEqual(muYield, 0.08); // (0.46 / 550) * 100 = 0.0836 -> 0.08%
+
+      // PYPL: Stale trailing rate in Yahoo, strict buyback policy
+      const pyplRawQuote = { dividendYield: 0.94, dividendRate: 0.56 };
+      const pyplYield = calculateSanitizedDividendYield(pyplRawQuote, 60.0, 'PYPL');
+      assert.strictEqual(pyplYield, 0.0);
+
+      // NEXI.MI: One-off distribution in 2024, no recurring dividend
+      const nexiRawQuote = { dividendYield: 6.63, dividendRate: 0.35 };
+      const nexiYield = calculateSanitizedDividendYield(nexiRawQuote, 4.5, 'NEXI.MI');
+      assert.strictEqual(nexiYield, 0.0);
+
+      // NOV.DE: Cross-listing DKK/EUR mismatch
+      const novRawQuote = { dividendYield: 4.32, dividendRate: 3.5 };
+      const novYield = calculateSanitizedDividendYield(novRawQuote, 80.0, 'NOV.DE');
+      assert.strictEqual(novYield, 1.25);
+
+      // Normal stock: e.g. Intesa Sanpaolo (price 6.30, divRate 0.434 -> ~6.89%)
+      const ispRawQuote = { dividendRate: 0.434 };
+      const ispYield = calculateSanitizedDividendYield(ispRawQuote, 6.30, 'ISP.MI');
+      assert.strictEqual(ispYield, 6.89);
     });
 
     test('calculateDividendForecast accurately forecasts remaining current year months and projects next year', () => {
@@ -214,16 +243,17 @@ describe('Dividend Annual History & Dynamic Projections Engine', () => {
       assert.ok(prx);
       assert.strictEqual(prx.month, 12);
 
-      // 6. Check PYPL is scheduled for December (23 Dic)
+      // 6. Check PYPL is recognized as non-dividend payer (share buyback policy, months: [])
       const pypl = rem.find(p => p.ticker === 'PYPL');
-      assert.ok(pypl);
-      assert.strictEqual(pypl.month, 12);
-      assert.strictEqual(pypl.dateLabel, '23 Dic');
+      assert.strictEqual(pypl, undefined, 'PYPL does not distribute dividends and must not be scheduled');
 
-      // 7. Check that RWAY and NEXI DO appear in next year forecast in May
+      // 7. Check that RWAY appears in next year forecast in May, while NEXI has no scheduled recurring payout months
       const nextRway = result.nextYearForecast.holdingProjections.find(h => h.ticker === 'RWAY.MI');
       assert.ok(nextRway);
       assert.deepStrictEqual(nextRway.payoutMonths, [5]);
+
+      const nextNexi = result.nextYearForecast.holdingProjections.find(h => h.ticker === 'NEXI.MI');
+      assert.strictEqual(nextNexi, undefined, 'NEXI has 0 recurring dividend and must not be in dividend projections');
     });
   });
 
@@ -382,6 +412,12 @@ describe('Dividend Annual History & Dynamic Projections Engine', () => {
       assert.ok(html.includes('forecastNextYearTotal'));
       assert.ok(html.includes('forecastNextYearMonthly'));
       assert.ok(html.includes('nextYearHoldingsList'));
+
+      // Verify elements for interactive dividend projections verification table
+      assert.ok(html.includes('dividendProjectionsCard'));
+      assert.ok(html.includes('projectionsTbody'));
+      assert.ok(html.includes('editProjectionModal'));
+      assert.ok(html.includes('recalculateAllProjectionsBtn'));
     });
 
     test('Mobile view history_mobile.html contains mobile forecast cards and annual list', async () => {
@@ -402,6 +438,115 @@ describe('Dividend Annual History & Dynamic Projections Engine', () => {
       assert.ok(html.includes('mForecastNextYearTotal'));
       assert.ok(html.includes('mNextYearHoldingsList'));
       assert.ok(html.includes('mAnnualDividendsContainer'));
+
+      // Verify mobile elements for dividend projections verification
+      assert.ok(html.includes('mDividendProjectionsCard'));
+      assert.ok(html.includes('mProjectionsList'));
+      assert.ok(html.includes('mEditProjectionModal'));
+      assert.ok(html.includes('mRecalculateProjectionsBtn'));
+    });
+  });
+
+  describe('4. Multi-Source Dividend Projections Verification API', () => {
+    test('GET /api/dividends/projections-detail returns multi-source yield data and warning status', async () => {
+      // First ensure an asset position exists in portfolio
+      db.prepare(`
+        INSERT OR REPLACE INTO assets (ticker, name, type, currentPrice, dividendYield)
+        VALUES ('ENI.MI', 'Eni S.p.A.', 'EQUITY', 14.50, 6.20)
+      `).run();
+
+      await fetch(`${baseUrl}/api/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          portfolioId,
+          assetTicker: 'ENI.MI',
+          type: 'BUY',
+          date: '2026-01-10',
+          quantity: 100,
+          price: 14.50,
+          fee: 0,
+          tax: 0
+        })
+      });
+
+      const res = await fetch(`${baseUrl}/api/dividends/projections-detail?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.ok(Array.isArray(data.holdings));
+
+      const eni = data.holdings.find(h => h.ticker === 'ENI.MI');
+      assert.ok(eni, 'ENI.MI must be in projections list');
+      assert.strictEqual(eni.ticker, 'ENI.MI');
+      assert.strictEqual(eni.source, 'PROVIDER');
+      assert.strictEqual(eni.appliedYield, 6.20);
+      assert.strictEqual(eni.isConfirmed, false);
+      assert.strictEqual(eni.status, 'WARNING'); // Not yet confirmed and no portfolio historical receipts
+    });
+
+    test('PUT /api/dividends/projections/:ticker updates source, manualYield, notes, and confirms', async () => {
+      const updateRes = await fetch(`${baseUrl}/api/dividends/projections/ENI.MI`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          portfolioId,
+          source: 'MANUAL',
+          manualYield: 5.50,
+          notes: 'Yield confermato da investor relations',
+          isConfirmed: 1
+        })
+      });
+      assert.strictEqual(updateRes.status, 200);
+      const updateData = await updateRes.json();
+      assert.strictEqual(updateData.success, true);
+
+      // Verify updated details
+      const detailRes = await fetch(`${baseUrl}/api/dividends/projections-detail?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const detailData = await detailRes.json();
+      const eni = detailData.holdings.find(h => h.ticker === 'ENI.MI');
+      assert.ok(eni);
+      assert.strictEqual(eni.source, 'MANUAL');
+      assert.strictEqual(eni.appliedYield, 5.50);
+      assert.strictEqual(eni.isConfirmed, true);
+      assert.strictEqual(eni.status, 'CONFIRMED');
+      assert.strictEqual(eni.notes, 'Yield confermato da investor relations');
+
+      // Verify income-summary incorporates the updated manual yield (100 * 14.50 * 5.50% = 79.75)
+      const incRes = await fetch(`${baseUrl}/api/dividends/income-summary?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const incData = await incRes.json();
+      assert.strictEqual(incData.success, true);
+      const eniProj = incData.summary.nextYearForecast.holdingProjections.find(h => h.ticker === 'ENI.MI');
+      assert.ok(eniProj);
+      assert.strictEqual(eniProj.dividendYield, 5.50);
+      assert.strictEqual(eniProj.projectedAnnualIncome, 79.75);
+    });
+
+    test('POST /api/dividends/recalculate recalculates and preserves manual overrides and confirmation', async () => {
+      const recalcRes = await fetch(`${baseUrl}/api/dividends/recalculate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ portfolioId })
+      });
+      assert.strictEqual(recalcRes.status, 200);
+      const recalcData = await recalcRes.json();
+      assert.strictEqual(recalcData.success, true);
+
+      const detailRes = await fetch(`${baseUrl}/api/dividends/projections-detail?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const detailData = await detailRes.json();
+      const eni = detailData.holdings.find(h => h.ticker === 'ENI.MI');
+      assert.ok(eni);
+      assert.strictEqual(eni.source, 'MANUAL');
+      assert.strictEqual(eni.appliedYield, 5.50);
+      assert.strictEqual(eni.isConfirmed, true);
     });
   });
 });

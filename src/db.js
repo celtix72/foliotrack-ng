@@ -235,6 +235,12 @@ function createSchema(database) {
       sharesHeld REAL NOT NULL DEFAULT 0.0,
       currentPrice REAL NOT NULL DEFAULT 0.0,
       currency TEXT NOT NULL DEFAULT 'EUR',
+      source TEXT DEFAULT 'AUTO',
+      providerYield REAL DEFAULT 0.0,
+      portfolioYield REAL DEFAULT 0.0,
+      manualYield REAL DEFAULT NULL,
+      isConfirmed INTEGER DEFAULT 0,
+      notes TEXT DEFAULT NULL,
       calculatedAt TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(portfolioId, assetTicker),
       FOREIGN KEY (portfolioId) REFERENCES portfolios(id) ON DELETE CASCADE
@@ -388,6 +394,12 @@ function createSchema(database) {
   try { database.exec("CREATE INDEX IF NOT EXISTS idx_portfolio_losses_port_type_exp ON portfolio_losses(portfolioId, assetType, expiryDate)"); } catch {}
   try { database.exec("ALTER TABLE portfolios ADD COLUMN netValue REAL DEFAULT 0.0"); } catch {}
   try { database.exec("ALTER TABLE portfolios ADD COLUMN estimatedTax REAL DEFAULT 0.0"); } catch {}
+  try { database.exec("ALTER TABLE dividend_projections ADD COLUMN source TEXT DEFAULT 'AUTO'"); } catch {}
+  try { database.exec("ALTER TABLE dividend_projections ADD COLUMN providerYield REAL DEFAULT 0.0"); } catch {}
+  try { database.exec("ALTER TABLE dividend_projections ADD COLUMN portfolioYield REAL DEFAULT 0.0"); } catch {}
+  try { database.exec("ALTER TABLE dividend_projections ADD COLUMN manualYield REAL DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE dividend_projections ADD COLUMN isConfirmed INTEGER DEFAULT 0"); } catch {}
+  try { database.exec("ALTER TABLE dividend_projections ADD COLUMN notes TEXT DEFAULT NULL"); } catch {}
 
   try {
     database.exec(`

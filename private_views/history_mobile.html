@@ -119,6 +119,42 @@
       </div>
     </div>
 
+    <!-- Verifica Proiezioni Dividendi (Mobile Card) -->
+    <div id="mDividendProjectionsCard" class="signature-card p-3 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-1.5">
+          <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <span class="font-bold text-xs text-gray-900 dark:text-white">Verifica Proiezioni</span>
+            <p class="text-[9px] font-mono text-gray-400">Provider vs Storico Portafoglio</p>
+          </div>
+        </div>
+        <button id="mRecalculateProjectionsBtn" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-mono flex items-center gap-1 transition shadow-xs">
+          <span id="mRecalcSpinnerIcon">🔄</span> Ricalcola
+        </button>
+      </div>
+
+      <!-- Filtri & Contatori -->
+      <div class="grid grid-cols-3 gap-1 text-center font-mono text-[10px]">
+        <button type="button" data-m-proj-filter="all" class="m-proj-filter-btn active p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold transition">
+          Tutti (<span id="mProjCountAll">0</span>)
+        </button>
+        <button type="button" data-m-proj-filter="warning" class="m-proj-filter-btn p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-transparent text-gray-600 dark:text-gray-400 transition">
+          Da verif. (<span id="mProjCountWarning">0</span>)
+        </button>
+        <button type="button" data-m-proj-filter="confirmed" class="m-proj-filter-btn p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-transparent text-gray-600 dark:text-gray-400 transition">
+          Confermati (<span id="mProjCountConfirmed">0</span>)
+        </button>
+      </div>
+
+      <!-- Lista Card Proiezioni -->
+      <div id="mProjectionsList" class="space-y-2 pt-1 font-mono text-xs">
+        <div class="text-center text-gray-400 py-3">Caricamento proiezioni...</div>
+      </div>
+    </div>
+
     <!-- Dividendi per Anno Card (Mobile) -->
     <div class="signature-card p-3 space-y-2">
       <div class="flex items-center justify-between text-xs">
@@ -602,13 +638,320 @@
     document.getElementById('mPortfolioSelect').addEventListener('change', (e) => {
       localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
       loadData();
+      loadMobileProjectionsDetail();
+    });
+
+    // --- Dividend Projections Mobile Logic ---
+    let currentMobileProjectionsList = [];
+    let currentMobileProjectionsFilter = 'all';
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function loadMobileProjectionsDetail() {
+      const pId = document.getElementById('mPortfolioSelect').value;
+      let url = '/api/dividends/projections-detail';
+      if (pId && pId !== 'all') url += `?portfolioId=${pId}`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.holdings)) {
+          currentMobileProjectionsList = data.holdings;
+          renderMobileProjectionsList(data.holdings, data.summary);
+        }
+      } catch (err) {
+        console.warn('Errore proiezioni mobile:', err);
+      }
+    }
+
+    function renderMobileProjectionsList(holdings, summary) {
+      const container = document.getElementById('mProjectionsList');
+      if (!container) return;
+
+      const totalCount = holdings.length;
+      const warningCount = holdings.filter(h => h.status === 'WARNING').length;
+      const confirmedCount = holdings.filter(h => h.isConfirmed).length;
+
+      document.getElementById('mProjCountAll').textContent = totalCount;
+      document.getElementById('mProjCountWarning').textContent = warningCount;
+      document.getElementById('mProjCountConfirmed').textContent = confirmedCount;
+
+      let filtered = holdings;
+      if (currentMobileProjectionsFilter === 'warning') {
+        filtered = holdings.filter(h => h.status === 'WARNING');
+      } else if (currentMobileProjectionsFilter === 'confirmed') {
+        filtered = holdings.filter(h => h.isConfirmed);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 py-3">Nessuna proiezione corrispondente al filtro.</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(h => {
+        let statusBadge = '';
+        if (h.isConfirmed) {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"><span>✅</span> Confermato</span>`;
+        } else if (h.status === 'WARNING') {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-500/20"><span>⚠️</span> Da Verificare</span>`;
+        } else {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] bg-gray-100 dark:bg-white/10 text-gray-500">Auto</span>`;
+        }
+
+        let sourceLabel = '';
+        if (h.source === 'PROVIDER') sourceLabel = 'Mercato';
+        else if (h.source === 'PORTFOLIO_HISTORY') sourceLabel = 'Storico';
+        else if (h.source === 'NONE') sourceLabel = 'Buyback (0%)';
+        else if (h.source === 'MANUAL') sourceLabel = 'Manuale';
+        else sourceLabel = 'Auto';
+
+        const warningHint = (!h.isConfirmed && h.warningReason)
+          ? `<div class="text-[9px] text-amber-600 dark:text-amber-400 font-sans flex items-center gap-1 bg-amber-500/5 p-1 rounded border border-amber-500/10"><span>⚠️</span> ${escapeHtml(h.warningReason)}</div>`
+          : '';
+
+        return `
+          <div class="p-2.5 rounded-xl bg-gray-50/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 space-y-1.5" data-ticker="${h.ticker}">
+            <div class="flex items-start justify-between gap-1">
+              <div class="min-w-0 pr-1">
+                <div class="flex items-center space-x-1.5">
+                  <span class="font-bold text-gray-900 dark:text-white text-xs">${h.ticker}</span>
+                  <span class="px-1 py-0.2 rounded text-[8px] bg-gray-100 dark:bg-white/10 text-gray-500">${h.type}</span>
+                </div>
+                <div class="text-[10px] text-gray-400 font-sans truncate max-w-[170px] mt-0.5">${escapeHtml(h.name)}</div>
+                ${h.notes ? `<div class="text-[9px] text-emerald-600 dark:text-emerald-400 font-sans truncate max-w-[200px]">📝 ${escapeHtml(h.notes)}</div>` : ''}
+              </div>
+              <div class="text-right whitespace-nowrap">
+                ${statusBadge}
+              </div>
+            </div>
+
+            ${warningHint}
+
+            <div class="grid grid-cols-3 gap-1 pt-1 border-t border-gray-100 dark:border-white/5 text-[10px] text-center">
+              <div class="bg-white dark:bg-[#141416] p-1 rounded border border-gray-100 dark:border-white/5">
+                <div class="text-[8px] text-gray-400">Provider</div>
+                <div class="font-bold text-gray-800 dark:text-gray-200">${fmtPct(h.providerYield)}</div>
+              </div>
+              <div class="bg-white dark:bg-[#141416] p-1 rounded border border-gray-100 dark:border-white/5">
+                <div class="text-[8px] text-gray-400">Storico Ptf</div>
+                <div class="font-bold ${h.portfolioYield > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}">${h.portfolioYield > 0 ? fmtPct(h.portfolioYield) : '0.0%'}</div>
+              </div>
+              <div class="bg-white dark:bg-[#141416] p-1 rounded border border-emerald-500/20 bg-emerald-500/[0.03]">
+                <div class="text-[8px] text-gray-400">${sourceLabel}</div>
+                <div class="font-bold text-gray-900 dark:text-white">${fmtPct(h.appliedYield)}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1 text-[11px]">
+              <div>
+                <span class="text-[10px] text-gray-400 font-sans">Previsto: </span>
+                <span class="font-bold ${h.projectedAnnualIncome > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}">${fmtEur(h.projectedAnnualIncome)}/a</span>
+              </div>
+              <div class="flex items-center space-x-1 font-sans">
+                ${!h.isConfirmed ? `
+                  <button type="button" class="m-btn-confirm-proj px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold transition" data-ticker="${h.ticker}" data-portfolio="${h.portfolioId}">
+                    ✓ Conferma
+                  </button>
+                ` : `
+                  <button type="button" class="m-btn-confirm-proj px-1.5 py-1 rounded bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-300 text-[9px] font-medium transition" data-ticker="${h.ticker}" data-portfolio="${h.portfolioId}" data-unconfirm="1">
+                    Annulla
+                  </button>
+                `}
+                <button type="button" class="m-btn-edit-proj px-2 py-1 rounded bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-[10px] font-medium transition" data-ticker="${h.ticker}" data-portfolio="${h.portfolioId}">
+                  ⚙️ Modifica
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.m-btn-confirm-proj').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const tkr = btn.getAttribute('data-ticker');
+          const pId = btn.getAttribute('data-portfolio');
+          const unconfirm = btn.getAttribute('data-unconfirm') === '1';
+          await updateMobileProjection(tkr, pId, { isConfirmed: unconfirm ? 0 : 1 });
+        });
+      });
+
+      container.querySelectorAll('.m-btn-edit-proj').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tkr = btn.getAttribute('data-ticker');
+          const pId = btn.getAttribute('data-portfolio');
+          const h = currentMobileProjectionsList.find(x => x.ticker === tkr && String(x.portfolioId) === String(pId));
+          if (h) openMobileEditProjectionModal(h);
+        });
+      });
+    }
+
+    async function updateMobileProjection(ticker, portfolioId, payload) {
+      try {
+        const res = await fetch(`/api/dividends/projections/${encodeURIComponent(ticker)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolioId, ...payload })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadMobileProjectionsDetail();
+          await loadData();
+        } else {
+          alert('Errore: ' + (data.error || 'Operazione fallita'));
+        }
+      } catch (err) {
+        alert('Errore di connessione: ' + err.message);
+      }
+    }
+
+    function openMobileEditProjectionModal(h) {
+      const modal = document.getElementById('mEditProjectionModal');
+      if (!modal) return;
+
+      document.getElementById('mModalTicker').value = h.ticker;
+      document.getElementById('mModalPortfolioId').value = h.portfolioId;
+      document.getElementById('mModalTickerBadge').textContent = `${h.ticker} - ${h.name || ''}`;
+      document.getElementById('mModalSource').value = h.source || 'PROVIDER';
+      document.getElementById('mModalManualYield').value = (h.manualYield !== null && h.manualYield !== undefined) ? h.manualYield : h.appliedYield;
+      document.getElementById('mModalNotes').value = h.notes || '';
+      document.getElementById('mModalIsConfirmed').checked = h.isConfirmed;
+
+      const manualRow = document.getElementById('mModalManualYieldRow');
+      if (manualRow) {
+        manualRow.classList.toggle('hidden', h.source !== 'MANUAL');
+      }
+
+      modal.showModal();
+    }
+
+    document.getElementById('mModalSource')?.addEventListener('change', (e) => {
+      const manualRow = document.getElementById('mModalManualYieldRow');
+      if (manualRow) {
+        manualRow.classList.toggle('hidden', e.target.value !== 'MANUAL');
+      }
+    });
+
+    document.getElementById('mModalCloseBtn')?.addEventListener('click', () => {
+      document.getElementById('mEditProjectionModal')?.close();
+    });
+
+    document.getElementById('mModalCancelBtn')?.addEventListener('click', () => {
+      document.getElementById('mEditProjectionModal')?.close();
+    });
+
+    document.getElementById('mEditProjectionForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const tkr = document.getElementById('mModalTicker').value;
+      const pId = document.getElementById('mModalPortfolioId').value;
+      const source = document.getElementById('mModalSource').value;
+      const manualYield = document.getElementById('mModalManualYield').value;
+      const notes = document.getElementById('mModalNotes').value.trim();
+      const isConfirmed = document.getElementById('mModalIsConfirmed').checked;
+
+      await updateMobileProjection(tkr, pId, { source, manualYield, notes, isConfirmed });
+      document.getElementById('mEditProjectionModal')?.close();
+    });
+
+    document.getElementById('mRecalculateProjectionsBtn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('mRecalculateProjectionsBtn');
+      const icon = document.getElementById('mRecalcSpinnerIcon');
+      if (btn) btn.disabled = true;
+      if (icon) icon.classList.add('animate-spin');
+
+      try {
+        const pId = document.getElementById('mPortfolioSelect').value;
+        const res = await fetch('/api/dividends/recalculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolioId: pId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadMobileProjectionsDetail();
+          await loadData();
+        } else {
+          alert('Errore ricalcolo: ' + (data.error || 'Impossibile ricalcolare'));
+        }
+      } catch (err) {
+        alert('Errore di connessione: ' + err.message);
+      } finally {
+        if (btn) btn.disabled = false;
+        if (icon) icon.classList.remove('animate-spin');
+      }
+    });
+
+    document.querySelectorAll('.m-proj-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.m-proj-filter-btn').forEach(b => {
+          b.className = 'm-proj-filter-btn p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-transparent text-gray-600 dark:text-gray-400 transition';
+        });
+        btn.className = 'm-proj-filter-btn active p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold transition';
+        currentMobileProjectionsFilter = btn.getAttribute('data-m-proj-filter');
+        renderMobileProjectionsList(currentMobileProjectionsList);
+      });
     });
 
     document.addEventListener('DOMContentLoaded', async () => {
       await loadPortfolios();
       await loadData();
+      await loadMobileProjectionsDetail();
     });
   </script>
+
+  <!-- Edit Projection Modal (Mobile) -->
+  <dialog id="mEditProjectionModal" class="rounded-2xl p-4 bg-white dark:bg-[#18181b] text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 shadow-2xl w-[92vw] max-w-sm backdrop:bg-black/60 m-auto">
+    <form id="mEditProjectionForm" method="dialog" class="space-y-3 font-mono text-xs">
+      <input type="hidden" id="mModalTicker">
+      <input type="hidden" id="mModalPortfolioId">
+      <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-2">
+        <div>
+          <span class="text-[10px] text-gray-400">Modifica Proiezione</span>
+          <div class="flex items-center space-x-1.5 mt-0.5">
+            <span class="font-bold text-sm" id="mModalTickerBadge">TICKER</span>
+          </div>
+        </div>
+        <button type="button" id="mModalCloseBtn" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm">✕</button>
+      </div>
+
+      <div class="space-y-1">
+        <label class="block text-gray-400 text-[10px]">Fonte Yield:</label>
+        <select id="mModalSource" class="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs text-gray-900 dark:text-white">
+          <option value="PROVIDER">🌐 Market Provider (Yahoo/Google)</option>
+          <option value="PORTFOLIO_HISTORY">🏦 Storico Portafoglio (Ultimi 12M)</option>
+          <option value="MANUAL">✏️ Personalizzato (Manuale)</option>
+          <option value="NONE">🚫 Nessun Dividendo (0% - Buyback)</option>
+        </select>
+      </div>
+
+      <div id="mModalManualYieldRow" class="space-y-1 hidden">
+        <label class="block text-gray-400 text-[10px]">Yield Annuo Manuale (%):</label>
+        <input type="number" step="0.01" min="0" max="100" id="mModalManualYield" class="w-full px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs tabular-nums text-gray-900 dark:text-white" placeholder="es. 1.25">
+      </div>
+
+      <div class="space-y-1">
+        <label class="block text-gray-400 text-[10px]">Note / Motivazione:</label>
+        <input type="text" id="mModalNotes" class="w-full px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs text-gray-900 dark:text-white" placeholder="es. Politica solo buyback, yield stimato 1.2%">
+      </div>
+
+      <label class="flex items-center space-x-2 pt-1 cursor-pointer">
+        <input type="checkbox" id="mModalIsConfirmed" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+        <span class="text-[11px] text-gray-700 dark:text-gray-300">Conferma come verificato</span>
+      </label>
+
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100 dark:border-white/10">
+        <button type="button" id="mModalCancelBtn" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 text-xs font-medium">Annulla</button>
+        <button type="submit" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">Salva</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>
 

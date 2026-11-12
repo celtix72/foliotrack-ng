@@ -67,11 +67,11 @@ const KNOWN_ASSET_SCHEDULES = {
     frequency: 'ANNUAL',
     note: 'Annuale a Maggio (già staccato)'
   },
-  // Nexi: dividendo annuale staccato solo a Maggio (nessun dividendo a fine anno)
+  // Nexi: nessun dividendo ordinario ricorrente
   'NEXI.MI': {
     payoutMonths: [5],
     frequency: 'ANNUAL',
-    note: 'Annuale a Maggio (già staccato)'
+    note: 'Nessun dividendo ordinario ricorrente'
   },
   // Prosus: dividendo annuale a Dicembre
   'PRX.AS': {
@@ -85,18 +85,19 @@ const KNOWN_ASSET_SCHEDULES = {
     frequency: 'QUARTERLY',
     note: 'Trimestrale Nov'
   },
-  // PayPal Holdings: trimestrale Mar, Giu, Set, Dic (23 Dic 2026)
+  // PayPal Holdings: non distribuisce dividendi ordinari (politica di buyback)
   'PYPL': {
     payoutMonths: [3, 6, 9, 12],
     frequency: 'QUARTERLY',
     dayOfMonth: 23,
-    note: '23 Dic'
+    note: 'Nessun dividendo ordinario (buyback)'
   },
-  // Micron Technology: trimestrale con stacco a Dicembre
+  // Micron Technology: trimestrale con stacco a Dicembre (dividendo simbolico ~0.08%)
   'MU': {
     payoutMonths: [3, 6, 9, 12],
     frequency: 'QUARTERLY',
-    note: 'Dicembre'
+    expectedYield: 0.08,
+    note: 'Dicembre (simbolico ~0.08%)'
   },
   // UnitedHealth Group: trimestrale Mar, Giu, Set, Dic
   'UNH': {
@@ -131,10 +132,12 @@ const KNOWN_ASSET_SCHEDULES = {
     payoutMonths: [1, 4, 7, 10],
     frequency: 'QUARTERLY'
   },
-  // Novo Nordisk: semestrale Aprile, Agosto
+  // Novo Nordisk: semestrale Aprile, Agosto (~1.25% yield effettivo)
   'NOV.DE': {
     payoutMonths: [4, 8],
-    frequency: 'SEMI_ANNUAL'
+    frequency: 'SEMI_ANNUAL',
+    expectedYield: 1.25,
+    note: 'Semestrale Novo Nordisk (~1.25%)'
   },
   // Kaspi.kz: trimestrale Mar, Giu, Set
   'KSPI': {
@@ -293,7 +296,21 @@ function calculateDividendForecast(activeHoldings = [], transactions = [], asset
     const marketValue = Number(h.marketValue) || (qty * price);
     totalHoldingsMarketValue += marketValue;
 
-    let yieldPct = Number(h.dividendYield) || Number(a.dividendYield) || 0.0;
+    // Check if asset has an active appliedYield (e.g. from dividend_projections)
+    let yieldPct = (h.appliedYield !== undefined && h.appliedYield !== null)
+      ? Number(h.appliedYield)
+      : (h.dividendYield !== undefined && h.dividendYield !== null && !isNaN(Number(h.dividendYield)))
+        ? Number(h.dividendYield)
+        : Number(a.dividendYield) || 0.0;
+
+    // Sanitize known non-payers and anomalous values if not manually confirmed
+    if (!h.isConfirmed) {
+      if (tkr === 'PYPL') yieldPct = 0.0;
+      else if (tkr === 'NOV.DE' && yieldPct > 2.5) yieldPct = 1.25;
+      else if (tkr === 'MU' && yieldPct > 2.0) yieldPct = 0.08;
+      else if (tkr === 'NEXI.MI' && yieldPct > 3.0) yieldPct = 0.0;
+    }
+
     let annualIncome = 0.0;
 
     const history = assetHistoryMap.get(tkr) || [];

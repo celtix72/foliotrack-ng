@@ -174,6 +174,68 @@
         </div>
       </div>
 
+      <!-- Tabella Proiezioni Dividendi per Titolo, Confronto Fonti & Conferma -->
+      <div id="dividendProjectionsCard" class="signature-card p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-gray-100 dark:border-white/5">
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              <span>Proiezioni Dividendi per Titolo & Verifica Fonti</span>
+            </h3>
+            <p class="text-xs text-gray-500 font-mono mt-0.5">
+              Confronta la stima di mercato (Yahoo Finance) con lo storico reale maturato nel tuo conto. Conferma o correggi le proiezioni con un clic.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="recalculateAllProjectionsBtn" type="button" class="btn-pill px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md flex items-center gap-1.5 transition">
+              <svg id="recalcSpinnerIcon" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Ricalcola Proiezioni</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter bar & counters -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-mono">
+          <div class="flex flex-wrap items-center gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl">
+            <button type="button" class="proj-filter-btn px-2.5 py-1 rounded-lg bg-white dark:bg-[#151518] font-bold text-gray-900 dark:text-white shadow-xs" data-filter="all">Tutti (<span id="projCountAll">0</span>)</button>
+            <button type="button" class="proj-filter-btn px-2.5 py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white font-medium" data-filter="warning">⚠️ Da Verificare (<span id="projCountWarning">0</span>)</button>
+            <button type="button" class="proj-filter-btn px-2.5 py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white font-medium" data-filter="confirmed">✅ Confermati (<span id="projCountConfirmed">0</span>)</button>
+            <button type="button" class="proj-filter-btn px-2.5 py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white font-medium" data-filter="income">💰 Con Dividendo (<span id="projCountIncome">0</span>)</button>
+          </div>
+
+          <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+            <span>Totale Proiettato Annuo: <b id="projSummaryTotalAnnual" class="text-emerald-600 dark:text-emerald-400 font-bold tabular-nums">€ 0.00</b></span>
+            <span>(Media: <span id="projSummaryTotalMonthly" class="text-blue-600 dark:text-blue-400 font-bold tabular-nums">€ 0.00</span>/m)</span>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto flex-1 border border-gray-100 dark:border-white/5 rounded-xl">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
+            <thead class="bg-gray-50 dark:bg-white/5 text-gray-500">
+              <tr>
+                <th class="px-3.5 py-3">Titolo / Asset</th>
+                <th class="px-3 py-3 text-right">Controvalore Detenuto</th>
+                <th class="px-3 py-3 text-center">Stima Mercato (Provider)</th>
+                <th class="px-3 py-3 text-center">Storico Reale Portafoglio</th>
+                <th class="px-3 py-3 text-center">Fonte Scelta & Yield</th>
+                <th class="px-3 py-3 text-right">Proiezione Annua</th>
+                <th class="px-3 py-3 text-center">Stato</th>
+                <th class="px-3 py-3 text-right">Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="projectionsTbody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums">
+              <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">Caricamento tabella proiezioni...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Tabella Dividendi e Cedole Staccati per Anno -->
       <div class="signature-card overflow-hidden flex flex-col justify-between">
         <div class="p-5 border-b border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -353,6 +415,59 @@
       </form>
     </div>
   </div>
+
+  <!-- Modal Modifica Proiezione Dividendo Titolo -->
+  <dialog id="editProjectionModal" class="signature-card p-0 rounded-2xl w-full max-w-md border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/60 font-sans">
+    <div class="p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-white/10 pb-3">
+        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <span>🎯 Configura Proiezione Dividendi</span>
+          <span id="modalProjTickerBadge" class="px-2 py-0.5 rounded text-xs font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">--</span>
+        </h3>
+        <form method="dialog">
+          <button type="submit" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg font-bold">&times;</button>
+        </form>
+      </div>
+
+      <form id="editProjectionForm" class="space-y-4 text-xs font-mono">
+        <input type="hidden" id="modalProjTicker">
+        <input type="hidden" id="modalProjPortfolioId">
+
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Fonte di Calcolo *</label>
+          <select id="modalProjSource" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-medium text-xs focus:ring-2 focus:ring-emerald-500">
+            <option value="PROVIDER">🌐 Provider di Mercato (Yahoo Finance)</option>
+            <option value="PORTFOLIO_HISTORY">🏦 Storico Reale del Portafoglio (Ultimi 12 mesi)</option>
+            <option value="NONE">🚫 Nessun Dividendo (0.00% - Politica di solo buyback / no dividendo)</option>
+            <option value="MANUAL">✏️ Personalizzato / Manuale (Specifica Rendimento %)</option>
+          </select>
+        </div>
+
+        <div id="modalManualYieldRow" class="hidden">
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Rendimento Annuo Stimato (%) *</label>
+          <input type="number" step="0.01" min="0" max="100" id="modalProjManualYield" placeholder="es. 1.25"
+            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-emerald-500">
+          <span class="text-[10px] text-gray-400 mt-0.5 block font-sans">Inserisci il dividend yield stimato (es. 0.08% per Micron, 1.25% per Novo Nordisk)</span>
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Note Operative / Motivazione</label>
+          <textarea id="modalProjNotes" rows="2" placeholder="es. Politica esclusiva di buyback, dividendo simbolico approvato da CdA..."
+            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-1">
+          <input type="checkbox" id="modalProjIsConfirmed" checked class="rounded border-gray-300 dark:border-white/10 text-emerald-600 focus:ring-emerald-500">
+          <label for="modalProjIsConfirmed" class="text-xs font-sans text-gray-700 dark:text-gray-300 font-medium">Contrassegna come <b>Verificato & Confermato</b></label>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-3 border-t border-gray-200 dark:border-white/10 font-sans">
+          <button type="button" onclick="document.getElementById('editProjectionModal').close()" class="btn-pill px-4 py-1.5 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium">Annulla</button>
+          <button type="submit" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow">Salva Proiezione</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
 
   <!-- Vendors & Scripts -->
   <script src="/vendor/chartjs/chart.umd.min.js"></script>
@@ -934,6 +1049,277 @@
       });
     }
 
+    // --- Dividend Projections & Multi-Source Verification Engine ---
+    let currentProjectionsList = [];
+    let currentProjectionsFilter = 'all';
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function loadProjectionsDetail() {
+      const pId = document.getElementById('portfolioSelect').value;
+      let url = '/api/dividends/projections-detail';
+      if (pId && pId !== 'all') url += `?portfolioId=${pId}`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.holdings)) {
+          currentProjectionsList = data.holdings;
+          renderProjectionsTable(data.holdings, data.summary);
+        }
+      } catch (err) {
+        console.warn('Errore caricamento proiezioni dettagliate:', err);
+      }
+    }
+
+    function renderProjectionsTable(holdings, summary) {
+      const tbody = document.getElementById('projectionsTbody');
+      if (!tbody) return;
+
+      const totalCount = holdings.length;
+      const warningCount = holdings.filter(h => h.status === 'WARNING').length;
+      const confirmedCount = holdings.filter(h => h.isConfirmed).length;
+      const incomeCount = holdings.filter(h => h.projectedAnnualIncome > 0).length;
+
+      document.getElementById('projCountAll').textContent = totalCount;
+      document.getElementById('projCountWarning').textContent = warningCount;
+      document.getElementById('projCountConfirmed').textContent = confirmedCount;
+      document.getElementById('projCountIncome').textContent = incomeCount;
+
+      const totalAnnual = summary ? summary.totalProjectedAnnual : holdings.reduce((s, h) => s + h.projectedAnnualIncome, 0);
+      const totalMonthly = summary ? summary.totalProjectedMonthly : (totalAnnual / 12);
+      document.getElementById('projSummaryTotalAnnual').textContent = fmtEur(totalAnnual);
+      document.getElementById('projSummaryTotalMonthly').textContent = fmtEur(totalMonthly);
+
+      let filtered = holdings;
+      if (currentProjectionsFilter === 'warning') {
+        filtered = holdings.filter(h => h.status === 'WARNING');
+      } else if (currentProjectionsFilter === 'confirmed') {
+        filtered = holdings.filter(h => h.isConfirmed);
+      } else if (currentProjectionsFilter === 'income') {
+        filtered = holdings.filter(h => h.projectedAnnualIncome > 0);
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="px-4 py-8 text-center text-gray-400 font-mono">
+              Nessuna proiezione corrispondente al filtro selezionato.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(h => {
+        let statusBadge = '';
+        if (h.isConfirmed) {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"><span>✅</span> Confermato</span>`;
+        } else if (h.status === 'WARNING') {
+          statusBadge = `
+            <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-500/20 cursor-help" title="${escapeHtml(h.warningReason || 'Dato da verificare')}">
+              <span>⚠️</span> Da Verificare
+            </div>
+          `;
+        } else {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400">Automatico</span>`;
+        }
+
+        let sourceLabel = '';
+        if (h.source === 'PROVIDER') sourceLabel = '🌐 Mercato (Yahoo)';
+        else if (h.source === 'PORTFOLIO_HISTORY') sourceLabel = '🏦 Storico Portafoglio';
+        else if (h.source === 'NONE') sourceLabel = '🚫 Nessun Div. (0%)';
+        else if (h.source === 'MANUAL') sourceLabel = '✏️ Manuale';
+        else sourceLabel = 'Auto';
+
+        const warningHint = (!h.isConfirmed && h.warningReason)
+          ? `<div class="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-sans flex items-center gap-1"><span>⚠️</span> ${escapeHtml(h.warningReason)}</div>`
+          : '';
+
+        return `
+          <tr class="hover:bg-gray-50/50 dark:hover:bg-white/5 transition group" data-ticker="${h.ticker}">
+            <td class="px-3.5 py-3">
+              <div class="flex items-center space-x-1.5">
+                <span class="font-bold text-gray-900 dark:text-white text-xs">${h.ticker}</span>
+                <span class="px-1 py-0.2 rounded text-[9px] bg-gray-100 dark:bg-white/10 text-gray-500">${h.type}</span>
+              </div>
+              <span class="text-[11px] text-gray-400 font-sans truncate max-w-[170px] block mt-0.5">${escapeHtml(h.name)}</span>
+              ${h.notes ? `<span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans block truncate max-w-[200px] mt-0.5" title="${escapeHtml(h.notes)}">📝 ${escapeHtml(h.notes)}</span>` : ''}
+              ${warningHint}
+            </td>
+            <td class="px-3 py-3 text-right">
+              <div class="font-bold text-gray-900 dark:text-white">${fmtEur(h.marketValue)}</div>
+              <div class="text-[10px] text-gray-400">${Number(h.quantity).toLocaleString('it-IT')} quote @ ${fmtEur(h.currentPrice)}</div>
+            </td>
+            <td class="px-3 py-3 text-center">
+              <div class="font-bold ${h.providerYield > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400'}">${fmtPct(h.providerYield)}</div>
+              <div class="text-[10px] text-gray-400">${h.providerYield > 0 ? fmtEur(h.providerAnnualIncome) + '/a' : '-'}</div>
+            </td>
+            <td class="px-3 py-3 text-center">
+              <div class="font-bold ${h.portfolioYield > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}">${h.portfolioYield > 0 ? fmtPct(h.portfolioYield) : '0.00%'}</div>
+              <div class="text-[10px] text-gray-400">${h.portfolioAnnualIncome > 0 ? fmtEur(h.portfolioAnnualIncome) + ' incassati' : 'Nessun incasso'}</div>
+            </td>
+            <td class="px-3 py-3 text-center">
+              <span class="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300">
+                ${sourceLabel}
+              </span>
+              <div class="font-bold text-xs mt-0.5 text-gray-900 dark:text-white">${fmtPct(h.appliedYield)}</div>
+            </td>
+            <td class="px-3 py-3 text-right">
+              <div class="font-bold text-sm ${h.projectedAnnualIncome > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}">
+                ${fmtEur(h.projectedAnnualIncome)}
+              </div>
+              <div class="text-[10px] text-gray-400">${fmtEur(h.projectedMonthlyIncome)}/m</div>
+            </td>
+            <td class="px-3 py-3 text-center">
+              ${statusBadge}
+            </td>
+            <td class="px-3 py-3 text-right font-sans">
+              <div class="flex items-center justify-end space-x-1">
+                ${!h.isConfirmed ? `
+                  <button type="button" class="btn-confirm-proj px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold transition shadow-xs flex items-center gap-0.5" data-ticker="${h.ticker}" data-portfolio="${h.portfolioId}">
+                    <span>✓</span> Conferma
+                  </button>
+                ` : `
+                  <button type="button" class="btn-confirm-proj px-2 py-1 rounded bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 text-[10px] font-medium transition" data-ticker="${h.ticker}" data-portfolio="${h.portfolioId}" data-unconfirm="1">
+                    Annulla Conf.
+                  </button>
+                `}
+                <button type="button" class="btn-edit-proj px-2 py-1 rounded bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-[11px] font-medium transition"
+                  data-ticker="${h.ticker}" data-portfolio="${h.portfolioId}">
+                  ⚙️ Modifica
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('.btn-confirm-proj').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const tkr = btn.getAttribute('data-ticker');
+          const pId = btn.getAttribute('data-portfolio');
+          const unconfirm = btn.getAttribute('data-unconfirm') === '1';
+          await updateProjection(tkr, pId, { isConfirmed: unconfirm ? 0 : 1 });
+        });
+      });
+
+      tbody.querySelectorAll('.btn-edit-proj').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tkr = btn.getAttribute('data-ticker');
+          const pId = btn.getAttribute('data-portfolio');
+          const h = currentProjectionsList.find(x => x.ticker === tkr && String(x.portfolioId) === String(pId));
+          if (h) openEditProjectionModal(h);
+        });
+      });
+    }
+
+    async function updateProjection(ticker, portfolioId, payload) {
+      try {
+        const res = await fetch(`/api/dividends/projections/${encodeURIComponent(ticker)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolioId, ...payload })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadProjectionsDetail();
+          await loadIncomeSummary();
+        } else {
+          alert('Errore: ' + (data.error || 'Operazione fallita'));
+        }
+      } catch (err) {
+        alert('Errore di connessione: ' + err.message);
+      }
+    }
+
+    function openEditProjectionModal(h) {
+      const modal = document.getElementById('editProjectionModal');
+      if (!modal) return;
+
+      document.getElementById('modalProjTicker').value = h.ticker;
+      document.getElementById('modalProjPortfolioId').value = h.portfolioId;
+      document.getElementById('modalProjTickerBadge').textContent = h.ticker;
+      document.getElementById('modalProjSource').value = h.source || 'PROVIDER';
+      document.getElementById('modalProjManualYield').value = (h.manualYield !== null && h.manualYield !== undefined) ? h.manualYield : h.appliedYield;
+      document.getElementById('modalProjNotes').value = h.notes || '';
+      document.getElementById('modalProjIsConfirmed').checked = h.isConfirmed;
+
+      const manualRow = document.getElementById('modalManualYieldRow');
+      if (manualRow) {
+        manualRow.classList.toggle('hidden', h.source !== 'MANUAL');
+      }
+
+      modal.showModal();
+    }
+
+    document.getElementById('modalProjSource')?.addEventListener('change', (e) => {
+      const manualRow = document.getElementById('modalManualYieldRow');
+      if (manualRow) {
+        manualRow.classList.toggle('hidden', e.target.value !== 'MANUAL');
+      }
+    });
+
+    document.getElementById('editProjectionForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const tkr = document.getElementById('modalProjTicker').value;
+      const pId = document.getElementById('modalProjPortfolioId').value;
+      const source = document.getElementById('modalProjSource').value;
+      const manualYield = document.getElementById('modalProjManualYield').value;
+      const notes = document.getElementById('modalProjNotes').value.trim();
+      const isConfirmed = document.getElementById('modalProjIsConfirmed').checked;
+
+      await updateProjection(tkr, pId, { source, manualYield, notes, isConfirmed });
+      document.getElementById('editProjectionModal')?.close();
+    });
+
+    document.getElementById('recalculateAllProjectionsBtn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('recalculateAllProjectionsBtn');
+      const icon = document.getElementById('recalcSpinnerIcon');
+      if (btn) btn.disabled = true;
+      if (icon) icon.classList.add('animate-spin');
+
+      try {
+        const pId = document.getElementById('portfolioSelect').value;
+        const res = await fetch('/api/dividends/recalculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolioId: pId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadProjectionsDetail();
+          await loadIncomeSummary();
+        } else {
+          alert('Errore ricalcolo: ' + (data.error || 'Impossibile ricalcolare'));
+        }
+      } catch (err) {
+        alert('Errore di connessione: ' + err.message);
+      } finally {
+        if (btn) btn.disabled = false;
+        if (icon) icon.classList.remove('animate-spin');
+      }
+    });
+
+    document.querySelectorAll('.proj-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.proj-filter-btn').forEach(b => {
+          b.className = 'proj-filter-btn px-2.5 py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white font-medium';
+        });
+        btn.className = 'proj-filter-btn px-2.5 py-1 rounded-lg bg-white dark:bg-[#151518] font-bold text-gray-900 dark:text-white shadow-xs';
+        currentProjectionsFilter = btn.getAttribute('data-filter');
+        renderProjectionsTable(currentProjectionsList);
+      });
+    });
+
     // Modal controls for manual loss
     const lossModal = document.getElementById('addLossModal');
     document.getElementById('addLossBtn').addEventListener('click', () => lossModal.classList.remove('hidden'));
@@ -968,6 +1354,7 @@
     document.getElementById('portfolioSelect').addEventListener('change', (e) => {
       localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
       loadIncomeSummary();
+      loadProjectionsDetail();
       loadPerformanceData();
       loadTaxZainetto();
     });
@@ -1012,6 +1399,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       await loadPortfolios();
       await loadIncomeSummary();
+      await loadProjectionsDetail();
       await loadPerformanceData();
       await loadTaxZainetto();
     });

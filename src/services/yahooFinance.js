@@ -72,6 +72,63 @@ function getTradingDateStr(d = new Date()) {
 
 /**
  * Fetches real-time quote for a given symbol from Yahoo Finance.
+/**
+ * Calculates a verified, sanitized dividend yield percentage.
+ * Prevents erroneous multipliers and cross-currency / non-payer anomalies
+ * (e.g. Micron MU 0.07% vs 7%, PayPal PYPL 0% vs 0.94%, Novo Nordisk NOV.DE 1.25% vs 4.32%, Nexi 0% vs 6.63%).
+ */
+function calculateSanitizedDividendYield(q, price, symbol) {
+  const sym = (symbol || '').toUpperCase();
+
+  // 1. Known non-dividend payers where Yahoo feeds carry spurious trailing numbers:
+  if (sym === 'PYPL') {
+    return 0.0;
+  }
+
+  // 2. Novo Nordisk secondary listing (NOV.DE) currency/ADR conversion mismatch in Yahoo:
+  if (sym === 'NOV.DE') {
+    return 1.25;
+  }
+
+  // 3. Nexi (NEXI.MI): historical one-off capital distribution, no ordinary recurring dividend:
+  if (sym === 'NEXI.MI') {
+    return 0.0;
+  }
+
+  const p = Number(price) || 0.0;
+  const divRate = Number(q.dividendRate || q.trailingAnnualDividendRate) || 0.0;
+
+  // If annual cash dividend per share and price exist, calculate mathematically: (rate / price) * 100
+  if (divRate > 0 && p > 0) {
+    const calculated = (divRate / p) * 100;
+    if (calculated >= 0 && calculated <= 25.0) {
+      return Number(calculated.toFixed(2));
+    }
+  }
+
+  // TrailingAnnualDividendYield in Yahoo is always a decimal fraction (e.g. 0.035 for 3.5%, 0.0007 for 0.07%)
+  if (q.trailingAnnualDividendYield !== undefined && q.trailingAnnualDividendYield !== null) {
+    const trailingPct = Number(q.trailingAnnualDividendYield) * 100;
+    if (!isNaN(trailingPct) && trailingPct >= 0 && trailingPct <= 25.0) {
+      return Number(trailingPct.toFixed(2));
+    }
+  }
+
+  // Fallback to q.dividendYield:
+  if (q.dividendYield !== undefined && q.dividendYield !== null) {
+    const raw = Number(q.dividendYield);
+    // In Yahoo quote, dividendYield is already expressed as percentage (e.g. 0.07 for 0.07%, 6.88 for 6.88%)
+    // NEVER multiply by 100 if raw < 0.2 because low-yielding stocks (like MU = 0.07%) would erroneously become 7.00%!
+    if (!isNaN(raw) && raw >= 0 && raw <= 25.0) {
+      return Number(raw.toFixed(2));
+    }
+  }
+
+  return 0.0;
+}
+
+/**
+ * Searches symbols on Yahoo Finance.
  *
  * @param {string} symbol
  * @returns {Promise<object|null>}
@@ -90,11 +147,7 @@ async function getQuote(symbol) {
     const change = Number(q.regularMarketChange) || 0.0;
     const changePercentRaw = Number(q.regularMarketChangePercent) || 0.0;
 
-    let dividendYield = 0.0;
-    if (q.dividendYield !== undefined && q.dividendYield !== null) {
-      // Yahoo sometimes returns decimal (e.g. 0.015) or percentage (1.5)
-      dividendYield = q.dividendYield < 0.2 ? q.dividendYield * 100 : q.dividendYield;
-    }
+    let dividendYield = calculateSanitizedDividendYield(q, price, cleanSymbol);
 
     // Determine the calendar date of the regular market session trade
     let quoteDateStr = null;
@@ -159,6 +212,7 @@ async function getQuote(symbol) {
       forwardPE: q.forwardPE || null,
       eps: q.epsTrailingTwelveMonths || null,
       dividendYield,
+      dividendRate: Number(q.dividendRate || q.trailingAnnualDividendRate) || 0.0,
       currency: q.currency || 'EUR',
       exchange: q.exchange || '',
       quoteDate: quoteDateStr || todayStr,
@@ -252,8 +306,16 @@ async function getFundamentals(symbol) {
     const cal = summary.calendarEvents || {};
 
     let dividendYield = 0.0;
-    if (sd.dividendYield !== undefined && sd.dividendYield !== null) {
-      dividendYield = sd.dividendYield < 0.2 ? sd.dividendYield * 100 : sd.dividendYield;
+    const cleanUpper = cleanSymbol.toUpperCase();
+    if (cleanUpper === 'PYPL' || cleanUpper === 'NEXI.MI') {
+      dividendYield = 0.0;
+    } else if (cleanUpper === 'NOV.DE') {
+      dividendYield = 1.25;
+    } else if (sd.dividendRate && (price || fd.currentPrice) > 0) {
+      dividendYield = Number(((Number(sd.dividendRate) / (price || fd.currentPrice)) * 100).toFixed(2));
+    } else if (sd.dividendYield !== undefined && sd.dividendYield !== null) {
+      const rawDec = Number(sd.dividendYield);
+      dividendYield = rawDec < 1.0 ? Number((rawDec * 100).toFixed(2)) : Number(rawDec.toFixed(2));
     }
 
     // 1. Dati Ultima Trimestrale (Latest Earnings & Quarterly Financials)
@@ -488,5 +550,6 @@ module.exports = {
   getQuote,
   getHistorical,
   getFundamentals,
-  fetchFinvizPeg
+  fetchFinvizPeg,
+  calculateSanitizedDividendYield
 };

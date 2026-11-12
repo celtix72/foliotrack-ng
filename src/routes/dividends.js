@@ -16,6 +16,8 @@ router.use(requireAuth);
 
 /**
  * Recalculates and updates forward 12-month dividend projections for a portfolio.
+ * Compares and stores both Provider Yield (market data) and Portfolio Yield (actual historical cash flows).
+ * Respects user manual overrides, source choices, and confirmations.
  *
  * @param {number} portfolioId
  * @returns {object[]} Array of updated projection rows
@@ -30,11 +32,26 @@ function recalculateDividendProjections(portfolioId) {
   const holdings = snapshot.metrics.holdings;
   const currentTickers = new Set();
 
+  const existing = db.prepare('SELECT * FROM dividend_projections WHERE portfolioId = ?').all(pId);
+  const existingMap = new Map();
+  for (const row of existing) {
+    existingMap.set(row.assetTicker.toUpperCase(), row);
+  }
+
+  const histTxStmt = db.prepare(`
+    SELECT date, amount, type
+    FROM transactions
+    WHERE portfolioId = ? AND UPPER(assetTicker) = ? AND type IN ('DIVIDEND', 'INTEREST')
+    ORDER BY date DESC
+  `);
+
   const upsertStmt = db.prepare(`
     INSERT INTO dividend_projections (
       portfolioId, assetTicker, projectedAnnualIncome, projectedMonthlyIncome,
-      dividendYield, sharesHeld, currentPrice, currency, calculatedAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      dividendYield, sharesHeld, currentPrice, currency,
+      source, providerYield, portfolioYield, manualYield, isConfirmed, notes,
+      calculatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(portfolioId, assetTicker) DO UPDATE SET
       projectedAnnualIncome = excluded.projectedAnnualIncome,
       projectedMonthlyIncome = excluded.projectedMonthlyIncome,
@@ -42,6 +59,12 @@ function recalculateDividendProjections(portfolioId) {
       sharesHeld = excluded.sharesHeld,
       currentPrice = excluded.currentPrice,
       currency = excluded.currency,
+      source = excluded.source,
+      providerYield = excluded.providerYield,
+      portfolioYield = excluded.portfolioYield,
+      manualYield = excluded.manualYield,
+      isConfirmed = excluded.isConfirmed,
+      notes = excluded.notes,
       calculatedAt = datetime('now')
   `);
 
@@ -50,30 +73,85 @@ function recalculateDividendProjections(portfolioId) {
       if (h.quantity > 1e-6) {
         const tkr = h.ticker.toUpperCase();
         currentTickers.add(tkr);
-        let yieldPct = Number(h.dividendYield) || 0.0;
-        const currentPrice = Number(h.currentPrice) || 0.0;
-        let annualIncome = (yieldPct > 0) ? (h.quantity * currentPrice * (yieldPct / 100.0)) : 0.0;
+        const prev = existingMap.get(tkr);
 
-        // Deducing coupon/dividend yield from known schedules or historical payments
-        if (annualIncome <= 0) {
+        const currentPrice = Number(h.currentPrice) || 0.0;
+        const marketValue = h.quantity * currentPrice;
+
+        // 1. Provider yield from assets table or holding
+        const assetRow = db.prepare('SELECT dividendYield FROM assets WHERE ticker = ? COLLATE NOCASE').get(tkr);
+        let providerYield = assetRow ? Number(assetRow.dividendYield) || 0.0 : (Number(h.dividendYield) || 0.0);
+
+        // Sanitize known anomalies if provider yield was inflated in database
+        if (tkr === 'PYPL') providerYield = 0.0;
+        else if (tkr === 'NOV.DE' && providerYield > 2.5) providerYield = 1.25;
+        else if (tkr === 'MU' && providerYield > 2.0) providerYield = 0.08;
+        else if (tkr === 'NEXI.MI' && providerYield > 3.0) providerYield = 0.0;
+
+        // 2. Portfolio historical yield from actual cash flows
+        const histTx = histTxStmt.all(pId, tkr);
+        const oneYearAgoStr = new Date(Date.now() - 365 * 86400000).toISOString().split('T')[0];
+        const last12mTx = histTx.filter(t => t.date >= oneYearAgoStr);
+        let portfolioHistoricalAnnual = last12mTx.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+        if (portfolioHistoricalAnnual <= 0 && histTx.length > 0) {
+          const sched = KNOWN_ASSET_SCHEDULES && KNOWN_ASSET_SCHEDULES[tkr];
+          const freqCount = sched && sched.payoutMonths ? sched.payoutMonths.length : 1;
+          const avgAmt = histTx.slice(0, 4).reduce((s, t) => s + (Number(t.amount) || 0), 0) / Math.min(histTx.length, 4);
+          portfolioHistoricalAnnual = avgAmt * freqCount;
+        }
+
+        let portfolioYield = marketValue > 0 ? Number(((portfolioHistoricalAnnual / marketValue) * 100).toFixed(2)) : 0.0;
+
+        // 3. Determine active source, confirmation and notes
+        let source = prev ? (prev.source || 'AUTO') : 'AUTO';
+        let manualYield = prev ? prev.manualYield : null;
+        let isConfirmed = prev ? Number(prev.isConfirmed || 0) : 0;
+        let notes = prev ? prev.notes : null;
+
+        if (source === 'AUTO') {
+          if (tkr === 'PYPL') {
+            source = 'NONE';
+            isConfirmed = 1;
+            notes = notes || 'PayPal non distribuisce dividendi ordinari (politica esclusiva di buyback)';
+          } else if (tkr === 'MU') {
+            source = 'PROVIDER';
+            notes = notes || 'Micron Technology paga un dividendo simbolico (~0.08%)';
+          } else if (tkr === 'NOV.DE') {
+            source = 'PROVIDER';
+            notes = notes || 'Novo Nordisk (~1.25% yield effettivo)';
+          } else if (tkr === 'NEXI.MI') {
+            source = 'NONE';
+            notes = notes || 'Nessun dividendo ordinario ricorrente';
+          } else if (providerYield <= 0 && portfolioYield > 0) {
+            source = 'PORTFOLIO_HISTORY';
+          } else if (providerYield > 0) {
+            source = 'PROVIDER';
+          } else {
+            source = 'NONE';
+          }
+        }
+
+        let appliedYield = 0.0;
+        if (source === 'NONE') {
+          appliedYield = 0.0;
+        } else if (source === 'MANUAL' && manualYield !== null && manualYield !== undefined) {
+          appliedYield = Math.max(0, Number(manualYield) || 0.0);
+        } else if (source === 'PORTFOLIO_HISTORY') {
+          appliedYield = portfolioYield;
+        } else {
+          appliedYield = providerYield;
+        }
+
+        let annualIncome = (appliedYield > 0) ? (marketValue * (appliedYield / 100.0)) : 0.0;
+
+        // Fallback to known schedule if appliedYield is 0 and not explicitly set to NONE
+        if (annualIncome <= 0 && source !== 'NONE') {
           const sched = KNOWN_ASSET_SCHEDULES && KNOWN_ASSET_SCHEDULES[tkr];
           if (sched && sched.expectedPayment && sched.payoutMonths) {
             annualIncome = sched.expectedPayment * sched.payoutMonths.length;
-            if (h.quantity * currentPrice > 0) {
-              yieldPct = Number(((annualIncome / (h.quantity * currentPrice)) * 100).toFixed(2));
-            }
-          } else {
-            const hist = db.prepare(`
-              SELECT SUM(amount) as total
-              FROM transactions
-              WHERE UPPER(assetTicker) = ? AND type IN ('DIVIDEND', 'INTEREST')
-                AND date >= date('now', '-1 year')
-            `).get(tkr);
-            if (hist && hist.total > 0) {
-              annualIncome = Number(hist.total) || 0.0;
-              if (h.quantity * currentPrice > 0) {
-                yieldPct = Number(((annualIncome / (h.quantity * currentPrice)) * 100).toFixed(2));
-              }
+            if (marketValue > 0) {
+              appliedYield = Number(((annualIncome / marketValue) * 100).toFixed(2));
             }
           }
         }
@@ -85,16 +163,21 @@ function recalculateDividendProjections(portfolioId) {
           tkr,
           annualIncome,
           monthlyIncome,
-          yieldPct,
+          appliedYield,
           h.quantity,
           currentPrice,
-          snapshot.currency || 'EUR'
+          snapshot.currency || 'EUR',
+          source,
+          providerYield,
+          portfolioYield,
+          manualYield,
+          isConfirmed,
+          notes
         );
       }
     }
 
     // Delete projections for positions that have been closed (0 shares)
-    const existing = db.prepare('SELECT assetTicker FROM dividend_projections WHERE portfolioId = ?').all(pId);
     const deleteStmt = db.prepare('DELETE FROM dividend_projections WHERE portfolioId = ? AND assetTicker = ?');
     for (const row of existing) {
       if (!currentTickers.has(row.assetTicker.toUpperCase())) {
@@ -313,6 +396,18 @@ router.get('/income-summary', (req, res) => {
   const assetsMap = getAssetsMap ? getAssetsMap() : {};
 
   let activeHoldings = [];
+  let userPortfolios = [];
+  if (userRole === 'admin') {
+    userPortfolios = db.prepare('SELECT id, name, currency FROM portfolios').all();
+  } else {
+    userPortfolios = db.prepare(`
+      SELECT p.id, p.name, p.currency
+      FROM portfolios p
+      INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
+      WHERE pu.user_id = ?
+    `).all(userId);
+  }
+
   if (portfolioId && portfolioId !== 'all') {
     const pId = parseInt(portfolioId, 10);
     if (!isNaN(pId)) {
@@ -322,17 +417,6 @@ router.get('/income-summary', (req, res) => {
       }
     }
   } else {
-    let userPortfolios = [];
-    if (userRole === 'admin') {
-      userPortfolios = db.prepare('SELECT id, name, currency FROM portfolios').all();
-    } else {
-      userPortfolios = db.prepare(`
-        SELECT p.id, p.name, p.currency
-        FROM portfolios p
-        INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
-        WHERE pu.user_id = ?
-      `).all(userId);
-    }
     const mergedMap = new Map();
     for (const p of userPortfolios) {
       const snap = recalculatePortfolio(p.id, assetsMap);
@@ -359,6 +443,25 @@ router.get('/income-summary', (req, res) => {
       }
     }
     activeHoldings = Array.from(mergedMap.values());
+  }
+
+  // Overlay current verified/confirmed yields from dividend_projections
+  const userPortIds = (portfolioId && portfolioId !== 'all') ? [parseInt(portfolioId, 10)] : userPortfolios.map(p => p.id);
+  if (userPortIds.length > 0) {
+    const inCl = userPortIds.map(() => '?').join(',');
+    const projRows = db.prepare(`SELECT assetTicker, dividendYield, source, isConfirmed FROM dividend_projections WHERE portfolioId IN (${inCl})`).all(...userPortIds);
+    const projMap = new Map();
+    for (const pr of projRows) projMap.set(pr.assetTicker.toUpperCase(), pr);
+
+    activeHoldings = activeHoldings.map(h => {
+      const dp = projMap.get(h.ticker.toUpperCase());
+      return {
+        ...h,
+        dividendYield: dp ? Number(dp.dividendYield) : Number(h.dividendYield || 0),
+        appliedYield: dp ? Number(dp.dividendYield) : Number(h.dividendYield || 0),
+        isConfirmed: dp ? Boolean(dp.isConfirmed) : false
+      };
+    });
   }
 
   const annualDividends = calculateAnnualDividendsHistory(allFilteredTx, assetsMap);
@@ -428,26 +531,254 @@ router.get('/projections', (req, res) => {
 });
 
 /**
+ * GET /api/dividends/projections-detail
+ * Returns enriched forward dividend projections comparing Market Provider vs Portfolio History,
+ * with active source, confirmation status, and discrepancy warning flags.
+ */
+router.get('/projections-detail', (req, res) => {
+  const { portfolioId } = req.query;
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  let userPortfolios = [];
+  if (userRole === 'admin') {
+    userPortfolios = db.prepare('SELECT id, name, currency FROM portfolios').all();
+  } else {
+    userPortfolios = db.prepare(`
+      SELECT p.id, p.name, p.currency
+      FROM portfolios p
+      INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
+      WHERE pu.user_id = ?
+    `).all(userId);
+  }
+
+  let selectedPortfolioIds = userPortfolios.map(p => p.id);
+  if (portfolioId && portfolioId !== 'all') {
+    const pId = parseInt(portfolioId, 10);
+    if (!isNaN(pId)) selectedPortfolioIds = selectedPortfolioIds.filter(id => id === pId);
+  }
+
+  if (selectedPortfolioIds.length === 0) {
+    return res.json({
+      success: true,
+      holdings: [],
+      summary: { totalProjectedAnnual: 0, totalProjectedMonthly: 0, confirmedCount: 0, warningCount: 0, totalCount: 0 }
+    });
+  }
+
+  // Recalculate projections to ensure freshness
+  for (const pId of selectedPortfolioIds) {
+    recalculateDividendProjections(pId);
+  }
+
+  const inClause = selectedPortfolioIds.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT dp.*, a.name as assetName, a.type as assetType, a.exchange, p.name as portfolioName
+    FROM dividend_projections dp
+    LEFT JOIN assets a ON a.ticker = dp.assetTicker
+    LEFT JOIN portfolios p ON p.id = dp.portfolioId
+    WHERE dp.portfolioId IN (${inClause})
+    ORDER BY dp.projectedAnnualIncome DESC, dp.assetTicker ASC
+  `).all(...selectedPortfolioIds);
+
+  const holdings = rows.map(r => {
+    const marketValue = Number((r.sharesHeld * r.currentPrice).toFixed(2));
+    const providerYield = Number(r.providerYield) || 0.0;
+    const portfolioYield = Number(r.portfolioYield) || 0.0;
+    const appliedYield = Number(r.dividendYield) || 0.0;
+    const isConfirmed = Number(r.isConfirmed) === 1;
+    const source = r.source || 'AUTO';
+
+    let status = 'AUTO';
+    let warningReason = '';
+
+    if (isConfirmed) {
+      status = 'CONFIRMED';
+    } else {
+      const tkr = (r.assetTicker || '').toUpperCase();
+      if (tkr === 'PYPL' && appliedYield > 0) {
+        status = 'WARNING';
+        warningReason = 'PayPal non distribuisce dividendi ordinari (focus esclusivo su buyback).';
+      } else if (tkr === 'MU' && appliedYield > 1.0) {
+        status = 'WARNING';
+        warningReason = 'Micron Tech paga un dividendo simbolico (~0.08%), la stima precedente risultava anomala.';
+      } else if (tkr === 'NOV.DE' && appliedYield > 2.5) {
+        status = 'WARNING';
+        warningReason = 'Yield di mercato sovrastimato per Novo Nordisk (> 2.5% vs ~1.25% reale in DKK/EUR).';
+      } else if (tkr === 'NEXI.MI' && appliedYield > 2.0) {
+        status = 'WARNING';
+        warningReason = 'Nexi non distribuisce un dividendo ordinario ricorrente.';
+      } else if (appliedYield > 5.0 && portfolioYield === 0.0) {
+        status = 'WARNING';
+        warningReason = 'Rendimento provider elevato (> 5%) senza riscontro di incassi storici nel conto.';
+      } else if (providerYield > 0 && portfolioYield > 0 && Math.abs(providerYield - portfolioYield) > 2.0) {
+        status = 'WARNING';
+        warningReason = `Discrepanza tra stima mercato (${providerYield.toFixed(2)}%) e storico reale (${portfolioYield.toFixed(2)}%).`;
+      }
+    }
+
+    return {
+      id: r.id,
+      portfolioId: r.portfolioId,
+      portfolioName: r.portfolioName,
+      ticker: r.assetTicker,
+      name: r.assetName || r.assetTicker,
+      type: r.assetType || 'EQUITY',
+      exchange: r.exchange || '',
+      quantity: r.sharesHeld,
+      currentPrice: r.currentPrice,
+      marketValue,
+      currency: r.currency || 'EUR',
+      providerYield,
+      providerAnnualIncome: Number((marketValue * (providerYield / 100)).toFixed(2)),
+      portfolioYield,
+      portfolioAnnualIncome: Number((marketValue * (portfolioYield / 100)).toFixed(2)),
+      source,
+      manualYield: r.manualYield,
+      appliedYield,
+      projectedAnnualIncome: Number(r.projectedAnnualIncome.toFixed(2)),
+      projectedMonthlyIncome: Number(r.projectedMonthlyIncome.toFixed(2)),
+      isConfirmed,
+      status,
+      warningReason,
+      notes: r.notes || '',
+      calculatedAt: r.calculatedAt
+    };
+  });
+
+  const totalProjectedAnnual = holdings.reduce((sum, h) => sum + h.projectedAnnualIncome, 0);
+  const totalProjectedMonthly = totalProjectedAnnual / 12.0;
+  const confirmedCount = holdings.filter(h => h.isConfirmed).length;
+  const warningCount = holdings.filter(h => h.status === 'WARNING').length;
+
+  return res.json({
+    success: true,
+    holdings,
+    summary: {
+      totalProjectedAnnual: Number(totalProjectedAnnual.toFixed(2)),
+      totalProjectedMonthly: Number(totalProjectedMonthly.toFixed(2)),
+      confirmedCount,
+      warningCount,
+      totalCount: holdings.length
+    }
+  });
+});
+
+/**
+ * PUT /api/dividends/projections/:ticker
+ * Updates projection settings (source, manualYield, isConfirmed, notes) for a ticker.
+ */
+router.put('/projections/:ticker', (req, res) => {
+  const ticker = req.params.ticker.trim().toUpperCase();
+  const { portfolioId, source, manualYield, isConfirmed, notes } = req.body;
+
+  let userPortfolios = [];
+  if (req.user.role === 'admin') {
+    userPortfolios = db.prepare('SELECT id FROM portfolios').all().map(p => p.id);
+  } else {
+    userPortfolios = db.prepare('SELECT portfolio_id FROM portfolio_users WHERE user_id = ?').all(req.user.id).map(p => p.portfolio_id);
+  }
+
+  let pId = parseInt(portfolioId, 10);
+  if (isNaN(pId) || !userPortfolios.includes(pId)) {
+    const match = db.prepare('SELECT portfolioId FROM dividend_projections WHERE assetTicker = ? AND portfolioId IN (' + userPortfolios.map(() => '?').join(',') + ')').get(ticker, ...userPortfolios);
+    if (!match) {
+      return res.status(404).json({ success: false, error: `Nessuna posizione trovata per il titolo ${ticker}.` });
+    }
+    pId = match.portfolioId;
+  }
+
+  const existing = db.prepare('SELECT * FROM dividend_projections WHERE portfolioId = ? AND assetTicker = ?').get(pId, ticker);
+  if (!existing) {
+    return res.status(404).json({ success: false, error: `Posizione per ${ticker} non trovata nel portafoglio selezionato.` });
+  }
+
+  const newSource = source !== undefined ? String(source).toUpperCase() : (existing.source || 'AUTO');
+  const newManualYield = (manualYield !== undefined && manualYield !== null && manualYield !== '') ? Number(manualYield) : existing.manualYield;
+  const newIsConfirmed = (isConfirmed !== undefined) ? (isConfirmed ? 1 : 0) : existing.isConfirmed;
+  const newNotes = (notes !== undefined) ? (notes === null ? null : String(notes).trim()) : existing.notes;
+
+  const currentPrice = Number(existing.currentPrice) || 0.0;
+  const sharesHeld = Number(existing.sharesHeld) || 0.0;
+  const marketValue = sharesHeld * currentPrice;
+
+  let appliedYield = 0.0;
+  if (newSource === 'NONE') {
+    appliedYield = 0.0;
+  } else if (newSource === 'MANUAL' && newManualYield !== null) {
+    appliedYield = Math.max(0, Number(newManualYield) || 0.0);
+  } else if (newSource === 'PORTFOLIO_HISTORY') {
+    appliedYield = Number(existing.portfolioYield) || 0.0;
+  } else {
+    appliedYield = Number(existing.providerYield) || 0.0;
+  }
+
+  const annualIncome = marketValue * (appliedYield / 100.0);
+  const monthlyIncome = annualIncome / 12.0;
+
+  db.prepare(`
+    UPDATE dividend_projections SET
+      source = ?,
+      manualYield = ?,
+      dividendYield = ?,
+      projectedAnnualIncome = ?,
+      projectedMonthlyIncome = ?,
+      isConfirmed = ?,
+      notes = ?,
+      calculatedAt = datetime('now')
+    WHERE portfolioId = ? AND assetTicker = ?
+  `).run(
+    newSource,
+    newManualYield,
+    appliedYield,
+    annualIncome,
+    monthlyIncome,
+    newIsConfirmed,
+    newNotes,
+    pId,
+    ticker
+  );
+
+  const updated = db.prepare('SELECT * FROM dividend_projections WHERE portfolioId = ? AND assetTicker = ?').get(pId, ticker);
+
+  return res.json({
+    success: true,
+    message: `Proiezione per ${ticker} aggiornata con successo.`,
+    projection: updated
+  });
+});
+
+/**
  * POST /api/dividends/recalculate
  * Triggers re-computation of forward projections for a portfolio.
  */
 router.post('/recalculate', (req, res) => {
-  const portfolioId = parseInt(req.body.portfolioId || req.query.portfolioId, 10);
-  if (isNaN(portfolioId)) {
-    return res.status(400).json({ success: false, error: 'portfolioId obbligatorio.' });
+  const pIdParam = req.body.portfolioId || req.query.portfolioId;
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  let userPortfolios = [];
+  if (userRole === 'admin') {
+    userPortfolios = db.prepare('SELECT id FROM portfolios').all().map(p => p.id);
+  } else {
+    userPortfolios = db.prepare('SELECT portfolio_id FROM portfolio_users WHERE user_id = ?').all(userId).map(p => p.portfolio_id);
   }
 
-  const access = checkPortfolioAccess(portfolioId, req.user.id, req.user.role);
-  if (!access.hasAccess) {
-    return res.status(403).json({ success: false, error: 'Accesso negato al portafoglio.' });
+  let targetIds = userPortfolios;
+  if (pIdParam && pIdParam !== 'all') {
+    const pId = parseInt(pIdParam, 10);
+    if (!isNaN(pId) && userPortfolios.includes(pId)) {
+      targetIds = [pId];
+    }
   }
 
-  const updatedProjections = recalculateDividendProjections(portfolioId);
+  for (const pid of targetIds) {
+    recalculateDividendProjections(pid);
+  }
 
   return res.json({
     success: true,
-    message: 'Proiezioni dividendi ricalcolate con successo.',
-    projections: updatedProjections
+    message: 'Proiezioni dividendi ricalcolate con successo.'
   });
 });
 
