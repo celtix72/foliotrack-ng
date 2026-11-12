@@ -35,6 +35,7 @@
     { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 9, h: 8, minW: 6, minH: 6 },
     { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 12, h: 6, minW: 4, minH: 3 },
     { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5 },
+    { id: 'categoryGains', name: 'Gain Categorie (Aperte / Chiuse)', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5 },
     { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 3, h: 8, minW: 3, minH: 6 },
     { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 12, h: 5, minW: 8, minH: 4 },
     { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 6, h: 6, minW: 4, minH: 4 },
@@ -70,36 +71,39 @@
     // Quotazioni per Categoria (Accordion live view - Photo 1 & 2)
     { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 2, h: 8, x: 0, y: 18 },
 
+    // Gain Categorie (Aperte / Chiuse)
+    { id: 'categoryGains', name: 'Gain Categorie (Aperte / Chiuse)', category: 'Dettaglio', w: 2, h: 8, x: 0, y: 26 },
+
     // Titoli Compatti in Singola Riga (Variazioni Giornaliere)
-    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 26 },
+    { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 34 },
 
     // Portfolio Composition with Sparklines (full width)
-    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 32 },
+    { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 2, h: 7, x: 0, y: 40 },
 
     // Daily Movers and All-Time Movers (full width)
-    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 39 },
-    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 44 },
+    { id: 'moversDay', name: 'Movers Giornalieri (1D)', category: 'Performance', w: 2, h: 5, x: 0, y: 47 },
+    { id: 'moversAllTime', name: 'Movers All-Time', category: 'Performance', w: 2, h: 5, x: 0, y: 52 },
 
     // Multi-Period Return Matrix (full width)
-    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 49 },
+    { id: 'performanceMatrix', name: 'Matrice Rendimenti Multi-Periodo', category: 'Performance', w: 2, h: 4, x: 0, y: 57 },
 
     // Ultime Notizie Portafoglio (full width)
-    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 2, h: 6, x: 0, y: 53 },
+    { id: 'news', name: 'Ultime Notizie Portafoglio', category: 'News', w: 2, h: 6, x: 0, y: 61 },
 
     // Allocation Donut Charts (full width)
-    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 59 },
-    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 64 },
-    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 69 },
-    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 74 },
+    { id: 'classes', name: 'Asset Class', category: 'Allocazione', w: 2, h: 5, x: 0, y: 67 },
+    { id: 'sectors', name: 'Settori GICS', category: 'Allocazione', w: 2, h: 5, x: 0, y: 72 },
+    { id: 'regions', name: 'Aree Geografiche', category: 'Allocazione', w: 2, h: 5, x: 0, y: 77 },
+    { id: 'accounts', name: 'Conti & Ripartizione', category: 'Allocazione', w: 2, h: 5, x: 0, y: 82 },
 
     // Strategy & Targets (full width)
-    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 79 },
+    { id: 'targets', name: 'Target & Rebalance', category: 'Strategia', w: 2, h: 6, x: 0, y: 87 },
 
     // Portfolio Concentration (full width)
-    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 85 },
+    { id: 'concentration', name: 'Concentrazione Portfolio', category: 'Rischio', w: 2, h: 5, x: 0, y: 93 },
 
     // Holdings Breakdown Table (full width)
-    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 90 }
+    { id: 'breakdown', name: 'Holdings Dettagliate', category: 'Dettaglio', w: 2, h: 6, x: 0, y: 98 }
   ];
 
   function isMobileDashboard() {
@@ -185,11 +189,18 @@
   let activeMoversMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_movers_mode') : null) || 'pct';
   let activeCompactSort = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_compact_sort') : null) || 'day_desc';
   let activeCategoryQuotesFilter = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_catquotes_filter') : null) || 'ALL';
+  let activeCategoryGainsFilter = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_catgains_filter') : null) || 'ALL';
+  let activeCategoryGainsStatus = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_catgains_status') : null) || 'ALL';
   let activePerfMatrixFilter = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_perfmatrix_filter') : null) || 'ALL';
   let collapsedCategorySet = new Set();
   try {
     const rawCollapsed = typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_collapsed_categories') : null;
     if (rawCollapsed) collapsedCategorySet = new Set(JSON.parse(rawCollapsed));
+  } catch {}
+  let collapsedCategoryGainsSet = new Set();
+  try {
+    const rawCollapsedGains = typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_collapsed_catgains') : null;
+    if (rawCollapsedGains) collapsedCategoryGainsSet = new Set(JSON.parse(rawCollapsedGains));
   } catch {}
 
   /**
@@ -676,6 +687,21 @@
   }
 
   /**
+   * Merges closed positions across portfolios that are included in global totals.
+   */
+  function getAggregatedClosedPositions(portfolios) {
+    const list = [];
+    for (const p of (portfolios || [])) {
+      if (p.include_in_totals === 0 || p.include_in_totals === false) continue;
+      const closed = p.closedPositions || p.metrics?.closedPositions || [];
+      for (const cp of closed) {
+        list.push(cp);
+      }
+    }
+    return list;
+  }
+
+  /**
    * Fetches real-time quantitative performance metrics (TWRR, MWRR/XIRR, Drawdown, Volatility, Sharpe)
    * for the given portfolio or all portfolios.
    */
@@ -774,6 +800,7 @@
           dayPnlPercent: aggDayPct
         },
         activeHoldings: aggHoldings,
+        closedPositions: getAggregatedClosedPositions(raw.portfolios || []),
         performanceMetrics: currentPerformanceMetrics
       };
     }
@@ -811,6 +838,7 @@
           dayPnlPercent: aggDayPct
         },
         activeHoldings: aggHoldings,
+        closedPositions: getAggregatedClosedPositions(raw.portfolios || []),
         performanceMetrics: currentPerformanceMetrics
       };
     }
@@ -853,7 +881,65 @@
         allocations: p.metrics?.allocations || { byAssetClass: {}, bySector: {}, byRegion: {} }
       },
       activeHoldings: portHoldings,
+      closedPositions: p.closedPositions || p.metrics?.closedPositions || [],
       performanceMetrics: currentPerformanceMetrics
+    };
+  }
+
+  /**
+   * Resolves uniform asset category, title, currency, and sort priority for both holdings and closed positions.
+   */
+  function getAssetCategoryInfo(type, currency) {
+    const normType = String(type || 'EQUITY').toUpperCase();
+    const curr = String(currency || 'EUR').toUpperCase();
+    let catKey = 'AZIONI EUR';
+    let catTitle = 'AZIONI EUR';
+    let catCurrency = curr;
+    let sortPriority = 10;
+
+    if (normType === 'ETF') {
+      catKey = curr === 'EUR' ? 'ETF' : `ETF ${curr}`;
+      catTitle = catKey;
+      sortPriority = 30;
+    } else if (normType.includes('BOND') || normType === 'FIXED_INCOME') {
+      catKey = curr === 'EUR' ? 'OBBLIGAZIONI' : `OBBLIGAZIONI ${curr}`;
+      catTitle = catKey;
+      sortPriority = 40;
+    } else if (normType === 'CRYPTO') {
+      catKey = 'CRYPTO';
+      catTitle = 'CRYPTO';
+      sortPriority = 50;
+    } else if (normType.includes('COMMODIT') || normType === 'GOLD') {
+      catKey = 'MATERIE PRIME / ORO';
+      catTitle = 'MATERIE PRIME / ORO';
+      sortPriority = 60;
+    } else if (normType === 'CASH' || normType === 'LIQUIDITY') {
+      catKey = 'LIQUIDITÀ';
+      catTitle = 'LIQUIDITÀ';
+      sortPriority = 70;
+    } else {
+      // Equity / Stocks
+      if (curr === 'EUR') {
+        catKey = 'AZIONI EUR';
+        catTitle = 'AZIONI EUR';
+        sortPriority = 10;
+      } else if (curr === 'USD') {
+        catKey = 'AZIONI USD';
+        catTitle = 'AZIONI USD';
+        sortPriority = 20;
+      } else {
+        catKey = `AZIONI ${curr}`;
+        catTitle = `AZIONI ${curr}`;
+        sortPriority = 25;
+      }
+    }
+
+    return {
+      id: catKey.replace(/[^a-zA-Z0-9]/g, '_'),
+      key: catKey,
+      title: catTitle,
+      currency: catCurrency,
+      sortPriority
     };
   }
 
@@ -985,6 +1071,187 @@
       });
     }
 
+    return categories;
+  }
+
+  /**
+   * Groups open holdings and closed positions by Macro Category, computing
+   * open gain (latent PnL), closed gain (realized PnL), and overall total gain.
+   */
+  function groupGainsByCategory(holdings = [], closedPositions = []) {
+    const categoryMap = new Map();
+
+    function getOrCreateCategory(type, currency) {
+      const info = getAssetCategoryInfo(type, currency);
+      if (!categoryMap.has(info.key)) {
+        categoryMap.set(info.key, {
+          id: info.id,
+          key: info.key,
+          title: info.title,
+          currency: info.currency,
+          sortPriority: info.sortPriority,
+          itemsMap: new Map()
+        });
+      }
+      return categoryMap.get(info.key);
+    }
+
+    // 1. Process active open holdings
+    for (const h of holdings) {
+      if (!h || !h.ticker) continue;
+      const cat = getOrCreateCategory(h.type, h.currency);
+      const ticker = h.ticker;
+      const qty = Number(h.quantity) || 0;
+      const cost = Number(h.totalCost !== undefined ? h.totalCost : ((h.pmc || h.costBasis || 0) * qty)) || 0;
+      const mv = Number(h.marketValue !== undefined ? h.marketValue : (h.currentValue || 0)) || 0;
+      const pnl = Number(h.unrealizedPnl !== undefined ? h.unrealizedPnl : (h.unrealizedPnL || 0)) || 0;
+
+      if (!cat.itemsMap.has(ticker)) {
+        cat.itemsMap.set(ticker, {
+          ticker,
+          name: h.name || ticker,
+          type: h.type || 'EQUITY',
+          currency: h.currency || 'EUR',
+          hasOpen: qty > 0 || Math.abs(pnl) > 0.001 || cost > 0,
+          hasClosed: false,
+          openQty: qty,
+          openCost: cost,
+          openMarketValue: mv,
+          openGain: pnl,
+          closedQty: 0,
+          closedCost: 0,
+          closedProceeds: 0,
+          closedGain: 0
+        });
+      } else {
+        const item = cat.itemsMap.get(ticker);
+        item.hasOpen = true;
+        item.openQty += qty;
+        item.openCost += cost;
+        item.openMarketValue += mv;
+        item.openGain += pnl;
+      }
+    }
+
+    // 2. Process closed positions
+    for (const cp of closedPositions) {
+      if (!cp || !cp.ticker) continue;
+      let targetCat = null;
+      for (const c of categoryMap.values()) {
+        if (c.itemsMap.has(cp.ticker)) {
+          targetCat = c;
+          break;
+        }
+      }
+      if (!targetCat) {
+        targetCat = getOrCreateCategory(cp.type, cp.currency);
+      }
+
+      const ticker = cp.ticker;
+      const qty = Number(cp.quantity) || 0;
+      const cost = Number(cp.costBasis) || 0;
+      const proceeds = Number(cp.proceeds) || 0;
+      const pnl = Number(cp.realizedPnl) || 0;
+
+      if (!targetCat.itemsMap.has(ticker)) {
+        targetCat.itemsMap.set(ticker, {
+          ticker,
+          name: cp.name || ticker,
+          type: cp.type || 'EQUITY',
+          currency: cp.currency || 'EUR',
+          hasOpen: false,
+          hasClosed: true,
+          openQty: 0,
+          openCost: 0,
+          openMarketValue: 0,
+          openGain: 0,
+          closedQty: qty,
+          closedCost: cost,
+          closedProceeds: proceeds,
+          closedGain: pnl
+        });
+      } else {
+        const item = targetCat.itemsMap.get(ticker);
+        item.hasClosed = true;
+        item.closedQty += qty;
+        item.closedCost += cost;
+        item.closedProceeds += proceeds;
+        item.closedGain += pnl;
+      }
+    }
+
+    // 3. Finalize category items and rollups
+    const categories = Array.from(categoryMap.values()).map(cat => {
+      const isUSD = cat.currency === 'USD';
+      const currSym = isUSD ? '$' : (cat.currency === 'EUR' ? '€' : cat.currency);
+
+      const items = Array.from(cat.itemsMap.values()).map(item => {
+        const openPct = item.openCost > 0 ? (item.openGain / item.openCost) * 100 : 0;
+        const closedPct = item.closedCost > 0 ? (item.closedGain / item.closedCost) * 100 : 0;
+        const totalGain = item.openGain + item.closedGain;
+        const totalCost = item.openCost + item.closedCost;
+        const totalPct = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
+
+        let status = 'APERTA';
+        if (item.hasOpen && item.hasClosed) {
+          status = 'MISTA';
+        } else if (!item.hasOpen && item.hasClosed) {
+          status = 'CHIUSA';
+        }
+
+        return {
+          ...item,
+          openPct,
+          closedPct,
+          totalGain,
+          totalCost,
+          totalPct,
+          status
+        };
+      });
+
+      // Sort items by totalGain descending
+      items.sort((a, b) => b.totalGain - a.totalGain);
+
+      let totOpenGain = 0;
+      let totOpenCost = 0;
+      let totClosedGain = 0;
+      let totClosedCost = 0;
+
+      for (const item of items) {
+        totOpenGain += item.openGain;
+        totOpenCost += item.openCost;
+        totClosedGain += item.closedGain;
+        totClosedCost += item.closedCost;
+      }
+
+      const totOpenPct = totOpenCost > 0 ? (totOpenGain / totOpenCost) * 100 : 0;
+      const totClosedPct = totClosedCost > 0 ? (totClosedGain / totClosedCost) * 100 : 0;
+      const totGain = totOpenGain + totClosedGain;
+      const totCost = totOpenCost + totClosedCost;
+      const totGainPct = totCost > 0 ? (totGain / totCost) * 100 : 0;
+
+      return {
+        id: cat.id,
+        key: cat.key,
+        title: cat.title,
+        currency: cat.currency,
+        currSym,
+        sortPriority: cat.sortPriority,
+        items,
+        totOpenGain,
+        totOpenCost,
+        totOpenPct,
+        totClosedGain,
+        totClosedCost,
+        totClosedPct,
+        totGain,
+        totCost,
+        totGainPct
+      };
+    });
+
+    categories.sort((a, b) => a.sortPriority - b.sortPriority);
     return categories;
   }
 
@@ -2187,6 +2454,331 @@
                           <div class="text-right pr-0.5 font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums leading-none">
                             ${valGiornoHtml}
                           </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    },
+
+    // 11c. Gain Categorie (Aperte / Chiuse) - Full parity with categoryQuotes accordion & layout
+    categoryGains: (data) => {
+      const holdings = data.activeHoldings || [];
+      const closedPositions = data.closedPositions || [];
+      if (holdings.length === 0 && closedPositions.length === 0) {
+        return `
+          <div class="h-full flex flex-col items-center justify-center p-6 text-center">
+            <span class="text-xs font-mono text-gray-400">Nessuna posizione aperta o chiusa</span>
+          </div>
+        `;
+      }
+
+      const allCategories = groupGainsByCategory(holdings, closedPositions);
+      let currentFilter = (typeof activeCategoryGainsFilter !== 'undefined') ? activeCategoryGainsFilter : 'ALL';
+      let currentStatus = (typeof activeCategoryGainsStatus !== 'undefined') ? activeCategoryGainsStatus : 'ALL';
+
+      // Status filtering: ALL, OPEN (Solo Aperte), CLOSED (Solo Chiuse)
+      const statusFilteredCategories = allCategories.map(cat => {
+        let visibleItems = cat.items;
+        if (currentStatus === 'OPEN') {
+          visibleItems = visibleItems.filter(i => i.hasOpen);
+        } else if (currentStatus === 'CLOSED') {
+          visibleItems = visibleItems.filter(i => i.hasClosed);
+        }
+        return {
+          ...cat,
+          visibleItems
+        };
+      }).filter(cat => cat.visibleItems.length > 0);
+
+      if (currentFilter !== 'ALL' && !statusFilteredCategories.some(c => c.id === currentFilter)) {
+        currentFilter = 'ALL';
+      }
+
+      const activeCategories = currentFilter === 'ALL'
+        ? statusFilteredCategories
+        : statusFilteredCategories.filter(c => c.id === currentFilter);
+
+      // Compute scope summary metrics
+      let scopeItemsCount = 0;
+      let scopeOpenGain = 0;
+      let scopeOpenCost = 0;
+      let scopeClosedGain = 0;
+      let scopeClosedCost = 0;
+
+      for (const cat of activeCategories) {
+        for (const item of cat.visibleItems) {
+          scopeItemsCount += 1;
+          scopeOpenGain += item.openGain;
+          scopeOpenCost += item.openCost;
+          scopeClosedGain += item.closedGain;
+          scopeClosedCost += item.closedCost;
+        }
+      }
+
+      const scopeTotGain = scopeOpenGain + scopeClosedGain;
+      const scopeTotCost = scopeOpenCost + scopeClosedCost;
+      const scopeTotPct = scopeTotCost > 0 ? (scopeTotGain / scopeTotCost) * 100 : 0;
+
+      function formatVal(val) {
+        const num = Math.round(Number(val) || 0);
+        const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
+        const abs = Math.abs(num);
+        if (abs >= 100000) {
+          return `${sign}${(abs / 1000).toFixed(0).replace('.', ',')}k €`;
+        }
+        if (abs >= 1000) {
+          return `${sign}${(abs / 1000).toFixed(1).replace('.', ',')}k €`;
+        }
+        return `${sign}${abs.toLocaleString('it-IT')} €`;
+      }
+
+      function formatPctStr(pct) {
+        if (pct === null || pct === undefined || isNaN(pct)) return '--';
+        const num = Number(pct) || 0;
+        const sign = num >= 0 ? '+' : '';
+        return `${sign}${num.toFixed(1).replace('.', ',')}%`;
+      }
+
+      const scopeOpenStr = formatVal(scopeOpenGain);
+      const scopeClosedStr = formatVal(scopeClosedGain);
+      const scopeTotStr = formatVal(scopeTotGain);
+      const scopeTotPctStr = formatPctStr(scopeTotPct);
+
+      const totalItemsCount = statusFilteredCategories.reduce((sum, c) => sum + c.visibleItems.length, 0);
+
+      const pillButtons = [
+        { id: 'ALL', label: 'Tutte', count: totalItemsCount },
+        ...statusFilteredCategories.map(c => ({ id: c.id, label: c.title, count: c.visibleItems.length }))
+      ].map(tab => {
+        const isActive = currentFilter === tab.id;
+        return `
+          <button type="button"
+            class="px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-mono font-medium transition shrink-0 cursor-pointer ${isActive ? 'bg-amber-600 text-white font-bold shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-white/5'}"
+            data-catgains-filter="${tab.id}">
+            ${tab.label} <span class="opacity-75 text-[8px] sm:text-[9px]">(${tab.count})</span>
+          </button>
+        `;
+      }).join('');
+
+      const selectOptions = [
+        `<option value="ALL" ${currentFilter === 'ALL' ? 'selected' : ''}>Tutte (${totalItemsCount})</option>`,
+        ...statusFilteredCategories.map(c => `<option value="${c.id}" ${currentFilter === c.id ? 'selected' : ''}>${c.title} (${c.visibleItems.length})</option>`)
+      ].join('');
+
+      return `
+        <div class="h-full flex flex-col -m-2 sm:-m-3 overflow-hidden select-none">
+          <!-- Top Control Header: Scope summary + Category selectors + Status filter -->
+          <div class="px-2 sm:px-2.5 pt-1 pb-1 border-b border-gray-100 dark:border-white/5 shrink-0 bg-white/40 dark:bg-black/20">
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <div class="flex items-center space-x-1.5 min-w-0">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">Gain Categorie</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">${scopeItemsCount} Titoli</span>
+              </div>
+
+              <!-- Scope KPIs (APERTO, CHIUSO, TOTALE) -->
+              <div class="flex items-center space-x-1.5 text-right shrink-0">
+                <div class="leading-none">
+                  <span class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">APERTO</span>
+                  <span class="text-[9px] sm:text-[10px] font-mono font-bold leading-tight ${scopeOpenGain >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeOpenStr}</span>
+                </div>
+                <div class="border-l border-gray-200 dark:border-white/10 pl-1.5 leading-none">
+                  <span class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">CHIUSO</span>
+                  <span class="text-[9px] sm:text-[10px] font-mono font-bold leading-tight ${scopeClosedGain >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeClosedStr}</span>
+                </div>
+                <div class="border-l border-gray-200 dark:border-white/10 pl-1.5 leading-none">
+                  <span class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider text-gray-400 font-mono block leading-none">TOTALE</span>
+                  <span class="text-[10px] sm:text-[11px] font-mono font-bold leading-tight ${scopeTotGain >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]'}">${scopeTotStr} (${scopeTotPctStr})</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Specific Category Selectors (Pills & Dropdown) + Status Selector -->
+            <div class="flex items-center justify-between gap-1">
+              <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
+                ${pillButtons}
+              </div>
+              <div class="flex items-center space-x-1 shrink-0 pl-1">
+                <!-- Status Mode Filter Pills -->
+                <div class="inline-flex rounded p-0.5 bg-gray-100 dark:bg-white/5 shrink-0" role="group">
+                  <button type="button" data-catgains-status="ALL"
+                    class="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-mono font-bold transition cursor-pointer ${currentStatus === 'ALL' ? 'bg-amber-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}">
+                    Tutti
+                  </button>
+                  <button type="button" data-catgains-status="OPEN"
+                    class="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-mono font-bold transition cursor-pointer ${currentStatus === 'OPEN' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}">
+                    Aperte
+                  </button>
+                  <button type="button" data-catgains-status="CLOSED"
+                    class="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-mono font-bold transition cursor-pointer ${currentStatus === 'CLOSED' ? 'bg-slate-700 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}">
+                    Chiuse
+                  </button>
+                </div>
+                <select data-catgains-select class="text-[9px] sm:text-[10px] font-mono font-semibold py-0.5 px-1 rounded bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 border-0 focus:ring-1 focus:ring-amber-500 cursor-pointer max-w-[90px] truncate" aria-label="Seleziona categoria">
+                  ${selectOptions}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Single Sticky Table Header -->
+          <div class="px-2 py-0.5 bg-gray-50/95 dark:bg-[#18181b]/95 backdrop-blur border-b border-gray-200/60 dark:border-white/10 text-[9px] sm:text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wider shrink-0 leading-none"
+               style="display: grid; grid-template-columns: 1.25fr 1.05fr 1.05fr 1.15fr; align-items: center;">
+            <div class="text-left pl-0.5">TICKER / STATO</div>
+            <div class="text-right">GAIN APERTO</div>
+            <div class="text-right">GAIN CHIUSO</div>
+            <div class="text-right pr-0.5">GAIN TOTALE</div>
+          </div>
+
+          <!-- Table Body Content -->
+          <div class="flex-1 overflow-y-auto no-scrollbar divide-y divide-gray-100/50 dark:divide-white/5">
+            ${activeCategories.map(cat => {
+              const isCollapsed = currentFilter === 'ALL' && collapsedCategoryGainsSet.has(cat.id);
+
+              let catOpenGain = 0;
+              let catOpenCost = 0;
+              let catClosedGain = 0;
+              let catClosedCost = 0;
+
+              for (const item of cat.visibleItems) {
+                catOpenGain += item.openGain;
+                catOpenCost += item.openCost;
+                catClosedGain += item.closedGain;
+                catClosedCost += item.closedCost;
+              }
+
+              const catTotGain = catOpenGain + catClosedGain;
+              const catTotCost = catOpenCost + catClosedCost;
+              const catTotPct = catTotCost > 0 ? (catTotGain / catTotCost) * 100 : 0;
+
+              const catOpenStyleColor = catOpenGain > 0 ? '#15803D' : (catOpenGain < 0 ? '#DC2626' : '#78350F');
+              const catClosedStyleColor = catClosedGain > 0 ? '#15803D' : (catClosedGain < 0 ? '#DC2626' : '#78350F');
+              const catTotStyleColor = catTotGain >= 0 ? '#15803D' : '#DC2626';
+
+              const catOpenStr = formatVal(catOpenGain);
+              const catClosedStr = formatVal(catClosedGain);
+              const catTotStr = formatVal(catTotGain);
+              const catTotPctStr = formatPctStr(catTotPct);
+
+              return `
+                <div class="category-block bg-white dark:bg-[#141416]">
+                  <!-- Compact Category Banner matching categoryQuotes (#FEF9C3) -->
+                  <div class="category-header cursor-pointer select-none px-2 py-0.5 flex items-center justify-between border-y border-amber-300/70 dark:border-amber-700/60 leading-none"
+                       style="background-color: #FEF9C3;"
+                       data-toggle-category-gains="${cat.id}">
+                    <!-- Left: Chevron + Dot + Title + Count -->
+                    <div class="flex items-center space-x-1.5 min-w-0 pr-1">
+                      <span id="catgains-chevron-${cat.id}" class="transform transition-transform duration-150 font-black text-xs shrink-0 ${isCollapsed ? '-rotate-90' : 'rotate-0'}" style="color: #78350F !important;">
+                        ⌄
+                      </span>
+                      <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0 shadow-xs" style="background-color: #2563EB;"></span>
+                      <span class="font-extrabold text-[10px] sm:text-[11px] tracking-wider uppercase font-mono truncate" style="color: #78350F !important;">
+                        ${cat.title}
+                      </span>
+                      <span class="text-[8px] sm:text-[9px] font-mono font-bold" style="color: #92400E !important;">
+                        (${cat.visibleItems.length})
+                      </span>
+                    </div>
+
+                    <!-- Right: Compact Metrics (APERTO, CHIUSO, TOT) -->
+                    <div class="flex items-center space-x-1.5 shrink-0 text-right">
+                      <div class="leading-none">
+                        <span class="text-[7px] sm:text-[8px] font-black uppercase font-mono" style="color: #92400E !important;">AP:</span>
+                        <span class="text-[9px] sm:text-[10px] font-extrabold font-mono" style="color: ${catOpenStyleColor} !important;">${catOpenStr}</span>
+                      </div>
+                      <div class="border-l border-amber-400/60 dark:border-amber-600/60 pl-1 leading-none">
+                        <span class="text-[7px] sm:text-[8px] font-black uppercase font-mono" style="color: #92400E !important;">CH:</span>
+                        <span class="text-[9px] sm:text-[10px] font-extrabold font-mono" style="color: ${catClosedStyleColor} !important;">${catClosedStr}</span>
+                      </div>
+                      <div class="border-l border-amber-400/60 dark:border-amber-600/60 pl-1 leading-none">
+                        <span class="text-[7px] sm:text-[8px] font-black uppercase font-mono" style="color: #92400E !important;">TOT:</span>
+                        <span class="text-[10px] sm:text-[11px] font-black font-mono" style="color: ${catTotStyleColor} !important;">${catTotStr}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Table Rows Section -->
+                  <div id="catgains-body-${cat.id}" class="${isCollapsed ? 'hidden' : ''} divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-[#141416]">
+                    ${cat.visibleItems.map(item => {
+                      let statusBadge = '';
+                      if (item.status === 'APERTA') {
+                        statusBadge = `<span class="px-1 py-[0.5px] rounded text-[7px] sm:text-[8px] font-mono font-bold uppercase leading-none bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">AP</span>`;
+                      } else if (item.status === 'CHIUSA') {
+                        statusBadge = `<span class="px-1 py-[0.5px] rounded text-[7px] sm:text-[8px] font-mono font-bold uppercase leading-none bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">CH</span>`;
+                      } else {
+                        statusBadge = `<span class="px-1 py-[0.5px] rounded text-[7px] sm:text-[8px] font-mono font-bold uppercase leading-none bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50" title="Posizione aperta con chiusure parziali">MIX</span>`;
+                      }
+
+                      // Open Gain Column
+                      let openColHtml = '';
+                      if (item.hasOpen) {
+                        const openColor = item.openGain >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]';
+                        openColHtml = `
+                          <div class="text-right flex flex-col items-end leading-none">
+                            <span class="font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums ${openColor}">${formatVal(item.openGain)}</span>
+                            <span class="text-[8px] sm:text-[9px] font-mono font-semibold ${openColor} opacity-90">${formatPctStr(item.openPct)}</span>
+                          </div>
+                        `;
+                      } else {
+                        openColHtml = `
+                          <div class="text-right flex flex-col items-end leading-none">
+                            <span class="font-bold font-mono text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500">--</span>
+                          </div>
+                        `;
+                      }
+
+                      // Closed Gain Column
+                      let closedColHtml = '';
+                      if (item.hasClosed) {
+                        const closedColor = item.closedGain >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]';
+                        closedColHtml = `
+                          <div class="text-right flex flex-col items-end leading-none">
+                            <span class="font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums ${closedColor}">${formatVal(item.closedGain)}</span>
+                            <span class="text-[8px] sm:text-[9px] font-mono font-semibold ${closedColor} opacity-90">${formatPctStr(item.closedPct)}</span>
+                          </div>
+                        `;
+                      } else {
+                        closedColHtml = `
+                          <div class="text-right flex flex-col items-end leading-none">
+                            <span class="font-bold font-mono text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500">--</span>
+                          </div>
+                        `;
+                      }
+
+                      // Total Gain Column
+                      const totColor = item.totalGain >= 0 ? 'text-[#16A34A] dark:text-[#4ADE80]' : 'text-[#E11D48] dark:text-[#FB7185]';
+                      const totColHtml = `
+                        <div class="text-right pr-0.5 flex flex-col items-end leading-none">
+                          <span class="font-extrabold font-mono text-[10px] sm:text-[11px] tabular-nums ${totColor}">${formatVal(item.totalGain)}</span>
+                          <span class="text-[8px] sm:text-[9px] font-mono font-semibold ${totColor} opacity-90">${formatPctStr(item.totalPct)}</span>
+                        </div>
+                      `;
+
+                      return `
+                        <div class="px-2 py-[2px] border-b border-gray-100 dark:border-white/5 hover:bg-gray-50/70 dark:hover:bg-white/5 transition cursor-pointer select-none leading-tight"
+                             style="display: grid; grid-template-columns: 1.25fr 1.05fr 1.05fr 1.15fr; align-items: center;"
+                             data-open-asset="${item.ticker}">
+                          <!-- Ticker & Status Badge -->
+                          <div class="text-left pl-0.5 flex items-center min-w-0 space-x-1">
+                            <span class="inline-flex items-center justify-center px-1 py-[1px] rounded font-black font-mono text-[10px] sm:text-[11px] tracking-tight leading-none cursor-pointer active:scale-95 transition bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100 border border-gray-200/80 dark:border-white/10 truncate">
+                              ${item.ticker}
+                            </span>
+                            ${statusBadge}
+                          </div>
+
+                          <!-- Open Gain -->
+                          ${openColHtml}
+
+                          <!-- Closed Gain -->
+                          ${closedColHtml}
+
+                          <!-- Total Gain -->
+                          ${totColHtml}
                         </div>
                       `;
                     }).join('')}
@@ -4455,6 +5047,22 @@
         return;
       }
 
+      // 6d. Category Gains Filter (Pills)
+      const catGainsFilterBtn = e.target.closest('[data-catgains-filter]');
+      if (catGainsFilterBtn) {
+        const catFilter = catGainsFilterBtn.getAttribute('data-catgains-filter');
+        setCategoryGainsFilter(catFilter);
+        return;
+      }
+
+      // 6e. Category Gains Status (ALL / OPEN / CLOSED)
+      const catGainsStatusBtn = e.target.closest('[data-catgains-status]');
+      if (catGainsStatusBtn) {
+        const catStatus = catGainsStatusBtn.getAttribute('data-catgains-status');
+        setCategoryGainsStatus(catStatus);
+        return;
+      }
+
       // 6c. Performance Matrix Filter (Pills)
       const perfFilterBtn = e.target.closest('[data-perfmatrix-filter]');
       if (perfFilterBtn) {
@@ -4468,6 +5076,14 @@
       if (catHeader) {
         const catId = catHeader.getAttribute('data-toggle-category');
         toggleCategoryAccordion(catId);
+        return;
+      }
+
+      // 7b. Category Gains Accordion Toggle
+      const catGainsHeader = e.target.closest('[data-toggle-category-gains]');
+      if (catGainsHeader) {
+        const catId = catGainsHeader.getAttribute('data-toggle-category-gains');
+        toggleCategoryGainsAccordion(catId);
         return;
       }
 
@@ -4485,6 +5101,12 @@
       const catSelect = e.target.closest('[data-catquotes-select]');
       if (catSelect) {
         setCategoryQuotesFilter(catSelect.value);
+        return;
+      }
+
+      const catGainsSelect = e.target.closest('[data-catgains-select]');
+      if (catGainsSelect) {
+        setCategoryGainsFilter(catGainsSelect.value);
         return;
       }
 
@@ -4559,6 +5181,65 @@
     }
   }
 
+  function toggleCategoryGainsAccordion(catId) {
+    if (collapsedCategoryGainsSet.has(catId)) {
+      collapsedCategoryGainsSet.delete(catId);
+    } else {
+      collapsedCategoryGainsSet.add(catId);
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('foliotrack_collapsed_catgains', JSON.stringify([...collapsedCategoryGainsSet]));
+      }
+    } catch {}
+
+    const bodyEl = document.getElementById(`catgains-body-${catId}`);
+    const chevronEl = document.getElementById(`catgains-chevron-${catId}`);
+    if (bodyEl) {
+      if (collapsedCategoryGainsSet.has(catId)) {
+        bodyEl.classList.add('hidden');
+        if (chevronEl) chevronEl.classList.add('-rotate-90');
+      } else {
+        bodyEl.classList.remove('hidden');
+        if (chevronEl) chevronEl.classList.remove('-rotate-90');
+      }
+    }
+  }
+
+  function setCategoryGainsFilter(filterId) {
+    if (filterId === activeCategoryGainsFilter) return;
+    activeCategoryGainsFilter = filterId;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('foliotrack_catgains_filter', filterId);
+      }
+    } catch {}
+    if (rawPortfolioData) {
+      const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+      const catEl = document.getElementById('widget-body-categoryGains');
+      if (catEl && WIDGET_RENDERERS.categoryGains) {
+        catEl.innerHTML = WIDGET_RENDERERS.categoryGains(activeView);
+      }
+    }
+  }
+
+  function setCategoryGainsStatus(statusId) {
+    if (statusId === activeCategoryGainsStatus) return;
+    activeCategoryGainsStatus = statusId;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('foliotrack_catgains_status', statusId);
+      }
+    } catch {}
+    if (rawPortfolioData) {
+      const activeView = getViewData(rawPortfolioData, selectedPortfolioId);
+      const catEl = document.getElementById('widget-body-categoryGains');
+      if (catEl && WIDGET_RENDERERS.categoryGains) {
+        catEl.innerHTML = WIDGET_RENDERERS.categoryGains(activeView);
+      }
+    }
+  }
+
   function setPerfMatrixFilter(filterId) {
     if (filterId === activePerfMatrixFilter) return;
     activePerfMatrixFilter = filterId;
@@ -4607,7 +5288,11 @@
     resetDefaultWidgets,
     openAssetDetail,
     toggleCategoryAccordion,
+    toggleCategoryGainsAccordion,
     setCategoryQuotesFilter,
+    setCategoryGainsFilter,
+    setCategoryGainsStatus,
+    groupGainsByCategory,
     setPerfMatrixFilter,
     setMoversMode,
     setCompactSort: (s) => {
