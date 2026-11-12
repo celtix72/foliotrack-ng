@@ -822,7 +822,7 @@
               <button type="button" data-range="3M" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '3M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">3M</button>
               <button type="button" data-range="6M" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '6M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">6M</button>
               <button type="button" data-range="1Y" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '1Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">1Y</button>
-              <button type="button" data-range="5Y" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '5Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">5Y</button>
+              <button type="button" data-range="3Y" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '3Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">3Y</button>
               <button type="button" data-range="ALL" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === 'ALL' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">ALL</button>
             </div>
           </div>
@@ -1410,7 +1410,7 @@
       }
 
       // Format labels & prices
-      const isMultiYear = range === '1Y' || range === '5Y' || range === 'ALL';
+      const isMultiYear = range === '1Y' || range === '3Y' || range === '5Y' || range === 'ALL';
       const labels = points.map(p => {
         if (!p.date) return '';
         const parts = p.date.split('-');

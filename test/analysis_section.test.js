@@ -636,4 +636,16 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
       assert.ok(code.includes('if (yVal === null && !isDivOrInterest && mainTx.price && Number(mainTx.price) > 0)'));
     }
   });
+
+  test('Stock charts in asset_drawer.js and analysis.js replace the 5Y period with 3Y', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const analysisJs = fs.readFileSync(path.join(__dirname, '../public/analysis.js'), 'utf8');
+    const drawerJs = fs.readFileSync(path.join(__dirname, '../public/asset_drawer.js'), 'utf8');
+
+    for (const code of [analysisJs, drawerJs]) {
+      assert.ok(code.includes('data-range="3Y"'), 'Stock chart must include 3Y range button');
+      assert.ok(!code.includes('data-range="5Y"'), 'Stock chart must not include 5Y range button');
+    }
+  });
 });

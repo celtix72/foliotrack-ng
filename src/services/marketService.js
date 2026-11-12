@@ -300,7 +300,13 @@ async function fetchUnifiedHistorical(ticker, period = '5Y', forcedSource = null
 
     if (!points || points.length === 0) {
       const now = new Date();
-      let period1 = new Date(now.setFullYear(now.getFullYear() - 5)).toISOString().split('T')[0];
+      let period1 = '2020-01-01';
+      if (period === '1M') period1 = new Date(now.setMonth(now.getMonth() - 1)).toISOString().split('T')[0];
+      else if (period === '3M') period1 = new Date(now.setMonth(now.getMonth() - 3)).toISOString().split('T')[0];
+      else if (period === '6M') period1 = new Date(now.setMonth(now.getMonth() - 6)).toISOString().split('T')[0];
+      else if (period === '1Y') period1 = new Date(now.setFullYear(now.getFullYear() - 1)).toISOString().split('T')[0];
+      else if (period === '3Y') period1 = new Date(now.setFullYear(now.getFullYear() - 3)).toISOString().split('T')[0];
+      else if (period === '5Y') period1 = new Date(now.setFullYear(now.getFullYear() - 5)).toISOString().split('T')[0];
       try { points = await yahoo.getHistorical(symbol, period1, '1d'); } catch {}
     }
   } else {
@@ -311,6 +317,7 @@ async function fetchUnifiedHistorical(ticker, period = '5Y', forcedSource = null
     else if (period === '3M') period1 = new Date(now.setMonth(now.getMonth() - 3)).toISOString().split('T')[0];
     else if (period === '6M') period1 = new Date(now.setMonth(now.getMonth() - 6)).toISOString().split('T')[0];
     else if (period === '1Y') period1 = new Date(now.setFullYear(now.getFullYear() - 1)).toISOString().split('T')[0];
+    else if (period === '3Y') period1 = new Date(now.setFullYear(now.getFullYear() - 3)).toISOString().split('T')[0];
     else if (period === '5Y') period1 = new Date(now.setFullYear(now.getFullYear() - 5)).toISOString().split('T')[0];
 
     try {

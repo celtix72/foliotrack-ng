@@ -529,6 +529,7 @@ router.get('/chart/:ticker', optionalAuth, async (req, res) => {
       else if (period === '3M') daysBack = 90;
       else if (period === '6M') daysBack = 180;
       else if (period === '1Y') daysBack = 365;
+      else if (period === '3Y') daysBack = 1095;
       else if (period === '5Y') daysBack = 1825;
       else if (period === 'ALL') daysBack = 3650;
 
@@ -854,6 +855,7 @@ router.post('/providers/:id/test-history', requireAuth, async (req, res) => {
       else if (period === '3M') period1 = new Date(now.setMonth(now.getMonth() - 3)).toISOString().split('T')[0];
       else if (period === '6M') period1 = new Date(now.setMonth(now.getMonth() - 6)).toISOString().split('T')[0];
       else if (period === '1Y') period1 = new Date(now.setFullYear(now.getFullYear() - 1)).toISOString().split('T')[0];
+      else if (period === '3Y') period1 = new Date(now.setFullYear(now.getFullYear() - 3)).toISOString().split('T')[0];
       else if (period === '5Y') period1 = new Date(now.setFullYear(now.getFullYear() - 5)).toISOString().split('T')[0];
       else if (/^\d{4}-\d{2}-\d{2}$/.test(period)) period1 = period;
 

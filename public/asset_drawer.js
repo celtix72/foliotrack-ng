@@ -190,7 +190,7 @@
                   <button data-range="3M" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">3M</button>
                   <button data-range="6M" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">6M</button>
                   <button data-range="1Y" class="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold">1Y</button>
-                  <button data-range="5Y" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">5Y</button>
+                  <button data-range="3Y" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">3Y</button>
                   <button data-range="ALL" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">ALL</button>
                 </div>
               </div>
@@ -471,7 +471,7 @@
       }
 
       // Format labels & prices
-      const isMultiYear = range === '1Y' || range === '5Y' || range === 'ALL';
+      const isMultiYear = range === '1Y' || range === '3Y' || range === '5Y' || range === 'ALL';
       const labels = points.map(p => {
         if (!p.date) return '';
         const parts = p.date.split('-');
