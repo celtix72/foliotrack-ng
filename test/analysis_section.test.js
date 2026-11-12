@@ -620,4 +620,20 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     const nvda = dataTicker.results.find(r => r.ticker === 'NVDA');
     assert.ok(nvda, 'Searching "NVDA" should include NVDA');
   });
+
+  test('Dividend and Interest transaction markers in asset_drawer.js and analysis.js anchor to price curve (points[i].close) and avoid 0 or arbitrary Y positions', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const analysisJs = fs.readFileSync(path.join(__dirname, '../public/analysis.js'), 'utf8');
+    const drawerJs = fs.readFileSync(path.join(__dirname, '../public/asset_drawer.js'), 'utf8');
+
+    for (const code of [analysisJs, drawerJs]) {
+      // Must identify DIVIDEND / INTEREST as distributions
+      assert.ok(code.includes('isDivOrInterest = mainTx.type === \'DIVIDEND\' || mainTx.type === \'INTEREST\''));
+      // Must anchor yVal to points[i].close
+      assert.ok(code.includes('yVal = (points[i] && typeof points[i].close === \'number\' && points[i].close > 0)'));
+      // Must NOT fallback to mainTx.price when isDivOrInterest is true
+      assert.ok(code.includes('if (yVal === null && !isDivOrInterest && mainTx.price && Number(mainTx.price) > 0)'));
+    }
+  });
 });

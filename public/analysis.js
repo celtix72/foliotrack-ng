@@ -1370,7 +1370,7 @@
         const tType = (t.type || '').toUpperCase();
         if (tType === 'BUY') buyCount++;
         else if (tType === 'SELL') sellCount++;
-        else if (tType === 'DIVIDEND') divCount++;
+        else if (tType === 'DIVIDEND' || tType === 'INTEREST') divCount++;
 
         let matchIdx = points.findIndex(p => p.date === t.date);
         if (matchIdx === -1) {
@@ -1403,7 +1403,7 @@
         if (allTxs.length === 0) {
           countsBadge.innerHTML = `<span class="text-blue-500 font-semibold">Asset in Watchlist</span> <span class="text-gray-400">• Nessuna operazione eseguita in portafoglio</span>`;
         } else if (visibleTxs.length > 0) {
-          countsBadge.innerHTML = `<strong class="text-gray-900 dark:text-white font-bold">${visibleTxs.length} operazioni</strong> nel periodo (<span class="text-emerald-600 dark:text-emerald-400 font-semibold">${buyCount} acq</span>, <span class="text-rose-600 dark:text-rose-400 font-semibold">${sellCount} vend</span>${divCount > 0 ? `, <span class="text-amber-600 dark:text-amber-400 font-semibold">${divCount} div</span>` : ''})`;
+          countsBadge.innerHTML = `<strong class="text-gray-900 dark:text-white font-bold">${visibleTxs.length} operazioni</strong> nel periodo (<span class="text-emerald-600 dark:text-emerald-400 font-semibold">${buyCount} acq</span>, <span class="text-rose-600 dark:text-rose-400 font-semibold">${sellCount} vend</span>${divCount > 0 ? `, <span class="text-amber-600 dark:text-amber-400 font-semibold">${divCount} div/ced</span>` : ''})`;
         } else {
           countsBadge.innerHTML = `<span class="text-gray-500 dark:text-gray-400">${allTxs.length} operazioni registrate in altri periodi (espandi il periodo temporale)</span>`;
         }
@@ -1432,7 +1432,26 @@
         const txList = txMapByPointIndex[i];
         if (txList && txList.length > 0) {
           const mainTx = txList.find(x => x.type === 'BUY' || x.type === 'SELL') || txList[0];
-          const yVal = (mainTx.price && Number(mainTx.price) > 0) ? Number(mainTx.price) : points[i].close;
+          const isDivOrInterest = mainTx.type === 'DIVIDEND' || mainTx.type === 'INTEREST';
+
+          // Operation markers (especially DIVIDEND and INTEREST, whose tx.price is a dividend rate e.g. 0.14 or dummy 1.0, NOT a share price)
+          // must always be anchored directly on the asset price curve (points[i].close) to avoid floating at 0 on the x-axis or in arbitrary detached positions.
+          let yVal = (points[i] && typeof points[i].close === 'number' && points[i].close > 0)
+            ? points[i].close
+            : null;
+
+          if (yVal === null) {
+            // Find nearest valid close price in points
+            for (let k = 1; k < points.length; k++) {
+              if (i - k >= 0 && points[i - k]?.close > 0) { yVal = points[i - k].close; break; }
+              if (i + k < points.length && points[i + k]?.close > 0) { yVal = points[i + k].close; break; }
+            }
+          }
+
+          if (yVal === null && !isDivOrInterest && mainTx.price && Number(mainTx.price) > 0) {
+            yVal = Number(mainTx.price);
+          }
+
           txDataPoints.push(yVal);
           txPointRadii.push(7);
 
@@ -1444,7 +1463,7 @@
             txColors.push('#f43f5e'); // Rose
             txBorderColors.push('#ffffff');
             txStyles.push('circle');
-          } else if (mainTx.type === 'DIVIDEND') {
+          } else if (mainTx.type === 'DIVIDEND' || mainTx.type === 'INTEREST') {
             txColors.push('#f59e0b'); // Amber
             txBorderColors.push('#ffffff');
             txStyles.push('circle');
@@ -1516,11 +1535,12 @@
             const isBuy = primaryTx.type === 'BUY';
             const isSell = primaryTx.type === 'SELL';
             const isDiv = primaryTx.type === 'DIVIDEND';
+            const isInterest = primaryTx.type === 'INTEREST';
 
-            let text = isBuy ? 'BUY' : (isSell ? 'SELL' : (isDiv ? 'DIV' : primaryTx.type));
+            let text = isBuy ? 'BUY' : (isSell ? 'SELL' : (isDiv ? 'DIV' : (isInterest ? 'CED' : primaryTx.type)));
             if (primaryTx.quantity && (isBuy || isSell)) {
               text += ` ${isBuy ? '+' : '-'}${Math.round(primaryTx.quantity)}`;
-            } else if (isDiv && primaryTx.amount) {
+            } else if ((isDiv || isInterest) && primaryTx.amount) {
               text += ` +${fmtPrice(primaryTx.amount, currency)}`;
             }
 
@@ -1532,7 +1552,7 @@
             const pillX = pos.x - pillWidth / 2;
 
             // Background pill
-            ctx.fillStyle = isBuy ? '#10b981' : (isSell ? '#f43f5e' : (isDiv ? '#f59e0b' : '#8b5cf6'));
+            ctx.fillStyle = isBuy ? '#10b981' : (isSell ? '#f43f5e' : ((isDiv || isInterest) ? '#f59e0b' : '#8b5cf6'));
             ctx.beginPath();
             const r = 4;
             if (typeof ctx.roundRect === 'function') {
@@ -1646,9 +1666,10 @@
                       const isB = t.type === 'BUY';
                       const isS = t.type === 'SELL';
                       const isD = t.type === 'DIVIDEND';
-                      const typeLabel = isB ? '🟢 ACQUISTO (BUY)' : (isS ? '🔴 VENDITA (SELL)' : (isD ? '🟡 DIVIDENDO' : `🟣 ${t.type}`));
+                      const isI = t.type === 'INTEREST';
+                      const typeLabel = isB ? '🟢 ACQUISTO (BUY)' : (isS ? '🔴 VENDITA (SELL)' : (isD ? '🟡 DIVIDENDO' : (isI ? '🟡 CEDOLA (INTEREST)' : `🟣 ${t.type}`)));
                       const qStr = t.quantity ? `${Math.round(t.quantity)} quote` : '';
-                      const pStr = t.price ? `@ ${fmtPrice(t.price, currency)}` : '';
+                      const pStr = (!isD && !isI && t.price) ? `@ ${fmtPrice(t.price, currency)}` : '';
                       const amtStr = t.amount ? `[Tot: ${fmtPrice(t.amount, currency)}]` : '';
                       return ` ${typeLabel}: ${qStr} ${pStr} ${amtStr}`.trim();
                     });
