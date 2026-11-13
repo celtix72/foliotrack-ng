@@ -45,24 +45,34 @@
     return `${sign}${formatted} ${curr}`;
   }
 
-  function fmtPrice(v, currency = 'EUR', decimals = 2) {
+  function fmtPrice(v, currency = 'EUR', decimals = null) {
     const num = Number(v) || 0;
     const curr = (currency || 'EUR').toUpperCase();
+    const abs = Math.abs(num);
     const hasSubCents = (num !== 0) && (Math.abs(num * 100 - Math.round(num * 100)) > 0.001);
-    const maxDec = Math.max(decimals, hasSubCents ? 4 : 2);
+
+    let dec;
+    if (decimals !== null && decimals !== undefined) {
+      dec = decimals;
+    } else if (abs >= 10) {
+      dec = 1;
+    } else {
+      dec = hasSubCents ? 4 : 2;
+    }
+
     const formatted = num.toLocaleString('it-IT', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: maxDec
+      minimumFractionDigits: dec,
+      maximumFractionDigits: dec
     });
     if (curr === 'USD') return `${formatted} USD`;
     if (curr === 'EUR') return `€ ${formatted}`;
     return `${formatted} ${curr}`;
   }
 
-  function fmtPercent(v, decimals = 2) {
+  function fmtPercent(v, decimals = 1) {
     const num = Number(v) || 0;
     const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
-    return `${sign}${Math.abs(num).toFixed(decimals)}%`;
+    return `${sign}${Math.abs(num).toFixed(decimals).replace('.', ',')}%`;
   }
 
   function createDrawerHtml() {
@@ -117,27 +127,27 @@
                 <!-- 1.1 Prezzo & Variazione 1D -->
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">Prezzo</span>
+                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">PREZZO</span>
                     <span id="drawerCurrentPriceEur" class="text-[10px] text-gray-400"></span>
                   </div>
                   <div class="mt-1">
-                    <strong id="drawerCurrentPrice" class="text-sm sm:text-base font-bold text-gray-900 dark:text-white block leading-tight truncate">0,00 USD</strong>
+                    <strong id="drawerCurrentPrice" class="text-sm sm:text-base font-bold text-gray-900 dark:text-white block leading-tight truncate">0,0 USD</strong>
                     <div id="drawerPreMarketWrap" class="hidden mt-1 flex items-center space-x-1">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-                      <span id="drawerPreMarketText" class="text-[9px] font-bold font-mono text-amber-600 dark:text-amber-400 truncate">PRE: 0,00 USD (+0,00%)</span>
+                      <span id="drawerPreMarketText" class="text-[9px] font-bold font-mono text-amber-600 dark:text-amber-400 truncate">PRE: 0,0 USD (+0,0%)</span>
                     </div>
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5">
                     <div id="drawerDayChangeBadge" class="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block truncate max-w-full">
-                      0,00 USD (+0,00%)
+                      0,0 USD (+0,0%)
                     </div>
                   </div>
                 </div>
 
-                <!-- 1.2 Controvalore di Mercato -->
+                <!-- 1.2 Controvalore di Mercato (CTRV) -->
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">Controvalore</span>
+                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">CTRV</span>
                     <span id="drawerMarketValueEur" class="text-[10px] text-gray-400"></span>
                   </div>
                   <div class="mt-1">
@@ -145,21 +155,21 @@
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400">
                     <span id="drawerSharesQty" class="truncate font-medium">0 quote</span>
-                    <span id="drawerPortfolioWeight" class="font-bold text-gray-700 dark:text-gray-300 ml-1 shrink-0">0,00%</span>
+                    <span id="drawerPortfolioWeight" class="font-bold text-gray-700 dark:text-gray-300 ml-1 shrink-0">0,0%</span>
                   </div>
                 </div>
 
                 <!-- 1.3 Prezzo Medio di Carico (PMC) & Valore di Carico -->
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">PMC / Carico</span>
+                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">PMC / CAR.</span>
                     <span id="drawerAverageCostEur" class="text-[10px] text-gray-400"></span>
                   </div>
                   <div class="mt-1">
-                    <strong id="drawerAverageCost" class="text-sm sm:text-base font-bold text-gray-900 dark:text-white block leading-tight truncate">0,0000 USD</strong>
+                    <strong id="drawerAverageCost" class="text-sm sm:text-base font-bold text-gray-900 dark:text-white block leading-tight truncate">0,0 USD</strong>
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                    <span class="truncate">Carico:</span>
+                    <span class="truncate">Car.:</span>
                     <div class="text-right truncate ml-1">
                       <strong id="drawerBookValue" class="text-gray-800 dark:text-gray-200 font-semibold">0,00 USD</strong>
                       <span id="drawerBookValueEur" class="text-[9px] text-gray-400 ml-0.5"></span>
@@ -170,15 +180,15 @@
                 <!-- 1.4 P&L Non Realizzato -->
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">P&L Non Real.</span>
-                    <span id="drawerPerfPriceReturn" class="text-[10px] text-gray-400">0,00%</span>
+                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">P&L N.REAL.</span>
+                    <span id="drawerPerfPriceReturn" class="text-[10px] text-gray-400">0,0%</span>
                   </div>
                   <div class="mt-1">
                     <strong id="drawerPerfUnrealizedPnl" class="text-sm sm:text-base font-bold block leading-tight truncate">0,00 USD</strong>
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px]">
-                    <span class="text-gray-400 truncate">Rendimento:</span>
-                    <span id="drawerPerfUnrealizedPct" class="font-bold shrink-0">0,00%</span>
+                    <span class="text-gray-400 truncate">Rend.:</span>
+                    <span id="drawerPerfUnrealizedPct" class="font-bold shrink-0">0,0%</span>
                   </div>
                 </div>
 
@@ -239,44 +249,44 @@
             <!-- 3. Dettaglio Performance -->
             <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
               <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5">
-                <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Dettaglio Performance</h4>
-                <span class="text-[10px] text-gray-400 font-medium">G/P & Rendimenti</span>
+                <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">PERFORMANCE</h4>
+                <span class="text-[10px] text-gray-400 font-medium">G/P & REND.</span>
               </div>
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 tabular-nums">
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">Rendimento Oggi</span>
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">REND. OGGI</span>
                   <strong id="drawerPerfDayPnl" class="text-xs sm:text-sm font-bold block mt-0.5">0,00 USD</strong>
-                  <span id="drawerPerfDayPct" class="text-[10px] font-semibold block mt-0.5">+0,00%</span>
+                  <span id="drawerPerfDayPct" class="text-[10px] font-semibold block mt-0.5">+0,0%</span>
                 </div>
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">G/P Realizzato</span>
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">G/P REAL.</span>
                   <strong id="drawerPerfRealizedPnl" class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white block mt-0.5">N/D</strong>
-                  <span class="text-[10px] text-gray-400 block mt-0.5">Vendite chiuse</span>
+                  <span class="text-[10px] text-gray-400 block mt-0.5">Vendite</span>
                 </div>
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">Dividendi Incassati</span>
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">DIVIDENDI</span>
                   <strong id="drawerPerfIncome" class="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">0,00 USD</strong>
-                  <span class="text-[10px] text-gray-400 block mt-0.5">Reddito cedole</span>
+                  <span class="text-[10px] text-gray-400 block mt-0.5">Cedole</span>
                 </div>
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">Effetto Cambio</span>
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">EFF. CAMBIO</span>
                   <strong id="drawerPerfFxImpact" class="text-xs sm:text-sm font-bold block mt-0.5">+0,00 €</strong>
-                  <span class="text-[10px] text-gray-400 block mt-0.5">Impatto FX EUR</span>
+                  <span class="text-[10px] text-gray-400 block mt-0.5">FX EUR</span>
                 </div>
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 col-span-1 sm:col-span-2">
-                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">G/P Totale</span>
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">G/P TOTALE</span>
                   <strong id="drawerPerfTotalPnl" class="text-xs sm:text-sm font-bold block mt-0.5">0,00 USD</strong>
-                  <span id="drawerPerfTotalPct" class="text-[10px] font-semibold block mt-0.5">0,00%</span>
+                  <span id="drawerPerfTotalPct" class="text-[10px] font-semibold block mt-0.5">0,0%</span>
                 </div>
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 col-span-1 sm:col-span-2">
                   <div class="flex items-center justify-between">
                     <div>
-                      <span class="text-gray-400 block text-[9px] uppercase font-semibold">Total Return</span>
+                      <span class="text-gray-400 block text-[9px] uppercase font-semibold">TOTAL RETURN</span>
                       <strong id="drawerPerfTotalReturn" class="text-xs sm:text-sm font-extrabold block mt-0.5">0,00 USD</strong>
                     </div>
                     <div class="text-right">
-                      <span class="text-gray-400 block text-[9px] uppercase font-semibold">% Totale</span>
-                      <strong id="drawerPerfTotalReturnPct" class="text-xs sm:text-sm font-extrabold block mt-0.5">0,00%</strong>
+                      <span class="text-gray-400 block text-[9px] uppercase font-semibold">% TOT.</span>
+                      <strong id="drawerPerfTotalReturnPct" class="text-xs sm:text-sm font-extrabold block mt-0.5">0,0%</strong>
                     </div>
                   </div>
                 </div>
@@ -288,29 +298,29 @@
               <!-- Sessione Borsa -->
               <div class="p-2.5 sm:p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1">
-                  <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Sessione Borsa</h4>
-                  <span class="text-[9px] text-gray-400">Range Odierno</span>
+                  <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">SESSIONE BORSA</h4>
+                  <span class="text-[9px] text-gray-400">RANGE 1D</span>
                 </div>
                 <div class="grid grid-cols-2 gap-1.5 text-[10px] tabular-nums">
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 block text-[9px]">Apertura</span>
-                    <strong id="drawerRangeOpen" class="text-gray-900 dark:text-white block truncate">0,00 USD</strong>
+                    <span class="text-gray-400 block text-[9px]">APER.</span>
+                    <strong id="drawerRangeOpen" class="text-gray-900 dark:text-white block truncate">0,0 USD</strong>
                   </div>
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 block text-[9px]">Chiusura</span>
-                    <strong id="drawerRangeClose" class="text-gray-900 dark:text-white block truncate">0,00 USD</strong>
+                    <span class="text-gray-400 block text-[9px]">CHIU.</span>
+                    <strong id="drawerRangeClose" class="text-gray-900 dark:text-white block truncate">0,0 USD</strong>
                   </div>
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 block text-[9px]">Minimo</span>
-                    <strong id="drawerRangeLow" class="text-gray-900 dark:text-white block truncate">0,00 USD</strong>
+                    <span class="text-gray-400 block text-[9px]">MIN</span>
+                    <strong id="drawerRangeLow" class="text-gray-900 dark:text-white block truncate">0,0 USD</strong>
                   </div>
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 block text-[9px]">Massimo</span>
-                    <strong id="drawerRangeHigh" class="text-gray-900 dark:text-white block truncate">0,00 USD</strong>
+                    <span class="text-gray-400 block text-[9px]">MAX</span>
+                    <strong id="drawerRangeHigh" class="text-gray-900 dark:text-white block truncate">0,0 USD</strong>
                   </div>
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 col-span-2">
-                    <span class="text-gray-400 block text-[9px]">Chiusura rettificata / prec.</span>
-                    <strong id="drawerRangeAdjClose" class="text-gray-900 dark:text-white block truncate">0,00 USD</strong>
+                    <span class="text-gray-400 block text-[9px]">CHIU. PREC.</span>
+                    <strong id="drawerRangeAdjClose" class="text-gray-900 dark:text-white block truncate">0,0 USD</strong>
                   </div>
                 </div>
               </div>
@@ -318,25 +328,25 @@
               <!-- Dati Fondamentali -->
               <div class="p-2.5 sm:p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1">
-                  <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Dati Fondamentali</h4>
-                  <span class="text-[9px] text-gray-400">Tassonomia</span>
+                  <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">FONDAMENTALI</h4>
+                  <span class="text-[9px] text-gray-400">INFO</span>
                 </div>
                 <div class="grid grid-cols-2 gap-1.5 text-[10px] tabular-nums">
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 block text-[9px]">Settore GICS</span>
+                    <span class="text-gray-400 block text-[9px]">SETTORE</span>
                     <strong id="drawerSector" class="text-gray-900 dark:text-white block truncate">-</strong>
                   </div>
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 block text-[9px]">Paese / Regione</span>
+                    <span class="text-gray-400 block text-[9px]">PAESE</span>
                     <strong id="drawerRegion" class="text-gray-900 dark:text-white block truncate">-</strong>
                   </div>
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 block text-[9px]">Rapporto P/E</span>
+                    <span class="text-gray-400 block text-[9px]">P/E</span>
                     <strong id="drawerPE" class="text-gray-900 dark:text-white block truncate">-</strong>
                   </div>
                   <div class="p-1.5 rounded-md bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                    <span class="text-gray-400 block text-[9px]">Dividend Yield</span>
-                    <strong id="drawerDivYield" class="text-gray-900 dark:text-white block truncate">0,00%</strong>
+                    <span class="text-gray-400 block text-[9px]">DIV. YIELD</span>
+                    <strong id="drawerDivYield" class="text-gray-900 dark:text-white block truncate">0,0%</strong>
                   </div>
                 </div>
               </div>
@@ -345,7 +355,7 @@
             <!-- 5. Storico Dividendi Percepiti -->
             <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
               <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5">
-                <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Dividendi & Cedole</h4>
+                <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">DIVIDENDI & CEDOLE</h4>
                 <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400" id="drawerTotalDividends">
                   Totale: 0,00 USD
                 </span>
@@ -354,9 +364,9 @@
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
                   <thead class="bg-gray-100/70 dark:bg-white/5 text-gray-500 sticky top-0 text-[10px]">
                     <tr>
-                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold">Data</th>
-                      <th class="px-2.5 sm:px-3 py-1.5 text-right font-semibold">Importo Netto</th>
-                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold">Note</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold">DATA</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 text-right font-semibold">IMP. NETTO</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold">NOTE</th>
                     </tr>
                   </thead>
                   <tbody id="drawerDividendsTbody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums text-[11px]">
@@ -927,7 +937,7 @@
 
     // Hero Highlights
     const qty = Number(holding.quantity) || 0;
-    document.getElementById('drawerSharesQty').textContent = `${fmtNumber(qty, qty % 1 === 0 ? 0 : 4)} azioni / quote`;
+    document.getElementById('drawerSharesQty').textContent = `${fmtNumber(qty, qty % 1 === 0 ? 0 : 4)} quote`;
 
     const mvNative = holding.marketValueNative !== undefined ? holding.marketValueNative : (isNonEur ? (holding.quantity * (holding.currentPriceNative || holding.rawPrice || 0)) : holding.marketValue);
     document.getElementById('drawerMarketValue').textContent = fmtCurrency(mvNative, curr);
@@ -958,7 +968,7 @@
 
     if (preMarketPrice > 0) {
       const preSign = preMarketChangePercent > 0 ? '+' : (preMarketChangePercent < 0 ? '-' : '');
-      const prePctFormatted = `${preSign}${Math.abs(preMarketChangePercent).toFixed(2).replace('.', ',')}%`;
+      const prePctFormatted = `${preSign}${Math.abs(preMarketChangePercent).toFixed(1).replace('.', ',')}%`;
       const prePriceFormatted = fmtPrice(preMarketPrice, curr);
       preText.textContent = `PRE: ${prePriceFormatted} (${prePctFormatted})`;
       preWrap.classList.remove('hidden');
@@ -1005,17 +1015,17 @@
     }
 
     const pmcNative = holding.pmcNative !== undefined ? holding.pmcNative : (holding.costBasisNative || holding.pmc);
-    document.getElementById('drawerAverageCost').textContent = fmtPrice(pmcNative, curr, 2);
+    document.getElementById('drawerAverageCost').textContent = fmtPrice(pmcNative, curr);
 
     const pmcEurEl = document.getElementById('drawerAverageCostEur');
     if (isNonEur && holding.pmc) {
-      pmcEurEl.textContent = `PMC base: € ${fmtPrice(holding.pmc, 'EUR', 2)}`;
+      pmcEurEl.textContent = `(€ ${fmtPrice(holding.pmc, 'EUR')})`;
     } else {
       pmcEurEl.textContent = '';
     }
 
     const weight = Number(holding.weight) || 0;
-    document.getElementById('drawerPortfolioWeight').textContent = `${weight.toFixed(2)}%`;
+    document.getElementById('drawerPortfolioWeight').textContent = `${weight.toFixed(1).replace('.', ',')}%`;
 
     // 2. Performance
     // Rendimento di oggi
@@ -1099,7 +1109,7 @@
     document.getElementById('drawerSector').textContent = holding.sector || 'N/D';
     document.getElementById('drawerRegion').textContent = holding.region || holding.country || 'N/D';
     document.getElementById('drawerPE').textContent = holding.pe ? Number(holding.pe).toFixed(1) : 'N/D';
-    document.getElementById('drawerDivYield').textContent = holding.dividendYield ? fmtPercent(holding.dividendYield) : '0,00%';
+    document.getElementById('drawerDivYield').textContent = holding.dividendYield ? fmtPercent(holding.dividendYield) : '0,0%';
 
     // Load interactive chart and dividend history
     loadHistoricalChart(holding.ticker, '1Y', curr, portfolioId);
@@ -1125,7 +1135,7 @@
           if (pmPrice > 0) {
             const pmChgPct = Number(a.preMarketChangePercent) || 0;
             const pmSign = pmChgPct > 0 ? '+' : (pmChgPct < 0 ? '-' : '');
-            const pmPctFormatted = `${pmSign}${Math.abs(pmChgPct).toFixed(2).replace('.', ',')}%`;
+            const pmPctFormatted = `${pmSign}${Math.abs(pmChgPct).toFixed(1).replace('.', ',')}%`;
             const pmPriceFormatted = fmtPrice(pmPrice, curr);
             document.getElementById('drawerPreMarketText').textContent = `PRE: ${pmPriceFormatted} (${pmPctFormatted})`;
             document.getElementById('drawerPreMarketWrap').classList.remove('hidden');
