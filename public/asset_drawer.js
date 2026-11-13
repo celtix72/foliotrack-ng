@@ -186,25 +186,23 @@
             </div>
 
             <!-- 2. Interactive Historical Chart with Operations -->
-            <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2.5">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Andamento, Volumi & Operazioni</h4>
-                    <p class="text-[9px] text-gray-400 font-mono hidden sm:block">Prezzi e volumi storici con eseguiti BUY, SELL e dividendi</p>
-                  </div>
-                </div>
-                <div class="grid grid-cols-6 gap-1 font-mono text-[10px] w-full sm:w-auto sm:flex sm:items-center sm:space-x-1 bg-gray-100/70 dark:bg-white/5 p-0.5 sm:p-1 rounded-lg" id="chartRangeButtons">
-                  <button data-range="1M" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">1M</button>
-                  <button data-range="3M" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">3M</button>
-                  <button data-range="6M" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">6M</button>
-                  <button data-range="1Y" class="py-1 px-1 sm:px-2 text-center rounded-md bg-emerald-600 text-white font-bold transition shadow-xs">1Y</button>
-                  <button data-range="3Y" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">3Y</button>
-                  <button data-range="ALL" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">ALL</button>
+            <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
+              <div class="flex items-center justify-between gap-1.5">
+                <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 truncate">
+                  <span class="sm:hidden">Andamento</span>
+                  <span class="hidden sm:inline">Andamento, Volumi & Operazioni</span>
+                </h4>
+                <div class="flex items-center space-x-0.5 sm:space-x-1 font-mono text-[10px] shrink-0" id="chartRangeButtons">
+                  <button data-range="1M" class="px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-900 dark:hover:text-white transition">1M</button>
+                  <button data-range="3M" class="px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-900 dark:hover:text-white transition">3M</button>
+                  <button data-range="6M" class="px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-900 dark:hover:text-white transition">6M</button>
+                  <button data-range="1Y" class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold transition shadow-xs">1Y</button>
+                  <button data-range="3Y" class="px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-900 dark:hover:text-white transition">3Y</button>
+                  <button data-range="ALL" class="px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-900 dark:hover:text-white transition">ALL</button>
                 </div>
               </div>
               <div class="relative w-full rounded-lg bg-white dark:bg-white/[0.03] p-2 sm:p-2.5 border border-gray-100 dark:border-white/5">
-                <div class="h-52 sm:h-56 relative w-full">
+                <div class="h-48 sm:h-52 relative w-full">
                   <canvas id="drawerChartCanvas"></canvas>
                   <div id="drawerChartLoading" class="hidden absolute inset-0 bg-white/70 dark:bg-black/70 backdrop-blur-2xs flex items-center justify-center text-xs font-mono text-gray-500">
                     Caricamento grafico e operazioni...
@@ -212,27 +210,27 @@
                 </div>
 
                 <!-- Operations Legend & Summary -->
-                <div id="drawerTxSummaryBar" class="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[10px] font-mono">
-                  <div class="flex items-center space-x-2.5 sm:space-x-3.5">
+                <div id="drawerTxSummaryBar" class="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-1 text-[10px] font-mono">
+                  <div class="flex items-center space-x-2 sm:space-x-3">
                     <span class="inline-flex items-center space-x-1">
-                      <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-2xs"></span>
-                      <span class="font-semibold text-emerald-700 dark:text-emerald-300">BUY</span>
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shadow-2xs"></span>
+                      <span class="font-semibold text-emerald-700 dark:text-emerald-300 text-[9px] sm:text-[10px]">BUY</span>
                     </span>
                     <span class="inline-flex items-center space-x-1">
-                      <span class="w-2 h-2 rounded-full bg-rose-500 inline-block shadow-2xs"></span>
-                      <span class="font-semibold text-rose-700 dark:text-rose-300">SELL</span>
+                      <span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block shadow-2xs"></span>
+                      <span class="font-semibold text-rose-700 dark:text-rose-300 text-[9px] sm:text-[10px]">SELL</span>
                     </span>
                     <span class="inline-flex items-center space-x-1">
-                      <span class="w-2 h-2 rounded-full bg-amber-500 inline-block shadow-2xs"></span>
-                      <span class="font-semibold text-amber-700 dark:text-amber-300">DIV</span>
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block shadow-2xs"></span>
+                      <span class="font-semibold text-amber-700 dark:text-amber-300 text-[9px] sm:text-[10px]">DIV</span>
                     </span>
                     <span class="inline-flex items-center space-x-1">
-                      <span class="w-2 h-2 rounded-2xs bg-gray-400/60 dark:bg-gray-500/60 inline-block"></span>
-                      <span class="font-semibold text-gray-500 dark:text-gray-400">Volumi</span>
+                      <span class="w-1.5 h-1.5 rounded-2xs bg-gray-400/60 dark:bg-gray-500/60 inline-block"></span>
+                      <span class="font-semibold text-gray-500 dark:text-gray-400 text-[9px] sm:text-[10px]">Vol</span>
                     </span>
                   </div>
                   <div id="drawerTxCountsBadge" class="text-gray-400 font-medium truncate text-[9px] sm:text-[10px]">
-                    0 operazioni nel periodo
+                    0 operazioni
                   </div>
                 </div>
               </div>
@@ -858,9 +856,9 @@
       if (!btn || !currentAssetData) return;
 
       document.querySelectorAll('#chartRangeButtons button').forEach(b => {
-        b.className = 'py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition';
+        b.className = 'px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-900 dark:hover:text-white transition';
       });
-      btn.className = 'py-1 px-1 sm:px-2 text-center rounded-md bg-emerald-600 text-white font-bold transition shadow-xs';
+      btn.className = 'px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold transition shadow-xs';
 
       const range = btn.getAttribute('data-range');
       loadHistoricalChart(currentAssetData.ticker, range, currentAssetData.currency || 'EUR', currentPortfolioId);

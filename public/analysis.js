@@ -792,38 +792,38 @@
       modalBody.innerHTML = `
         <!-- TOP CARD: GRAFICO PREZZO CON ULTIMA QUOTAZIONE AD OGGI E OPERAZIONI BUY / SELL -->
         <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-gray-200/60 dark:border-white/5 pb-2">
-            <div>
-              <div class="flex items-center space-x-2">
-                <span class="text-base" aria-hidden="true">📈</span>
-                <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono">
-                  Andamento Prezzo, Volumi & Operazioni Eseguite
+          <div class="flex items-center justify-between gap-1.5 border-b border-gray-200/60 dark:border-white/5 pb-2">
+            <div class="min-w-0">
+              <div class="flex items-center space-x-1.5 truncate">
+                <span class="text-sm" aria-hidden="true">📈</span>
+                <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono truncate">
+                  <span class="sm:hidden">Andamento Prezzo</span>
+                  <span class="hidden sm:inline">Andamento Prezzo, Volumi & Operazioni Eseguite</span>
                 </h3>
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/20">
-                  Live Oggi
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/20 shrink-0">
+                  Live
                 </span>
               </div>
-              <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-x-2 font-mono">
-                <span>Ultima quotazione: <strong class="text-gray-900 dark:text-white font-bold">${fmtPrice(currentPrice, currency)}</strong></span>
+              <div class="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-x-1.5 font-mono">
+                <span>Ultima: <strong class="text-gray-900 dark:text-white font-bold">${fmtPrice(currentPrice, currency)}</strong></span>
                 ${(assetInfo.preMarketPrice && Number(assetInfo.preMarketPrice) > 0) ? `
-                  <span class="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  <span class="inline-flex items-center space-x-1 px-1 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                    <span>PRE: ${fmtPrice(assetInfo.preMarketPrice, currency)} (${Number(assetInfo.preMarketChangePercent || 0) > 0 ? '+' : ''}${Number(assetInfo.preMarketChangePercent || 0).toFixed(2).replace('.', ',')}%)</span>
+                    <span>PRE: ${fmtPrice(assetInfo.preMarketPrice, currency)}</span>
                   </span>
                 ` : ''}
                 <span>${renderVariationBadge(dayChangePct)}</span>
-                <span class="text-gray-400">• Aggiornato ad oggi</span>
               </div>
             </div>
 
             <!-- Time Range Selector -->
-            <div class="flex items-center space-x-1 font-mono text-[10px]" id="modalPriceChartRangeButtons">
-              <button type="button" data-range="1M" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '1M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">1M</button>
-              <button type="button" data-range="3M" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '3M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">3M</button>
-              <button type="button" data-range="6M" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '6M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">6M</button>
-              <button type="button" data-range="1Y" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '1Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">1Y</button>
-              <button type="button" data-range="3Y" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === '3Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">3Y</button>
-              <button type="button" data-range="ALL" class="chart-range-btn px-2 py-0.5 rounded transition border ${currentModalRange === 'ALL' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">ALL</button>
+            <div class="flex items-center space-x-0.5 sm:space-x-1 font-mono text-[10px] shrink-0" id="modalPriceChartRangeButtons">
+              <button type="button" data-range="1M" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === '1M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">1M</button>
+              <button type="button" data-range="3M" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === '3M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">3M</button>
+              <button type="button" data-range="6M" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === '6M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">6M</button>
+              <button type="button" data-range="1Y" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === '1Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">1Y</button>
+              <button type="button" data-range="3Y" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === '3Y' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">3Y</button>
+              <button type="button" data-range="ALL" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === 'ALL' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">ALL</button>
             </div>
           </div>
 
