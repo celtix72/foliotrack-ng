@@ -648,4 +648,69 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
       assert.ok(!code.includes('data-range="5Y"'), 'Stock chart must not include 5Y range button');
     }
   });
+
+  test('PUT /api/analysis/:ticker/notes saves, updates, and clears investment notes', async () => {
+    // 1. Save an investment note for AAPL
+    const saveRes = await fetch(`${baseUrl}/api/analysis/AAPL/notes`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ notes: 'Tesi: solido posizionamento AI con Apple Intelligence e buyback aggressivo.' })
+    });
+    assert.equal(saveRes.status, 200);
+    const saveData = await saveRes.json();
+    assert.equal(saveData.success, true);
+    assert.equal(saveData.ticker, 'AAPL');
+    assert.equal(saveData.notes, 'Tesi: solido posizionamento AI con Apple Intelligence e buyback aggressivo.');
+
+    // 2. Verify GET /api/analysis reflects the note
+    const getRes = await fetch(`${baseUrl}/api/analysis`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(getRes.status, 200);
+    const getData = await getRes.json();
+    assert.equal(getData.success, true);
+    const aapl = getData.assets.find(a => a.ticker === 'AAPL');
+    assert.ok(aapl);
+    assert.equal(aapl.notes, 'Tesi: solido posizionamento AI con Apple Intelligence e buyback aggressivo.');
+
+    // 3. Clear the note by sending null or empty string
+    const clearRes = await fetch(`${baseUrl}/api/analysis/AAPL/notes`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ notes: '' })
+    });
+    assert.equal(clearRes.status, 200);
+    const clearData = await clearRes.json();
+    assert.equal(clearData.success, true);
+    assert.equal(clearData.notes, null);
+
+    // 4. Verify note is cleared in DB
+    const db = getDb();
+    const row = db.prepare('SELECT notes FROM analysis_watchlist WHERE ticker = ?').get('AAPL');
+    assert.equal(row.notes, null);
+  });
+
+  test('Watchlist analysis UI templates and analysis.js include investment note dialog, icons, and tooltips', () => {
+    const desktopHtml = fs.readFileSync(path.join(__dirname, '../private_views/analysis.html'), 'utf8');
+    const mobileHtml = fs.readFileSync(path.join(__dirname, '../private_views/analysis_mobile.html'), 'utf8');
+    const analysisJs = fs.readFileSync(path.join(__dirname, '../public/analysis.js'), 'utf8');
+
+    // Modals
+    assert.ok(desktopHtml.includes('id="assetNoteModal"'), 'Desktop HTML must contain assetNoteModal dialog');
+    assert.ok(desktopHtml.includes('id="noteModalText"'), 'Desktop HTML must contain noteModalText');
+    assert.ok(mobileHtml.includes('id="assetNoteModal"'), 'Mobile HTML must contain assetNoteModal dialog');
+    assert.ok(mobileHtml.includes('id="noteModalText"'), 'Mobile HTML must contain noteModalText');
+
+    // analysis.js features
+    assert.ok(analysisJs.includes('function renderNoteIcon'), 'analysis.js must implement renderNoteIcon');
+    assert.ok(analysisJs.includes('function openNoteModal'), 'analysis.js must implement openNoteModal');
+    assert.ok(analysisJs.includes('data-action="note"'), 'analysis.js must support data-action="note"');
+    assert.ok(analysisJs.includes('/api/analysis/${encodeURIComponent(currentNoteTicker)}/notes'), 'analysis.js must call PUT /notes endpoint');
+  });
 });

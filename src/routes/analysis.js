@@ -514,6 +514,47 @@ router.put('/:ticker/monitoring', async (req, res) => {
 });
 
 /**
+ * PUT /api/analysis/:ticker/notes
+ * Updates investment notes for an asset in analysis_watchlist.
+ * Supports adding, updating, or clearing (null) the note.
+ */
+router.put('/:ticker/notes', async (req, res) => {
+  const ticker = (req.params.ticker || '').trim().toUpperCase();
+  if (!ticker) {
+    return res.status(400).json({ success: false, error: 'Ticker obbligatorio' });
+  }
+
+  const rawNotes = req.body && req.body.notes !== undefined ? req.body.notes : null;
+  const cleanNotes = (rawNotes !== null && typeof rawNotes === 'string' && rawNotes.trim().length > 0)
+    ? rawNotes.trim()
+    : null;
+
+  try {
+    const db = getDb();
+    const existing = db.prepare('SELECT name, stopLoss, takeProfit, isMonitored FROM analysis_watchlist WHERE ticker = ?').get(ticker);
+    const asset = db.prepare('SELECT name FROM assets WHERE ticker = ?').get(ticker);
+    const assetName = existing?.name || asset?.name || ticker;
+
+    db.prepare(`
+      INSERT INTO analysis_watchlist (ticker, name, notes, isMonitored, updatedAt)
+      VALUES (?, ?, ?, 1, datetime('now'))
+      ON CONFLICT(ticker) DO UPDATE SET
+        notes = excluded.notes,
+        updatedAt = datetime('now')
+    `).run(ticker, assetName, cleanNotes);
+
+    res.json({
+      success: true,
+      ticker,
+      notes: cleanNotes
+    });
+  } catch (err) {
+    console.error('[Analysis Notes PUT Error]', err);
+    res.status(500).json({ success: false, error: 'Errore salvataggio nota di investimento: ' + err.message });
+  }
+});
+
+/**
  * DELETE /api/analysis/watchlist/:ticker
  * Removes a monitored asset or resets SL/TP if the asset is in portfolio.
  */

@@ -11,11 +11,23 @@
   let activeFilter = 'all';
   let searchQuery = '';
   let currentTargetTicker = null;
+  let currentNoteTicker = null;
   let currentFundamentalsTicker = null;
   let currentModalRange = '1Y';
   let activeRevenueChart = null;
   let activePEChart = null;
   let activePriceChart = null;
+
+  // HTML escaping helper
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   // Formatting helpers
   function fmtCurrencySymbol(cur) {
@@ -284,6 +296,43 @@
     `;
   }
 
+  function renderNoteIcon(notes, ticker, isCompact = false) {
+    const hasNote = Boolean(notes && String(notes).trim().length > 0);
+    const cleanNotes = hasNote ? String(notes).trim() : '';
+    const tooltipText = hasNote ? cleanNotes : 'Aggiungi nota di investimento';
+
+    if (isCompact) {
+      if (!hasNote) return '';
+      return `
+        <button type="button" data-action="note" data-ticker="${escapeHtml(ticker)}"
+          title="${escapeHtml(tooltipText)}"
+          aria-label="Nota: ${escapeHtml(tooltipText)}"
+          onclick="event.stopPropagation()"
+          class="inline-flex items-center text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 hover:scale-110 transition cursor-pointer flex-shrink-0"
+        >
+          <span class="text-xs leading-none">📝</span>
+        </button>
+      `;
+    }
+
+    const btnClass = hasNote
+      ? 'text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-400/40 dark:border-amber-500/40 shadow-2xs'
+      : 'text-gray-400 hover:text-amber-500 dark:hover:text-amber-400 rounded hover:bg-gray-100 dark:hover:bg-white/10 border border-transparent';
+
+    return `
+      <button type="button" data-action="note" data-ticker="${escapeHtml(ticker)}"
+        title="${escapeHtml(tooltipText)}"
+        aria-label="${escapeHtml(tooltipText)}"
+        onclick="event.stopPropagation()"
+        class="note-btn p-1 rounded-md transition cursor-pointer inline-flex items-center justify-center ${btnClass} flex-shrink-0"
+      >
+        <svg class="w-3.5 h-3.5" fill="${hasNote ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${hasNote ? '1.5' : '2'}">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+        </svg>
+      </button>
+    `;
+  }
+
   function renderOriginBadge(origin) {
     const o = (origin || 'WATCHLIST').toUpperCase();
     if (o === 'OPEN') {
@@ -498,6 +547,7 @@
           <td class="px-2.5 py-1.5 whitespace-nowrap">
             <div class="flex items-center space-x-2">
               <span class="font-bold text-xs text-gray-900 dark:text-white font-mono group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">${a.ticker}</span>
+              ${renderNoteIcon(a.notes, a.ticker, true)}
               <span class="text-gray-400 text-[11px] truncate max-w-[150px] font-sans" title="${a.name}">${a.name}</span>
               ${!a.isMonitored ? '<span class="text-[8px] font-mono px-1 py-0.2 rounded bg-gray-100 dark:bg-white/10 text-gray-400 font-bold uppercase" title="Notifiche disabilitate per questo asset">OFF</span>' : ''}
             </div>
@@ -525,6 +575,7 @@
           <td class="px-2.5 py-1.5 whitespace-nowrap text-right">${tpHtml}</td>
           <td class="px-2 py-1.5 whitespace-nowrap text-center" onclick="event.stopPropagation()">
             <div class="inline-flex items-center space-x-1 opacity-75 group-hover:opacity-100 transition leading-none">
+              ${renderNoteIcon(a.notes, a.ticker)}
               <button data-action="targets" data-ticker="${a.ticker}" title="Imposta / Modifica SL e TP" class="p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded hover:bg-gray-100 dark:hover:bg-white/10 transition">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -550,7 +601,8 @@
 
     // Bind row click for fundamentals
     tbody.querySelectorAll('tr[data-ticker]').forEach(row => {
-      row.addEventListener('click', () => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('button[data-action]')) return;
         const ticker = row.getAttribute('data-ticker');
         if (ticker) openFundamentalsModal(ticker);
       });
@@ -563,7 +615,12 @@
         const action = btn.getAttribute('data-action');
         const ticker = btn.getAttribute('data-ticker');
         if (action === 'toggle-monitor') toggleAssetMonitoring(ticker);
+        else if (action === 'note') openNoteModal(ticker);
         else if (action === 'fundamentals') openFundamentalsModal(ticker);
+        else if (action === 'targets') openEditTargetsModal(ticker);
+        else if (action === 'delete') removeWatchlistAsset(ticker);
+      });
+    });
         else if (action === 'targets') openEditTargetsModal(ticker);
         else if (action === 'delete') removeWatchlistAsset(ticker);
       });
@@ -617,6 +674,7 @@
             <div class="flex items-center space-x-1.5 min-w-0 overflow-hidden">
               ${renderEyeIcon(a.isMonitored, a.ticker)}
               <span class="font-bold text-xs font-mono text-gray-900 dark:text-white">${a.ticker}</span>
+              ${renderNoteIcon(a.notes, a.ticker, true)}
               ${originBadge}
               <span class="text-[10px] text-gray-400 truncate max-w-[120px] font-sans">${a.name}</span>
               ${!a.isMonitored ? '<span class="text-[8px] font-mono px-1 py-0.2 rounded bg-gray-100 dark:bg-white/10 text-gray-400 font-bold uppercase" title="Notifiche disabilitate">OFF</span>' : ''}
@@ -653,6 +711,7 @@
               ${tpStatusBadge || '<span class="text-gray-500 text-[9px]">TP: -</span>'}
             </div>
             <div class="flex items-center space-x-1.5">
+              ${renderNoteIcon(a.notes, a.ticker)}
               <button data-action="targets" data-ticker="${a.ticker}" title="Imposta / Modifica SL e TP" class="p-0.5 text-gray-400 hover:text-emerald-500">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -676,7 +735,8 @@
 
     // Bind card clicks
     container.querySelectorAll('div[data-ticker]').forEach(card => {
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('button[data-action]')) return;
         const ticker = card.getAttribute('data-ticker');
         if (ticker) openFundamentalsModal(ticker);
       });
@@ -689,6 +749,7 @@
         const action = btn.getAttribute('data-action');
         const ticker = btn.getAttribute('data-ticker');
         if (action === 'toggle-monitor') toggleAssetMonitoring(ticker);
+        else if (action === 'note') openNoteModal(ticker);
         else if (action === 'fundamentals') openFundamentalsModal(ticker);
         else if (action === 'targets') openEditTargetsModal(ticker);
         else if (action === 'delete') removeWatchlistAsset(ticker);
@@ -1745,6 +1806,40 @@
     modal.showModal();
   }
 
+  // Open Investment Note Modal
+  function openNoteModal(ticker) {
+    const modal = document.getElementById('assetNoteModal');
+    if (!modal) return;
+
+    currentNoteTicker = ticker;
+    const asset = allAssets.find(x => x.ticker === ticker);
+
+    const tickerEl = document.getElementById('noteModalTicker');
+    const nameEl = document.getElementById('noteModalName');
+    const textArea = document.getElementById('noteModalText');
+    const charCount = document.getElementById('noteModalCharCount');
+    const deleteBtn = document.getElementById('noteModalDeleteBtn');
+
+    if (tickerEl) tickerEl.textContent = ticker;
+    if (nameEl) nameEl.textContent = asset?.name || ticker;
+
+    const currentNotes = (asset && asset.notes) ? String(asset.notes) : '';
+    if (textArea) {
+      textArea.value = currentNotes;
+    }
+    if (charCount) {
+      charCount.textContent = `${currentNotes.length} caratteri`;
+    }
+    if (deleteBtn) {
+      deleteBtn.classList.toggle('hidden', !currentNotes);
+    }
+
+    modal.showModal();
+    if (textArea) {
+      setTimeout(() => textArea.focus(), 60);
+    }
+  }
+
   // Remove Watchlist Asset
   async function removeWatchlistAsset(ticker) {
     if (!confirm(`Rimuovere ${ticker} dai titoli monitorati?`)) return;
@@ -1762,17 +1857,6 @@
     } catch (err) {
       alert('Errore di connessione: ' + err.message);
     }
-  }
-
-  // HTML escaping helper
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
   }
 
   // Market & Exchange detector for badge display
@@ -2145,6 +2229,94 @@
           }
         } catch (err) {
           alert('Errore di rete: ' + err.message);
+        }
+      });
+    }
+
+    // Realtime character counter for investment note textarea
+    const noteTextArea = document.getElementById('noteModalText');
+    if (noteTextArea) {
+      noteTextArea.addEventListener('input', () => {
+        const charCount = document.getElementById('noteModalCharCount');
+        if (charCount) {
+          charCount.textContent = `${noteTextArea.value.length} caratteri`;
+        }
+      });
+    }
+
+    // Submit Investment Note Form
+    const noteForm = document.getElementById('assetNoteForm');
+    if (noteForm) {
+      noteForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentNoteTicker) return;
+
+        const saveBtn = document.getElementById('noteModalSaveBtn');
+        if (saveBtn) saveBtn.disabled = true;
+
+        const textVal = document.getElementById('noteModalText')?.value.trim();
+
+        try {
+          const res = await fetch(`/api/analysis/${encodeURIComponent(currentNoteTicker)}/notes`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: textVal || null })
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            const asset = allAssets.find(x => x.ticker === currentNoteTicker);
+            if (asset) {
+              asset.notes = data.notes;
+            }
+            renderDesktopTable();
+            renderMobileList();
+            document.getElementById('assetNoteModal')?.close();
+            if (typeof window.showToast === 'function') {
+              window.showToast(data.notes ? `Nota salvata per ${currentNoteTicker}` : `Nota rimossa per ${currentNoteTicker}`);
+            }
+          } else {
+            alert('Errore salvataggio nota: ' + (data.error || 'Operazione fallita'));
+          }
+        } catch (err) {
+          alert('Errore di connessione: ' + err.message);
+        } finally {
+          if (saveBtn) saveBtn.disabled = false;
+        }
+      });
+    }
+
+    // Delete Investment Note Button
+    const noteDeleteBtn = document.getElementById('noteModalDeleteBtn');
+    if (noteDeleteBtn) {
+      noteDeleteBtn.addEventListener('click', async () => {
+        if (!currentNoteTicker) return;
+        if (!confirm(`Eliminare la nota di investimento per ${currentNoteTicker}?`)) return;
+
+        try {
+          const res = await fetch(`/api/analysis/${encodeURIComponent(currentNoteTicker)}/notes`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: null })
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            const asset = allAssets.find(x => x.ticker === currentNoteTicker);
+            if (asset) {
+              asset.notes = null;
+            }
+            renderDesktopTable();
+            renderMobileList();
+            document.getElementById('assetNoteModal')?.close();
+            if (typeof window.showToast === 'function') {
+              window.showToast(`Nota rimossa per ${currentNoteTicker}`);
+            }
+          } else {
+            alert('Errore eliminazione nota: ' + (data.error || 'Operazione fallita'));
+          }
+        } catch (err) {
+          alert('Errore di connessione: ' + err.message);
         }
       });
     }
