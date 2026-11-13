@@ -74,26 +74,33 @@
     div.className = 'fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs hidden transition-opacity duration-300';
 
     div.innerHTML = `
-      <div class="fixed inset-y-0 right-0 max-w-full flex pl-4 sm:pl-6 md:pl-10">
-        <div id="asset-drawer-panel" class="w-screen max-w-xl sm:max-w-xl md:max-w-2xl bg-white dark:bg-[#161618] shadow-2xl border-l border-gray-200 dark:border-white/10 flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out">
+      <div class="fixed inset-y-0 right-0 w-full sm:w-auto max-w-full flex pl-0 sm:pl-6 md:pl-10">
+        <div id="asset-drawer-panel" class="w-full sm:w-screen max-w-full sm:max-w-xl md:max-w-2xl h-full h-[100dvh] bg-white dark:bg-[#161618] shadow-2xl border-l-0 sm:border-l border-gray-200 dark:border-white/10 flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out">
           
           <!-- Drawer Header -->
-          <div class="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/70 dark:bg-white/[0.02]">
-            <div class="flex items-center space-x-2.5 truncate">
-              <span id="drawerAssetTypeBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                EQUITY
-              </span>
-              <span id="drawerCurrencyBadge" class="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                USD
-              </span>
-              <span id="drawerMarketStateBadge" class="hidden px-2 py-0.5 rounded text-[10px] font-bold font-mono">
-              </span>
-              <div class="truncate">
-                <h3 id="drawerAssetTicker" class="text-lg sm:text-xl font-bold font-mono text-gray-900 dark:text-white leading-tight">-</h3>
-                <p id="drawerAssetName" class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px] sm:max-w-sm">-</p>
+          <div class="sticky top-0 z-30 px-3.5 py-3 sm:px-5 sm:py-3.5 border-b border-gray-100 dark:border-white/5 bg-white/95 dark:bg-[#161618]/95 backdrop-blur-md flex items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+              <button type="button" id="drawerBackBtn" class="sm:hidden -ml-1 p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 active:scale-95 transition shrink-0" aria-label="Chiudi e torna indietro">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <h3 id="drawerAssetTicker" class="text-lg sm:text-xl font-bold font-mono text-gray-900 dark:text-white leading-tight tracking-tight">-</h3>
+                  <span id="drawerAssetTypeBadge" class="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 uppercase">
+                    EQUITY
+                  </span>
+                  <span id="drawerCurrencyBadge" class="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    USD
+                  </span>
+                  <span id="drawerMarketStateBadge" class="hidden px-1.5 py-0.5 rounded text-[10px] font-bold font-mono">
+                  </span>
+                </div>
+                <p id="drawerAssetName" class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5 max-w-full">-</p>
               </div>
             </div>
-            <button type="button" id="drawerCloseBtn" class="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition" title="Chiudi">
+            <button type="button" id="drawerCloseBtn" class="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 active:scale-95 transition shrink-0" title="Chiudi">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -101,27 +108,27 @@
           </div>
 
           <!-- Drawer Body (Scrollable, High Information Density) -->
-          <div class="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 text-xs font-mono">
+          <div class="flex-1 overflow-y-auto overscroll-contain p-2.5 sm:p-4 space-y-2.5 sm:space-y-3.5 text-xs font-mono">
 
             <!-- 1. Principali Indicatori (Hero Highlights Strip) -->
-            <div class="p-3 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs">
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 tabular-nums">
+            <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 tabular-nums">
                 
                 <!-- 1.1 Prezzo & Variazione 1D -->
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] uppercase font-semibold text-gray-400">Prezzo Attuale</span>
+                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">Prezzo</span>
                     <span id="drawerCurrentPriceEur" class="text-[10px] text-gray-400"></span>
                   </div>
                   <div class="mt-1">
-                    <strong id="drawerCurrentPrice" class="text-base sm:text-lg font-bold text-gray-900 dark:text-white block leading-tight">0,00 USD</strong>
+                    <strong id="drawerCurrentPrice" class="text-sm sm:text-base font-bold text-gray-900 dark:text-white block leading-tight truncate">0,00 USD</strong>
                     <div id="drawerPreMarketWrap" class="hidden mt-1 flex items-center space-x-1">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-                      <span id="drawerPreMarketText" class="text-[10px] font-bold font-mono text-amber-600 dark:text-amber-400">PRE: 0,00 USD (+0,00%)</span>
+                      <span id="drawerPreMarketText" class="text-[9px] font-bold font-mono text-amber-600 dark:text-amber-400 truncate">PRE: 0,00 USD (+0,00%)</span>
                     </div>
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5">
-                    <div id="drawerDayChangeBadge" class="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block">
+                    <div id="drawerDayChangeBadge" class="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block truncate max-w-full">
                       0,00 USD (+0,00%)
                     </div>
                   </div>
@@ -130,26 +137,26 @@
                 <!-- 1.2 Controvalore di Mercato -->
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] uppercase font-semibold text-gray-400">Controvalore</span>
+                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">Controvalore</span>
                     <span id="drawerMarketValueEur" class="text-[10px] text-gray-400"></span>
                   </div>
                   <div class="mt-1">
-                    <strong id="drawerMarketValue" class="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white block leading-tight">0,00 USD</strong>
+                    <strong id="drawerMarketValue" class="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white block leading-tight truncate">0,00 USD</strong>
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400">
                     <span id="drawerSharesQty" class="truncate font-medium">0 quote</span>
-                    <span id="drawerPortfolioWeight" class="font-bold text-gray-700 dark:text-gray-300 ml-1">0,00%</span>
+                    <span id="drawerPortfolioWeight" class="font-bold text-gray-700 dark:text-gray-300 ml-1 shrink-0">0,00%</span>
                   </div>
                 </div>
 
                 <!-- 1.3 Prezzo Medio di Carico (PMC) & Valore di Carico -->
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] uppercase font-semibold text-gray-400">PMC / Carico</span>
+                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">PMC / Carico</span>
                     <span id="drawerAverageCostEur" class="text-[10px] text-gray-400"></span>
                   </div>
                   <div class="mt-1">
-                    <strong id="drawerAverageCost" class="text-base sm:text-lg font-bold text-gray-900 dark:text-white block leading-tight">0,0000 USD</strong>
+                    <strong id="drawerAverageCost" class="text-sm sm:text-base font-bold text-gray-900 dark:text-white block leading-tight truncate">0,0000 USD</strong>
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400">
                     <span class="truncate">Carico:</span>
@@ -163,39 +170,41 @@
                 <!-- 1.4 P&L Non Realizzato -->
                 <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] uppercase font-semibold text-gray-400">P&L Non Realizzato</span>
+                    <span class="text-[10px] uppercase font-semibold text-gray-400 truncate">P&L Non Real.</span>
                     <span id="drawerPerfPriceReturn" class="text-[10px] text-gray-400">0,00%</span>
                   </div>
                   <div class="mt-1">
-                    <strong id="drawerPerfUnrealizedPnl" class="text-base sm:text-lg font-bold block leading-tight">0,00 USD</strong>
+                    <strong id="drawerPerfUnrealizedPnl" class="text-sm sm:text-base font-bold block leading-tight truncate">0,00 USD</strong>
                   </div>
                   <div class="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px]">
-                    <span class="text-gray-400">Rendimento:</span>
-                    <span id="drawerPerfUnrealizedPct" class="font-bold">0,00%</span>
+                    <span class="text-gray-400 truncate">Rendimento:</span>
+                    <span id="drawerPerfUnrealizedPct" class="font-bold shrink-0">0,00%</span>
                   </div>
                 </div>
 
               </div>
             </div>
 
-            <!-- 2. Interactive Historical Chart with Operations (SUBITO SOTTO I PRINCIPALI INDICATORI) -->
-            <div class="p-3 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Andamento, Volumi & Operazioni</h4>
-                  <p class="text-[9px] text-gray-400 font-mono">Prezzi e volumi storici con eseguiti BUY, SELL e dividendi</p>
+            <!-- 2. Interactive Historical Chart with Operations -->
+            <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2.5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Andamento, Volumi & Operazioni</h4>
+                    <p class="text-[9px] text-gray-400 font-mono hidden sm:block">Prezzi e volumi storici con eseguiti BUY, SELL e dividendi</p>
+                  </div>
                 </div>
-                <div class="flex items-center space-x-1 font-mono text-[10px]" id="chartRangeButtons">
-                  <button data-range="1M" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">1M</button>
-                  <button data-range="3M" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">3M</button>
-                  <button data-range="6M" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">6M</button>
-                  <button data-range="1Y" class="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold">1Y</button>
-                  <button data-range="3Y" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">3Y</button>
-                  <button data-range="ALL" class="px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white">ALL</button>
+                <div class="grid grid-cols-6 gap-1 font-mono text-[10px] w-full sm:w-auto sm:flex sm:items-center sm:space-x-1 bg-gray-100/70 dark:bg-white/5 p-0.5 sm:p-1 rounded-lg" id="chartRangeButtons">
+                  <button data-range="1M" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">1M</button>
+                  <button data-range="3M" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">3M</button>
+                  <button data-range="6M" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">6M</button>
+                  <button data-range="1Y" class="py-1 px-1 sm:px-2 text-center rounded-md bg-emerald-600 text-white font-bold transition shadow-xs">1Y</button>
+                  <button data-range="3Y" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">3Y</button>
+                  <button data-range="ALL" class="py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">ALL</button>
                 </div>
               </div>
               <div class="relative w-full rounded-lg bg-white dark:bg-white/[0.03] p-2 sm:p-2.5 border border-gray-100 dark:border-white/5">
-                <div class="h-48 sm:h-52 relative w-full">
+                <div class="h-52 sm:h-56 relative w-full">
                   <canvas id="drawerChartCanvas"></canvas>
                   <div id="drawerChartLoading" class="hidden absolute inset-0 bg-white/70 dark:bg-black/70 backdrop-blur-2xs flex items-center justify-center text-xs font-mono text-gray-500">
                     Caricamento grafico e operazioni...
@@ -203,7 +212,7 @@
                 </div>
 
                 <!-- Operations Legend & Summary -->
-                <div id="drawerTxSummaryBar" class="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-1.5 text-[10px] font-mono">
+                <div id="drawerTxSummaryBar" class="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[10px] font-mono">
                   <div class="flex items-center space-x-2.5 sm:space-x-3.5">
                     <span class="inline-flex items-center space-x-1">
                       <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-2xs"></span>
@@ -222,7 +231,7 @@
                       <span class="font-semibold text-gray-500 dark:text-gray-400">Volumi</span>
                     </span>
                   </div>
-                  <div id="drawerTxCountsBadge" class="text-gray-400 font-medium truncate">
+                  <div id="drawerTxCountsBadge" class="text-gray-400 font-medium truncate text-[9px] sm:text-[10px]">
                     0 operazioni nel periodo
                   </div>
                 </div>
@@ -230,45 +239,45 @@
             </div>
 
             <!-- 3. Dettaglio Performance -->
-            <div class="p-3 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
+            <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
               <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5">
                 <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Dettaglio Performance</h4>
                 <span class="text-[10px] text-gray-400 font-medium">G/P & Rendimenti</span>
               </div>
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 tabular-nums">
-                <div class="p-2 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase">Rendimento Oggi</span>
-                  <strong id="drawerPerfDayPnl" class="text-xs font-bold block mt-0.5">0,00 USD</strong>
+                <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">Rendimento Oggi</span>
+                  <strong id="drawerPerfDayPnl" class="text-xs sm:text-sm font-bold block mt-0.5">0,00 USD</strong>
                   <span id="drawerPerfDayPct" class="text-[10px] font-semibold block mt-0.5">+0,00%</span>
                 </div>
-                <div class="p-2 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase">G/P Realizzato</span>
-                  <strong id="drawerPerfRealizedPnl" class="text-xs font-bold text-gray-900 dark:text-white block mt-0.5">N/D</strong>
+                <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">G/P Realizzato</span>
+                  <strong id="drawerPerfRealizedPnl" class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white block mt-0.5">N/D</strong>
                   <span class="text-[10px] text-gray-400 block mt-0.5">Vendite chiuse</span>
                 </div>
-                <div class="p-2 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase">Dividendi Incassati</span>
-                  <strong id="drawerPerfIncome" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">0,00 USD</strong>
+                <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">Dividendi Incassati</span>
+                  <strong id="drawerPerfIncome" class="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">0,00 USD</strong>
                   <span class="text-[10px] text-gray-400 block mt-0.5">Reddito cedole</span>
                 </div>
-                <div class="p-2 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase">Effetto Cambio</span>
-                  <strong id="drawerPerfFxImpact" class="text-xs font-bold block mt-0.5">+0,00 €</strong>
+                <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">Effetto Cambio</span>
+                  <strong id="drawerPerfFxImpact" class="text-xs sm:text-sm font-bold block mt-0.5">+0,00 €</strong>
                   <span class="text-[10px] text-gray-400 block mt-0.5">Impatto FX EUR</span>
                 </div>
-                <div class="p-2 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
-                  <span class="text-gray-400 block text-[9px] uppercase">G/P Totale</span>
-                  <strong id="drawerPerfTotalPnl" class="text-xs font-bold block mt-0.5">0,00 USD</strong>
+                <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 col-span-1 sm:col-span-2">
+                  <span class="text-gray-400 block text-[9px] uppercase font-semibold">G/P Totale</span>
+                  <strong id="drawerPerfTotalPnl" class="text-xs sm:text-sm font-bold block mt-0.5">0,00 USD</strong>
                   <span id="drawerPerfTotalPct" class="text-[10px] font-semibold block mt-0.5">0,00%</span>
                 </div>
-                <div class="p-2 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 col-span-1 sm:col-span-3">
+                <div class="p-2 sm:p-2.5 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 col-span-1 sm:col-span-2">
                   <div class="flex items-center justify-between">
                     <div>
-                      <span class="text-gray-400 block text-[9px] uppercase">Rendimento Totale Complessivo (Total Return)</span>
+                      <span class="text-gray-400 block text-[9px] uppercase font-semibold">Total Return</span>
                       <strong id="drawerPerfTotalReturn" class="text-xs sm:text-sm font-extrabold block mt-0.5">0,00 USD</strong>
                     </div>
                     <div class="text-right">
-                      <span class="text-gray-400 block text-[9px] uppercase">% Totale</span>
+                      <span class="text-gray-400 block text-[9px] uppercase font-semibold">% Totale</span>
                       <strong id="drawerPerfTotalReturnPct" class="text-xs sm:text-sm font-extrabold block mt-0.5">0,00%</strong>
                     </div>
                   </div>
@@ -277,9 +286,9 @@
             </div>
 
             <!-- 4. Sessione di Borsa & Dati Fondamentali (2 Colonne Compatte) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
               <!-- Sessione Borsa -->
-              <div class="p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
+              <div class="p-2.5 sm:p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1">
                   <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Sessione Borsa</h4>
                   <span class="text-[9px] text-gray-400">Range Odierno</span>
@@ -309,7 +318,7 @@
               </div>
 
               <!-- Dati Fondamentali -->
-              <div class="p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
+              <div class="p-2.5 sm:p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1">
                   <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Dati Fondamentali</h4>
                   <span class="text-[9px] text-gray-400">Tassonomia</span>
@@ -336,24 +345,24 @@
             </div>
 
             <!-- 5. Storico Dividendi Percepiti -->
-            <div class="p-3 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
+            <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
               <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5">
                 <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Dividendi & Cedole</h4>
                 <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400" id="drawerTotalDividends">
                   Totale: 0,00 USD
                 </span>
               </div>
-              <div class="overflow-hidden rounded-lg border border-gray-200/60 dark:border-white/10 max-h-36 overflow-y-auto">
+              <div class="overflow-hidden rounded-lg border border-gray-200/60 dark:border-white/10 max-h-40 overflow-y-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
                   <thead class="bg-gray-100/70 dark:bg-white/5 text-gray-500 sticky top-0 text-[10px]">
                     <tr>
-                      <th class="px-3 py-1.5 font-semibold">Data</th>
-                      <th class="px-3 py-1.5 text-right font-semibold">Importo Netto</th>
-                      <th class="px-3 py-1.5 font-semibold">Note</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold">Data</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 text-right font-semibold">Importo Netto</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold">Note</th>
                     </tr>
                   </thead>
                   <tbody id="drawerDividendsTbody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums text-[11px]">
-                    <tr><td colspan="3" class="px-3 py-2 text-center text-gray-400">Caricamento storico dividendi...</td></tr>
+                    <tr><td colspan="3" class="px-2.5 sm:px-3 py-2 text-center text-gray-400">Caricamento storico dividendi...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -362,16 +371,18 @@
           </div>
 
           <!-- Drawer Footer Actions -->
-          <div class="px-4 py-2.5 sm:px-5 sm:py-3 bg-gray-50 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
-            <button type="button" id="drawerCloseBtn2" class="btn-pill px-3.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition">
+          <div class="sticky bottom-0 z-30 px-3 py-2.5 sm:px-5 sm:py-3 bg-white/95 dark:bg-[#161618]/95 backdrop-blur-md border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-2">
+            <button type="button" id="drawerCloseBtn2" class="px-3 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95 transition shrink-0">
               Chiudi
             </button>
-            <div class="flex items-center gap-2">
-              <button type="button" id="drawerSellBtn" class="btn-pill px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition shadow-md shadow-rose-600/20">
-                🔴 Vendi Titolo (SELL)
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-1 justify-end min-w-0">
+              <button type="button" id="drawerSellBtn" class="flex-1 sm:flex-none justify-center inline-flex items-center px-2.5 sm:px-3.5 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-semibold rounded-xl transition shadow-sm shadow-rose-600/30 truncate">
+                <span class="sm:hidden">🔴 Vendi</span>
+                <span class="hidden sm:inline">🔴 Vendi Titolo (SELL)</span>
               </button>
-              <button type="button" id="drawerNewTxBtn" class="btn-pill px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20">
-                + Nuova Operazione
+              <button type="button" id="drawerNewTxBtn" class="flex-1 sm:flex-none justify-center inline-flex items-center px-2.5 sm:px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-semibold rounded-xl transition shadow-sm shadow-emerald-600/30 truncate">
+                <span class="sm:hidden">+ Operazione</span>
+                <span class="hidden sm:inline">+ Nuova Operazione</span>
               </button>
             </div>
           </div>
@@ -750,7 +761,11 @@
           scales: {
             x: {
               grid: { display: false },
-              ticks: { maxTicksLimit: 7, font: { family: 'JetBrains Mono', size: 10 }, color: isDark ? '#9ca3af' : '#6b7280' }
+              ticks: {
+                maxTicksLimit: (typeof window !== 'undefined' && window.innerWidth < 640) ? 5 : 7,
+                font: { family: 'JetBrains Mono', size: 10 },
+                color: isDark ? '#9ca3af' : '#6b7280'
+              }
             },
             y: {
               position: 'left',
@@ -828,6 +843,8 @@
       }, 300);
     };
 
+    const backBtn = document.getElementById('drawerBackBtn');
+    if (backBtn) backBtn.addEventListener('click', close);
     document.getElementById('drawerCloseBtn').addEventListener('click', close);
     document.getElementById('drawerCloseBtn2').addEventListener('click', close);
 
@@ -841,9 +858,9 @@
       if (!btn || !currentAssetData) return;
 
       document.querySelectorAll('#chartRangeButtons button').forEach(b => {
-        b.className = 'px-2 py-0.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white';
+        b.className = 'py-1 px-1 sm:px-2 text-center rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition';
       });
-      btn.className = 'px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold';
+      btn.className = 'py-1 px-1 sm:px-2 text-center rounded-md bg-emerald-600 text-white font-bold transition shadow-xs';
 
       const range = btn.getAttribute('data-range');
       loadHistoricalChart(currentAssetData.ticker, range, currentAssetData.currency || 'EUR', currentPortfolioId);
