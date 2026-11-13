@@ -621,10 +621,6 @@
         else if (action === 'delete') removeWatchlistAsset(ticker);
       });
     });
-        else if (action === 'targets') openEditTargetsModal(ticker);
-        else if (action === 'delete') removeWatchlistAsset(ticker);
-      });
-    });
   }
 
   // Render Mobile Cards List

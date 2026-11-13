@@ -708,6 +708,10 @@ describe('Stock Analysis & Watchlist Section (Analisi, SL/TP & Fundamentals)', (
     assert.ok(mobileHtml.includes('id="noteModalText"'), 'Mobile HTML must contain noteModalText');
 
     // analysis.js features
+    assert.doesNotThrow(() => {
+      new Function(analysisJs);
+    }, 'analysis.js must be syntactically valid JS');
+
     assert.ok(analysisJs.includes('function renderNoteIcon'), 'analysis.js must implement renderNoteIcon');
     assert.ok(analysisJs.includes('function openNoteModal'), 'analysis.js must implement openNoteModal');
     assert.ok(analysisJs.includes('data-action="note"'), 'analysis.js must support data-action="note"');
