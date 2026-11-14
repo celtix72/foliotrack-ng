@@ -176,16 +176,31 @@
 
     const fmtPrice = (v, curr = '€') => {
       const n = Number(v) || 0;
-      const hasSubCents = (n !== 0) && (Math.abs(n * 100 - Math.round(n * 100)) > 0.001);
-      return curr + ' ' + n.toLocaleString('it-IT', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: hasSubCents ? 4 : 2
+      const abs = Math.abs(n);
+      let minDec, maxDec;
+      if (abs > 0 && abs < 1) {
+        minDec = 2;
+        maxDec = (abs < 0.01) ? 4 : 3;
+      } else if (abs >= 10) {
+        minDec = 1;
+        maxDec = 1;
+      } else {
+        minDec = 2;
+        maxDec = 2;
+      }
+      const formatted = n.toLocaleString('it-IT', {
+        minimumFractionDigits: minDec,
+        maximumFractionDigits: maxDec
       });
+      const c = (curr || '€').trim();
+      if (c === 'EUR' || c === '€') return `€ ${formatted}`;
+      if (c === 'USD' || c === '$') return `$ ${formatted}`;
+      return `${formatted} ${c}`;
     };
 
     const fmtPct = (v) => {
       const n = Number(v) || 0;
-      return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+      return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
     };
 
     const fmtQty = (v) => {
@@ -226,7 +241,7 @@
 
         document.getElementById('mStatNav').textContent = fmtEur(nav);
         const p1dEl = document.getElementById('mStat1D');
-        p1dEl.textContent = `${p1d >= 0 ? '+' : ''}${p1d.toFixed(2)}% 1D`;
+        p1dEl.textContent = `${p1d >= 0 ? '+' : ''}${p1d.toFixed(1)}% 1D`;
         p1dEl.className = `text-xs font-mono font-semibold ${p1d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
 
         document.getElementById('mStatCash').textContent = fmtEur(cash);
@@ -258,7 +273,7 @@
         const pnlBadge = pnl >= 0 ? 'badge-profit' : 'badge-loss';
 
         return `
-          <div class="signature-card p-3 space-y-2 cursor-pointer active:scale-[0.99] transition" data-m-holding-idx="${idx}">
+          <div class="signature-card p-2.5 space-y-1.5 cursor-pointer active:scale-[0.99] transition" data-m-holding-idx="${idx}">
             <div class="flex items-center justify-between">
               <div>
                 <span class="font-bold text-sm font-mono text-gray-900 dark:text-white">${h.ticker}</span>
@@ -275,7 +290,7 @@
 
             <div class="flex items-center justify-between text-[11px] font-mono text-gray-400 pt-1 border-t border-gray-100 dark:border-white/5">
               <span>Qtà: ${fmtQty(h.quantity)} @ ${fmtPrice(h.costBasis || h.pmc)}</span>
-              <span>Peso: <strong>${fmtPct(h.weight || 0)}</strong></span>
+              <span>Peso: <strong>${(Number(h.weight) || 0).toFixed(1)}%</strong></span>
             </div>
           </div>
         `;
@@ -317,7 +332,7 @@
         const isTot = c.isTotal || c.closeType === 'TOTALE';
 
         return `
-          <div class="signature-card p-3 space-y-2 cursor-pointer active:scale-[0.99] transition" data-m-closed-idx="${idx}">
+          <div class="signature-card p-2.5 space-y-1.5 cursor-pointer active:scale-[0.99] transition" data-m-closed-idx="${idx}">
             <div class="flex items-center justify-between">
               <div>
                 <span class="font-bold text-sm font-mono text-gray-900 dark:text-white">${c.ticker}</span>
