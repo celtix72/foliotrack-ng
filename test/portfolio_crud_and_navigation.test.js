@@ -236,4 +236,18 @@ describe('Portfolio Full CRUD & Multi-Portfolio Selector Verification', () => {
     const dashMobileHtml = await dashMobileRes.text();
     assert.ok(dashMobileHtml.includes('mDashboardPortfolioSelect'));
   });
+
+  test('Mobile portfolios page renders compact layout focusing on Controvalore and Liquidità', () => {
+    const pageJs = fs.readFileSync(path.join(__dirname, '../public/portfolios_page.js'), 'utf8');
+
+    // Syntax validity of portfolios_page.js
+    assert.doesNotThrow(() => {
+      new Function(pageJs);
+    }, 'portfolios_page.js must be syntactically valid JS');
+
+    assert.ok(pageJs.includes('function renderMobilePortfolios'), 'portfolios_page.js must contain renderMobilePortfolios');
+    assert.ok(pageJs.includes('function renderDesktopPortfolios'), 'portfolios_page.js must contain renderDesktopPortfolios');
+    assert.ok(pageJs.includes('Controvalore'), 'mobile layout must show Controvalore');
+    assert.ok(pageJs.includes('Liquidità'), 'mobile layout must show Liquidità');
+  });
 });
