@@ -127,6 +127,10 @@ describe('Phase 7: Portfolio Detail, Transactions Register & Bulk CSV Uploader',
       assert.ok(text.includes('drawerChartCanvas'));
       assert.ok(text.includes('loadHistoricalChart'));
       assert.ok(text.includes('loadDividendHistory'));
+      assert.ok(text.includes('loadAssetMovements'));
+      assert.ok(text.includes('MOVIMENTI ASSET'));
+      assert.ok(text.includes('drawerMovementsTbody'));
+      assert.ok(text.includes('drawerMovementsFilterBtns'));
     });
   });
 

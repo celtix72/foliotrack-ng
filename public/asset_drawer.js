@@ -11,6 +11,16 @@
   let currentAssetData = null;
   let currentPortfolioId = null;
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function fmtNumber(v, decimals = 0) {
     const num = Number(v) || 0;
     return num.toLocaleString('it-IT', {
@@ -352,25 +362,35 @@
               </div>
             </div>
 
-            <!-- 5. Storico Dividendi Percepiti -->
+            <!-- 5. Storico Movimenti Asset (BUY, SELL, DIVIDENDI & CEDOLE) -->
             <div class="p-2.5 sm:p-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200/80 dark:border-white/10 shadow-2xs space-y-2">
-              <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5">
-                <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">DIVIDENDI & CEDOLE</h4>
-                <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400" id="drawerTotalDividends">
-                  Totale: 0,00 USD
-                </span>
+              <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5 gap-2">
+                <div class="flex items-center space-x-2 min-w-0">
+                  <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 truncate">MOVIMENTI ASSET</h4>
+                  <span class="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 font-semibold shrink-0" id="drawerMovementsCount">
+                    0 op.
+                  </span>
+                </div>
+                <div class="flex items-center space-x-1 shrink-0" id="drawerMovementsFilterBtns">
+                  <button type="button" data-tx-filter="ALL" class="drawer-tx-filter-btn px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-600 text-white shadow-2xs">TUTTI</button>
+                  <button type="button" data-tx-filter="BUY" class="drawer-tx-filter-btn px-2 py-0.5 rounded text-[9px] font-mono font-semibold bg-gray-200/80 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">BUY</button>
+                  <button type="button" data-tx-filter="SELL" class="drawer-tx-filter-btn px-2 py-0.5 rounded text-[9px] font-mono font-semibold bg-gray-200/80 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">SELL</button>
+                  <button type="button" data-tx-filter="DIV" class="drawer-tx-filter-btn px-2 py-0.5 rounded text-[9px] font-mono font-semibold bg-gray-200/80 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">DIV</button>
+                </div>
               </div>
-              <div class="overflow-hidden rounded-lg border border-gray-200/60 dark:border-white/10 max-h-40 overflow-y-auto">
+              <div class="overflow-x-auto rounded-lg border border-gray-200/60 dark:border-white/10 max-h-52 overflow-y-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-white/5 text-left text-xs font-mono">
-                  <thead class="bg-gray-100/70 dark:bg-white/5 text-gray-500 sticky top-0 text-[10px]">
+                  <thead class="bg-gray-100/70 dark:bg-white/5 text-gray-500 sticky top-0 text-[10px] uppercase">
                     <tr>
-                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold">DATA</th>
-                      <th class="px-2.5 sm:px-3 py-1.5 text-right font-semibold">IMP. NETTO</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold whitespace-nowrap">DATA</th>
+                      <th class="px-2 sm:px-2.5 py-1.5 font-semibold whitespace-nowrap">TIPO</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 font-semibold whitespace-nowrap">QTÀ @ PREZZO</th>
+                      <th class="px-2.5 sm:px-3 py-1.5 text-right font-semibold whitespace-nowrap">IMPORTO</th>
                       <th class="px-2.5 sm:px-3 py-1.5 font-semibold">NOTE</th>
                     </tr>
                   </thead>
-                  <tbody id="drawerDividendsTbody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums text-[11px]">
-                    <tr><td colspan="3" class="px-2.5 sm:px-3 py-2 text-center text-gray-400">Caricamento storico dividendi...</td></tr>
+                  <tbody id="drawerMovementsTbody" class="divide-y divide-gray-200/50 dark:divide-white/5 tabular-nums text-[10px] sm:text-[11px]">
+                    <tr><td colspan="5" class="px-2.5 sm:px-3 py-3 text-center text-gray-400 font-mono">Caricamento movimenti in corso...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -804,41 +824,128 @@
     }
   }
 
-  async function loadDividendHistory(ticker, portfolioId, currency = 'EUR') {
-    const tbody = document.getElementById('drawerDividendsTbody');
-    const totalEl = document.getElementById('drawerTotalDividends');
+  let currentAssetMovements = [];
+  let currentAssetCurrency = 'EUR';
+  let activeMovementsFilter = 'ALL';
+
+  function filterAndRenderMovements() {
+    const tbody = document.getElementById('drawerMovementsTbody');
+    const countEl = document.getElementById('drawerMovementsCount');
+    if (!tbody) return;
+
+    let filtered = currentAssetMovements;
+    if (activeMovementsFilter === 'BUY') {
+      filtered = currentAssetMovements.filter(t => (t.type || '').toUpperCase() === 'BUY');
+    } else if (activeMovementsFilter === 'SELL') {
+      filtered = currentAssetMovements.filter(t => (t.type || '').toUpperCase() === 'SELL');
+    } else if (activeMovementsFilter === 'DIV') {
+      filtered = currentAssetMovements.filter(t => {
+        const tp = (t.type || '').toUpperCase();
+        return tp === 'DIVIDEND' || tp === 'INTEREST';
+      });
+    }
+
+    if (countEl) {
+      countEl.textContent = `${filtered.length} op.`;
+    }
+
+    if (!filtered || filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="px-3 py-4 text-center text-gray-400 font-mono text-xs">
+            Nessun movimento registrato ${activeMovementsFilter !== 'ALL' ? `per il filtro ${activeMovementsFilter}` : 'per questo asset'}
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(t => {
+      const tp = (t.type || '').toUpperCase();
+      const isBuy = tp === 'BUY';
+      const isSell = tp === 'SELL';
+      const isDiv = tp === 'DIVIDEND';
+      const isInterest = tp === 'INTEREST';
+
+      // Type Badge
+      let badgeHtml = '';
+      if (isBuy) {
+        badgeHtml = '<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">🟢 BUY</span>';
+      } else if (isSell) {
+        badgeHtml = '<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">🔴 SELL</span>';
+      } else if (isDiv) {
+        badgeHtml = '<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">🟡 DIV</span>';
+      } else if (isInterest) {
+        badgeHtml = '<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">🟡 CED</span>';
+      } else {
+        badgeHtml = `<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-gray-500/15 text-gray-600 dark:text-gray-300 border border-gray-500/30">${escapeHtml(tp)}</span>`;
+      }
+
+      // Quantity & Price
+      let qtyPriceStr = '-';
+      if (t.quantity && t.price) {
+        const qFormatted = fmtNumber(t.quantity, t.quantity % 1 === 0 ? 0 : 2);
+        qtyPriceStr = `${qFormatted} @ ${fmtPrice(t.price, currentAssetCurrency)}`;
+      } else if (t.quantity) {
+        qtyPriceStr = `${fmtNumber(t.quantity, t.quantity % 1 === 0 ? 0 : 2)} quote`;
+      } else if (t.price) {
+        qtyPriceStr = `@ ${fmtPrice(t.price, currentAssetCurrency)}`;
+      }
+
+      // Amount / Controvalore
+      const amt = Number(t.amount) || 0;
+      let amtClass = 'text-gray-900 dark:text-white font-bold';
+      let amtPrefix = '';
+      if (isSell || isDiv || isInterest) {
+        amtClass = 'text-emerald-600 dark:text-emerald-400 font-bold';
+        amtPrefix = '+';
+      } else if (isBuy) {
+        amtClass = 'text-gray-900 dark:text-white font-bold';
+        amtPrefix = '-';
+      }
+      const amtStr = `${amtPrefix}${fmtPrice(amt, currentAssetCurrency)}`;
+
+      return `
+        <tr class="hover:bg-gray-50/50 dark:hover:bg-white/5 transition">
+          <td class="px-2.5 sm:px-3 py-1.5 text-gray-500 whitespace-nowrap font-mono text-[10px] sm:text-[11px]">${escapeHtml(t.date || '-')}</td>
+          <td class="px-2 sm:px-2.5 py-1.5 whitespace-nowrap">${badgeHtml}</td>
+          <td class="px-2.5 sm:px-3 py-1.5 text-gray-700 dark:text-gray-300 font-mono whitespace-nowrap text-[10px] sm:text-[11px]">${qtyPriceStr}</td>
+          <td class="px-2.5 sm:px-3 py-1.5 text-right ${amtClass} font-mono whitespace-nowrap text-[10px] sm:text-[11px]">${amtStr}</td>
+          <td class="px-2.5 sm:px-3 py-1.5 text-gray-400 truncate max-w-[130px] font-sans text-[10px] sm:text-[11px]" title="${escapeHtml(t.notes || '')}">${escapeHtml(t.notes || '-')}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function loadAssetMovements(ticker, portfolioId, currency = 'EUR') {
+    currentAssetCurrency = currency || 'EUR';
+    const tbody = document.getElementById('drawerMovementsTbody');
+    const countEl = document.getElementById('drawerMovementsCount');
     if (!tbody) return;
 
     try {
-      let url = `/api/transactions?type=DIVIDEND&assetTicker=${encodeURIComponent(ticker)}&limit=100`;
+      let url = `/api/transactions?assetTicker=${encodeURIComponent(ticker)}&limit=200`;
       if (portfolioId && portfolioId !== 'all') url += `&portfolioId=${portfolioId}`;
 
       const res = await fetch(url);
       const data = await res.json();
 
-      if (data.success && data.transactions && data.transactions.length > 0) {
-        let sum = 0;
-        tbody.innerHTML = data.transactions.map(t => {
-          const amt = Number(t.amount) || 0;
-          sum += amt;
-          return `
-            <tr class="hover:bg-gray-50/50 dark:hover:bg-white/5 transition">
-              <td class="px-3 py-2 text-gray-500">${t.date}</td>
-              <td class="px-3 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">${fmtCurrency(amt, currency)}</td>
-              <td class="px-3 py-2 text-gray-400 truncate max-w-[120px]" title="${t.notes || ''}">${t.notes || '-'}</td>
-            </tr>
-          `;
-        }).join('');
-
-        totalEl.textContent = `Totale: ${fmtCurrency(sum, currency)}`;
+      if (data.success && Array.isArray(data.transactions)) {
+        currentAssetMovements = data.transactions;
       } else {
-        tbody.innerHTML = '<tr><td colspan="3" class="px-3 py-3 text-center text-gray-400">Nessun dividendo registrato per questo titolo</td></tr>';
-        totalEl.textContent = `Totale: ${fmtCurrency(0, currency)}`;
+        currentAssetMovements = [];
       }
+      filterAndRenderMovements();
     } catch (err) {
-      console.warn('Error loading dividend history:', err);
+      console.warn('Error loading asset movements:', err);
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-3 text-center text-rose-500 font-mono text-xs">Errore nel caricamento dei movimenti</td></tr>';
+      }
     }
   }
+
+  // Alias for backward compatibility
+  const loadDividendHistory = loadAssetMovements;
 
   function setupEvents() {
     const close = () => {
@@ -903,6 +1010,24 @@
             quantity: asset.quantity || null
           });
         }
+      });
+    }
+
+    // Movements filter buttons
+    const filterContainer = document.getElementById('drawerMovementsFilterBtns');
+    if (filterContainer) {
+      filterContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-tx-filter]');
+        if (!btn) return;
+        activeMovementsFilter = btn.getAttribute('data-tx-filter') || 'ALL';
+        filterContainer.querySelectorAll('button[data-tx-filter]').forEach(b => {
+          if (b === btn) {
+            b.className = 'drawer-tx-filter-btn px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-600 text-white shadow-2xs';
+          } else {
+            b.className = 'drawer-tx-filter-btn px-2 py-0.5 rounded text-[9px] font-mono font-semibold bg-gray-200/80 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white';
+          }
+        });
+        filterAndRenderMovements();
       });
     }
   }
@@ -1111,9 +1236,20 @@
     document.getElementById('drawerPE').textContent = holding.pe ? Number(holding.pe).toFixed(1) : 'N/D';
     document.getElementById('drawerDivYield').textContent = holding.dividendYield ? fmtPercent(holding.dividendYield) : '0,0%';
 
-    // Load interactive chart and dividend history
+    // Load interactive chart and asset movements
     loadHistoricalChart(holding.ticker, '1Y', curr, portfolioId);
-    loadDividendHistory(holding.ticker, portfolioId, curr);
+    activeMovementsFilter = 'ALL';
+    const filterContainer = document.getElementById('drawerMovementsFilterBtns');
+    if (filterContainer) {
+      filterContainer.querySelectorAll('button[data-tx-filter]').forEach(b => {
+        if (b.getAttribute('data-tx-filter') === 'ALL') {
+          b.className = 'drawer-tx-filter-btn px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-600 text-white shadow-2xs';
+        } else {
+          b.className = 'drawer-tx-filter-btn px-2 py-0.5 rounded text-[9px] font-mono font-semibold bg-gray-200/80 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white';
+        }
+      });
+    }
+    loadAssetMovements(holding.ticker, portfolioId, curr);
 
     // Asynchronously fetch extra asset data from API if any daily values were fallback
     fetch(`/api/assets/${encodeURIComponent(holding.ticker)}`)
