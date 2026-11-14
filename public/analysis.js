@@ -245,10 +245,10 @@
     }
 
     return `
-      <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between" ${tooltip ? `title="${tooltip}"` : ''}>
+      <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden" ${tooltip ? `title="${tooltip}"` : ''}>
         <span class="text-gray-400 text-[10px] block truncate">${label}</span>
-        <div class="mt-1 flex items-baseline justify-between flex-wrap gap-1">
-          <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums">${valueFormatted}</strong>
+        <div class="mt-1 flex items-baseline justify-between flex-wrap gap-1 min-w-0">
+          <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums truncate">${valueFormatted}</strong>
           ${badgeHtml}
         </div>
       </div>
@@ -848,11 +848,11 @@
       // Render Rich Fundamental Report & Price Chart Card
       modalBody.innerHTML = `
         <!-- TOP CARD: GRAFICO PREZZO CON ULTIMA QUOTAZIONE AD OGGI E OPERAZIONI BUY / SELL -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono">
-          <div class="flex items-center justify-between gap-1.5 border-b border-gray-200/60 dark:border-white/5 pb-2">
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono min-w-0">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200/60 dark:border-white/5 pb-2 min-w-0">
             <div class="min-w-0">
               <div class="flex items-center space-x-1.5 truncate">
-                <span class="text-sm" aria-hidden="true">📈</span>
+                <span class="text-sm shrink-0" aria-hidden="true">📈</span>
                 <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono truncate">
                   <span class="sm:hidden">Andamento Prezzo</span>
                   <span class="hidden sm:inline">Andamento Prezzo, Volumi & Operazioni Eseguite</span>
@@ -864,7 +864,7 @@
               <div class="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-x-1.5 font-mono">
                 <span>Ultima: <strong class="text-gray-900 dark:text-white font-bold">${fmtPrice(currentPrice, currency)}</strong></span>
                 ${(assetInfo.preMarketPrice && Number(assetInfo.preMarketPrice) > 0) ? `
-                  <span class="inline-flex items-center space-x-1 px-1 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  <span class="inline-flex items-center space-x-1 px-1 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                     <span>PRE: ${fmtPrice(assetInfo.preMarketPrice, currency)}</span>
                   </span>
@@ -874,7 +874,7 @@
             </div>
 
             <!-- Time Range Selector -->
-            <div class="flex items-center space-x-0.5 sm:space-x-1 font-mono text-[10px] shrink-0" id="modalPriceChartRangeButtons">
+            <div class="flex items-center space-x-1 font-mono text-[10px] shrink-0 overflow-x-auto max-w-full pb-0.5" id="modalPriceChartRangeButtons">
               <button type="button" data-range="1M" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === '1M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">1M</button>
               <button type="button" data-range="3M" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === '3M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">3M</button>
               <button type="button" data-range="6M" class="chart-range-btn px-1.5 py-0.5 rounded transition border ${currentModalRange === '6M' ? 'bg-emerald-600 text-white font-bold border-emerald-500' : 'border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}">6M</button>
@@ -885,56 +885,56 @@
           </div>
 
           <!-- Operations Summary Banner -->
-          <div class="flex flex-wrap items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-white/[0.02] p-1.5 rounded-lg border border-gray-100 dark:border-white/5">
-            <div class="flex items-center space-x-2">
-              <span id="modalTxCountsBadge" class="font-semibold text-gray-700 dark:text-gray-300">Caricamento operazioni portafoglio...</span>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-white/[0.02] p-1.5 rounded-lg border border-gray-100 dark:border-white/5 min-w-0">
+            <div class="flex items-center space-x-2 min-w-0">
+              <span id="modalTxCountsBadge" class="font-semibold text-gray-700 dark:text-gray-300 truncate">Caricamento operazioni portafoglio...</span>
             </div>
-            <div class="flex items-center space-x-2 text-[9px]">
-              <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white mr-1" aria-hidden="true"></span>BUY (Acquisto)</span>
-              <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white mr-1" aria-hidden="true"></span>SELL (Vendita)</span>
-              <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white mr-1" aria-hidden="true"></span>DIV (Dividendo)</span>
-              <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-2xs bg-gray-400/60 dark:bg-gray-500/60 mr-1" aria-hidden="true"></span>Volumi</span>
+            <div class="flex flex-wrap items-center gap-1.5 text-[9px] shrink-0">
+              <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1 shrink-0" aria-hidden="true"></span>BUY</span>
+              <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-rose-500 mr-1 shrink-0" aria-hidden="true"></span>SELL</span>
+              <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-amber-500 mr-1 shrink-0" aria-hidden="true"></span>DIV</span>
+              <span class="inline-flex items-center"><span class="w-2 h-2 rounded-xs bg-gray-400/60 dark:bg-gray-500/60 mr-1 shrink-0" aria-hidden="true"></span>Volumi</span>
             </div>
           </div>
 
           <!-- Canvas Container -->
-          <div class="h-60 sm:h-72 w-full relative">
+          <div class="h-56 sm:h-72 w-full min-w-0 max-w-full relative overflow-hidden">
             <div id="modalPriceChartLoading" class="absolute inset-0 bg-white/60 dark:bg-[#151518]/60 backdrop-blur-xs flex items-center justify-center z-10 hidden">
               <svg class="w-6 h-6 animate-spin text-emerald-500" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             </div>
-            <canvas id="modalPriceChartCanvas"></canvas>
+            <canvas id="modalPriceChartCanvas" class="max-w-full"></canvas>
           </div>
         </div>
 
         <!-- Top Metrics KPI Grid -->
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono">
-          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono min-w-0">
+          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 min-w-0 overflow-hidden">
             <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Market Cap</span>
-            <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">${fmtLargeNumber(f.marketCap, f.currency)}</div>
+            <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5 truncate">${fmtLargeNumber(f.marketCap, f.currency)}</div>
           </div>
-          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 min-w-0 overflow-hidden">
             <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">P/E (Trail / Fwd)</span>
-            <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+            <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5 truncate">
               ${f.trailingPE ? f.trailingPE.toFixed(1) + 'x' : '-'} / ${f.forwardPE ? f.forwardPE.toFixed(1) + 'x' : '-'}
             </div>
           </div>
-          <div class="signature-card p-2 bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/30 dark:border-emerald-500/20">
+          <div class="signature-card p-2 bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/30 dark:border-emerald-500/20 min-w-0 overflow-hidden">
             <span class="text-[9px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block truncate">PEG Ratio</span>
-            <div class="text-xs font-bold text-emerald-800 dark:text-emerald-300 mt-0.5 flex items-center justify-between">
-              <span>${f.pegRatio ? f.pegRatio.toFixed(2) + 'x' : '-'}</span>
-              <span class="text-[9px] font-sans font-semibold">${pegScore.label ? pegScore.label.split(' ')[0] : ''}</span>
+            <div class="text-xs font-bold text-emerald-800 dark:text-emerald-300 mt-0.5 flex items-center justify-between gap-1 min-w-0">
+              <span class="truncate">${f.pegRatio ? f.pegRatio.toFixed(2) + 'x' : '-'}</span>
+              <span class="text-[9px] font-sans font-semibold shrink-0">${pegScore.label ? pegScore.label.split(' ')[0] : ''}</span>
             </div>
           </div>
-          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5">
+          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 min-w-0 overflow-hidden">
             <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Dividend Yield</span>
-            <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+            <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
               ${f.dividendYield ? f.dividendYield.toFixed(2) + '%' : '0.00%'}
             </div>
           </div>
-          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 col-span-2 sm:col-span-1">
+          <div class="signature-card p-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 col-span-2 sm:col-span-1 min-w-0 overflow-hidden">
             <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Consenso Analisti</span>
             <div class="mt-0.5">
               ${getRecommendationBadge(f.recommendationKey)}
@@ -943,15 +943,16 @@
         </div>
 
         <!-- SPOTLIGHT: PEG RATIO (Peter Lynch Growth Metric) -->
-        <div class="signature-card p-3 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 dark:border-emerald-500/20 rounded-xl space-y-2">
-          <div class="flex items-center justify-between flex-wrap gap-1">
-            <div class="flex items-center space-x-2">
-              <span class="text-base" aria-hidden="true">💎</span>
-              <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono">
-                PEG Ratio (Price / Earnings-to-Growth) - Regola di Peter Lynch
+        <div class="signature-card p-3 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 dark:border-emerald-500/20 rounded-xl space-y-2 min-w-0">
+          <div class="flex items-center justify-between flex-wrap gap-1.5 min-w-0">
+            <div class="flex items-center space-x-1.5 min-w-0">
+              <span class="text-base shrink-0" aria-hidden="true">💎</span>
+              <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider font-mono truncate">
+                <span class="sm:hidden">PEG Ratio (Regola di Lynch)</span>
+                <span class="hidden sm:inline">PEG Ratio (Price / Earnings-to-Growth) - Regola di Peter Lynch</span>
               </h3>
             </div>
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-2 shrink-0">
               ${f.pegSource ? `<span class="text-[9px] text-gray-400 font-mono">Fonte: ${f.pegSource}</span>` : ''}
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${pegScore.bgClass} ${pegScore.textClass}">
                 <span class="mr-1" aria-hidden="true">${pegScore.icon}</span>
@@ -960,9 +961,9 @@
             </div>
           </div>
 
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-            <div class="flex items-baseline space-x-2">
-              <span class="text-2xl font-extrabold font-mono text-gray-900 dark:text-white">${f.pegRatio ? f.pegRatio.toFixed(2) + 'x' : 'N/D'}</span>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 min-w-0">
+            <div class="flex items-baseline space-x-2 min-w-0">
+              <span class="text-2xl font-extrabold font-mono text-gray-900 dark:text-white shrink-0">${f.pegRatio ? f.pegRatio.toFixed(2) + 'x' : 'N/D'}</span>
               <span class="text-[11px] text-gray-500 dark:text-gray-400 font-sans leading-tight">
                 ${f.pegRatio && f.pegRatio > 0 && f.pegRatio < 1.0
                   ? 'Il titolo tratta a sconto rispetto alla crescita attesa degli utili (Buy Zone).'
@@ -973,7 +974,7 @@
             </div>
 
             <!-- Visual Scale Reference -->
-            <div class="flex items-center space-x-1.5 text-[9px] font-mono shrink-0">
+            <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono w-full sm:w-auto">
               <span class="px-1.5 py-0.5 rounded ${f.pegRatio > 0 && f.pegRatio < 1.0 ? 'bg-emerald-600 text-white font-bold ring-2 ring-emerald-400' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'} border border-emerald-500/30">&lt; 1.0 Sottovalutato</span>
               <span class="px-1.5 py-0.5 rounded ${f.pegRatio >= 1.0 && f.pegRatio <= 1.5 ? 'bg-amber-600 text-white font-bold ring-2 ring-amber-400' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'} border border-amber-500/30">1.0 - 1.5 Fair</span>
               <span class="px-1.5 py-0.5 rounded ${f.pegRatio > 1.5 ? 'bg-rose-600 text-white font-bold ring-2 ring-rose-400' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400'} border border-rose-500/30">&gt; 1.5 Sopravvalutato</span>
@@ -983,9 +984,9 @@
 
         <!-- ULTIMA TRIMESTRALE (Latest Quarter Financials & EPS Surprise) -->
         ${f.latestQuarter ? `
-          <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono">
-            <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1.5">
-              <div class="flex items-center space-x-2">
+          <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono min-w-0">
+            <div class="text-xs font-bold text-gray-900 dark:text-white flex flex-wrap items-center justify-between gap-1.5 border-b border-gray-200/60 dark:border-white/5 pb-1.5 min-w-0">
+              <div class="flex flex-wrap items-center gap-1.5 min-w-0">
                 <span>📅 Ultima Trimestrale (${f.latestQuarter.quarter})</span>
                 ${f.latestQuarter.reportedDate ? `<span class="text-[10px] text-gray-400 font-normal">Riportata il ${new Date(f.latestQuarter.reportedDate).toLocaleDateString('it-IT')}</span>` : ''}
               </div>
@@ -1005,54 +1006,54 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">EPS Effettivo vs Stima</span>
-                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] min-w-0">
+              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+                <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">EPS Effettivo / Stima</span>
+                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5 truncate">
                   ${f.latestQuarter.epsActual !== null ? f.latestQuarter.epsActual.toFixed(2) : '-'} / ${f.latestQuarter.epsEstimate !== null ? f.latestQuarter.epsEstimate.toFixed(2) : '-'}
                 </div>
-                <span class="text-[9px] text-gray-400">Diff: ${f.latestQuarter.epsDifference !== null ? (f.latestQuarter.epsDifference >= 0 ? '+' : '') + f.latestQuarter.epsDifference.toFixed(3) : '-'}</span>
+                <span class="text-[9px] text-gray-400 block truncate">Diff: ${f.latestQuarter.epsDifference !== null ? (f.latestQuarter.epsDifference >= 0 ? '+' : '') + f.latestQuarter.epsDifference.toFixed(3) : '-'}</span>
               </div>
 
-              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
                 <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Ricavi Trimestrali</span>
-                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5 truncate">
                   ${fmtLargeNumber(f.latestQuarter.revenue, f.currency)}
                 </div>
-                <span class="text-[9px] text-gray-400">Fatturato 3M</span>
+                <span class="text-[9px] text-gray-400 block truncate">Fatturato 3M</span>
               </div>
 
-              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Utile Netto Trimestre</span>
-                <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+                <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Utile Trimestrale</span>
+                <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
                   ${fmtLargeNumber(f.latestQuarter.earnings, f.currency)}
                 </div>
-                <span class="text-[9px] text-gray-400">Net Income 3M</span>
+                <span class="text-[9px] text-gray-400 block truncate">Net Income 3M</span>
               </div>
 
-              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+              <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
                 <span class="text-[9px] uppercase font-bold text-gray-400 block truncate">Margine Trimestrale</span>
-                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+                <div class="text-xs font-bold text-gray-900 dark:text-white mt-0.5 truncate">
                   ${f.latestQuarter.profitMargin !== null ? f.latestQuarter.profitMargin.toFixed(1) + '%' : '-'}
                 </div>
-                <span class="text-[9px] text-gray-400">${f.latestQuarter.nextEarningsDate ? `Prossima: ${new Date(f.latestQuarter.nextEarningsDate).toLocaleDateString('it-IT')}` : 'Prossima: N/D'}</span>
+                <span class="text-[9px] text-gray-400 block truncate">${f.latestQuarter.nextEarningsDate ? `Prox: ${new Date(f.latestQuarter.nextEarningsDate).toLocaleDateString('it-IT')}` : 'Prox: N/D'}</span>
               </div>
             </div>
           </div>
         ` : ''}
 
         <!-- STORICO 5 ANNI: GRAFICI FATTURATO E P/E -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono">
-          <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1.5">
-            <div class="flex items-center space-x-1.5">
-              <span>📊 Storico Ultimi 5 Anni: Fatturato & Multiplo P/E</span>
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-xl font-mono min-w-0">
+          <div class="text-xs font-bold text-gray-900 dark:text-white flex flex-wrap items-center justify-between gap-1 border-b border-gray-200/60 dark:border-white/5 pb-1.5 min-w-0">
+            <div class="flex items-center space-x-1.5 min-w-0">
+              <span class="truncate">📊 Storico Ultimi 5 Anni: Fatturato & P/E</span>
             </div>
-            <span class="text-[10px] text-gray-400 font-normal">Dati storici yfinance</span>
+            <span class="text-[10px] text-gray-400 font-normal shrink-0">Dati storici yfinance</span>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 min-w-0">
             <!-- Chart 1: Fatturato e Utili Annuali -->
-            <div class="p-2 rounded-lg bg-white dark:bg-[#121214] border border-gray-200/60 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white dark:bg-[#121214] border border-gray-200/60 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <div class="flex items-center justify-between mb-1 text-[10px] font-mono">
                 <span class="font-bold text-gray-700 dark:text-gray-300">Fatturato & Utili Annuali</span>
                 <div class="flex items-center space-x-2 text-[9px]">
@@ -1060,13 +1061,13 @@
                   <span class="inline-flex items-center"><span class="w-2 h-2 rounded-sm bg-purple-500 mr-1" aria-hidden="true"></span>Utile</span>
                 </div>
               </div>
-              <div class="h-40 w-full relative">
-                <canvas id="modalRevenueChart"></canvas>
+              <div class="h-40 w-full min-w-0 max-w-full relative overflow-hidden">
+                <canvas id="modalRevenueChart" class="max-w-full"></canvas>
               </div>
             </div>
 
             <!-- Chart 2: Andamento Multiplo P/E -->
-            <div class="p-2 rounded-lg bg-white dark:bg-[#121214] border border-gray-200/60 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white dark:bg-[#121214] border border-gray-200/60 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <div class="flex items-center justify-between mb-1 text-[10px] font-mono">
                 <span class="font-bold text-gray-700 dark:text-gray-300">Andamento P/E Storico</span>
                 <div class="flex items-center space-x-2 text-[9px]">
@@ -1074,48 +1075,48 @@
                   <span class="text-gray-400">(Ref. 20x)</span>
                 </div>
               </div>
-              <div class="h-40 w-full relative">
-                <canvas id="modalPEChart"></canvas>
+              <div class="h-40 w-full min-w-0 max-w-full relative overflow-hidden">
+                <canvas id="modalPEChart" class="max-w-full"></canvas>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Section 1: Multipli di Valutazione Evidenziati -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
-          <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono min-w-0">
+          <div class="text-xs font-bold text-gray-900 dark:text-white flex flex-wrap items-center justify-between gap-1 border-b border-gray-200/60 dark:border-white/5 pb-1 min-w-0">
             <span>📈 Multipli di Mercato & Valutazione</span>
             <span class="text-[10px] text-gray-400 font-normal">Evidenziati per congruità del valore</span>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-0">
             ${renderScoredMetric('P/E Ratio (Trailing)', fmtMultiple(f.trailingPE), peScore, 'Multiplo prezzo/utili ultimi 12 mesi')}
             ${renderScoredMetric('P/E Forward', fmtMultiple(f.forwardPE), fwdPeScore, 'Multiplo prezzo/utili attesi a 1 anno')}
             ${renderScoredMetric('PEG Ratio', fmtMultiple(f.pegRatio), pegScore, 'Rapporto tra P/E e crescita stimata')}
             ${renderScoredMetric('Price to Book (P/B)', fmtMultiple(f.priceToBook), pbScore, 'Prezzo diviso valore contabile per azione')}
             ${renderScoredMetric('Price to Sales (P/S)', fmtMultiple(f.priceToSales), psScore, 'Prezzo diviso fatturato per azione')}
             ${renderScoredMetric('EV / EBITDA', fmtMultiple(f.enterpriseToEbitda), evEbitdaScore, 'Enterprise Value diviso margine EBITDA')}
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">Enterprise Value</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.enterpriseValue, f.currency)}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${fmtLargeNumber(f.enterpriseValue, f.currency)}</strong>
             </div>
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">EV / Revenue</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtMultiple(f.enterpriseToRevenue)}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${fmtMultiple(f.enterpriseToRevenue)}</strong>
             </div>
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">Beta (Volatilità)</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${f.beta ? Number(f.beta).toFixed(2) : '-'}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${f.beta ? Number(f.beta).toFixed(2) : '-'}</strong>
             </div>
           </div>
         </div>
 
         <!-- Section 2: Redditività & Conto Economico Evidenziati -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
-          <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono min-w-0">
+          <div class="text-xs font-bold text-gray-900 dark:text-white flex flex-wrap items-center justify-between gap-1 border-b border-gray-200/60 dark:border-white/5 pb-1 min-w-0">
             <span>💰 Redditività, Margini & Solidità Patrimoniale</span>
             <span class="text-[10px] text-gray-400 font-normal">Income & Balance Sheet</span>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-0">
             ${renderScoredMetric('Margine Utile Netto', f.profitMargins ? (f.profitMargins * 100).toFixed(2) + '%' : '-', profitMarginScore, 'Percentuale di utile netto sui ricavi totali')}
             ${renderScoredMetric('Margine Operativo', f.operatingMargins ? (f.operatingMargins * 100).toFixed(2) + '%' : '-', opMarginScore, 'Redditività dell attività core')}
             ${renderScoredMetric('Return on Equity (ROE)', f.returnOnEquity ? (f.returnOnEquity * 100).toFixed(2) + '%' : '-', roeScore, 'Rendimento del patrimonio netto degli azionisti')}
@@ -1123,47 +1124,59 @@
             ${renderScoredMetric('Posizione Cassa vs Debito', f.totalCash && f.totalDebt ? fmtLargeNumber(f.totalCash - f.totalDebt, f.currency) : '-', cashDebtScore, 'Differenza tra cassa totale disponibile e debito')}
             ${renderScoredMetric('Dividend Yield', f.dividendYield ? f.dividendYield.toFixed(2) + '%' : '0.00%', divYieldScore, 'Rendimento cedolare annuo')}
 
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">Fatturato Totale 12M</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.totalRevenue, f.currency)}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${fmtLargeNumber(f.totalRevenue, f.currency)}</strong>
             </div>
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">Utile Netto 12M</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.netIncome, f.currency)}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${fmtLargeNumber(f.netIncome, f.currency)}</strong>
             </div>
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">EBITDA 12M</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.ebitda, f.currency)}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${fmtLargeNumber(f.ebitda, f.currency)}</strong>
             </div>
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">Free Cash Flow (FCF)</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.freeCashflow, f.currency)}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${fmtLargeNumber(f.freeCashflow, f.currency)}</strong>
             </div>
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">Cassa Disponibile</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.totalCash, f.currency)}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${fmtLargeNumber(f.totalCash, f.currency)}</strong>
             </div>
-            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 flex flex-col justify-between min-w-0 overflow-hidden">
               <span class="text-gray-400 text-[10px] block truncate">Debito Totale</span>
-              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1">${fmtLargeNumber(f.totalDebt, f.currency)}</strong>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-1 truncate">${fmtLargeNumber(f.totalDebt, f.currency)}</strong>
             </div>
           </div>
         </div>
 
         <!-- Section 3: Target Prezzo & Consenso Analisti -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
-          <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono min-w-0">
+          <div class="text-xs font-bold text-gray-900 dark:text-white flex flex-wrap items-center justify-between gap-1 border-b border-gray-200/60 dark:border-white/5 pb-1 min-w-0">
             <span>🎯 Target Price & Opinioni Analisti</span>
             <span class="text-[10px] text-gray-400 font-normal">${f.numberOfAnalystOpinions || 0} analisti censiti</span>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-            <div><span class="text-gray-400">Prezzo Corrente:</span> <strong class="text-gray-900 dark:text-white font-mono">${fmtPrice(f.currentPrice, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Target Medio:</span> <strong class="text-emerald-600 dark:text-emerald-400 font-mono">${fmtPrice(f.targetMeanPrice, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Target Minimo:</span> <strong class="text-gray-700 dark:text-gray-300 font-mono">${fmtPrice(f.targetLowPrice, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Target Massimo:</span> <strong class="text-emerald-500 font-mono">${fmtPrice(f.targetHighPrice, f.currency)}</strong></div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] min-w-0">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+              <span class="text-gray-400 text-[9px] uppercase font-bold block truncate">Prezzo Corrente</span>
+              <strong class="text-gray-900 dark:text-white font-mono text-xs tabular-nums mt-0.5 block truncate">${fmtPrice(f.currentPrice, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+              <span class="text-gray-400 text-[9px] uppercase font-bold block truncate">Target Medio</span>
+              <strong class="text-emerald-600 dark:text-emerald-400 font-mono text-xs tabular-nums mt-0.5 block truncate">${fmtPrice(f.targetMeanPrice, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+              <span class="text-gray-400 text-[9px] uppercase font-bold block truncate">Target Minimo</span>
+              <strong class="text-gray-700 dark:text-gray-300 font-mono text-xs tabular-nums mt-0.5 block truncate">${fmtPrice(f.targetLowPrice, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+              <span class="text-gray-400 text-[9px] uppercase font-bold block truncate">Target Massimo</span>
+              <strong class="text-emerald-500 font-mono text-xs tabular-nums mt-0.5 block truncate">${fmtPrice(f.targetHighPrice, f.currency)}</strong>
+            </div>
           </div>
           ${f.targetMeanPrice && f.currentPrice ? `
-            <div class="pt-1 flex items-center space-x-2 text-[11px]">
+            <div class="pt-1 flex flex-wrap items-center gap-1.5 text-[11px] min-w-0">
               <span class="text-gray-400">Potenziale rispetto al Target Medio:</span>
               ${(() => {
                 const upside = ((f.targetMeanPrice - f.currentPrice) / f.currentPrice) * 100;
@@ -1175,27 +1188,39 @@
         </div>
 
         <!-- Section 4: Range 52 Settimane & Medie Mobili -->
-        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
-          <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
+        <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono min-w-0">
+          <div class="text-xs font-bold text-gray-900 dark:text-white flex flex-wrap items-center justify-between gap-1 border-b border-gray-200/60 dark:border-white/5 pb-1 min-w-0">
             <span>📊 Range 52 Settimane & Medie Mobili</span>
             <span class="text-[10px] text-gray-400 font-normal">Technical Moving Averages</span>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-            <div><span class="text-gray-400">Min 52W:</span> <strong class="text-gray-700 dark:text-gray-300 font-mono">${fmtPrice(f.fiftyTwoWeekLow, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Max 52W:</span> <strong class="text-gray-700 dark:text-gray-300 font-mono">${fmtPrice(f.fiftyTwoWeekHigh, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Media Mobile 50D:</span> <strong class="text-gray-700 dark:text-gray-300 font-mono">${fmtPrice(f.fiftyDayAverage, f.currency)}</strong></div>
-            <div><span class="text-gray-400">Media Mobile 200D:</span> <strong class="text-gray-700 dark:text-gray-300 font-mono">${fmtPrice(f.twoHundredDayAverage, f.currency)}</strong></div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] min-w-0">
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+              <span class="text-gray-400 text-[9px] uppercase font-bold block truncate">Min 52W</span>
+              <strong class="text-gray-700 dark:text-gray-300 font-mono text-xs tabular-nums mt-0.5 block truncate">${fmtPrice(f.fiftyTwoWeekLow, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+              <span class="text-gray-400 text-[9px] uppercase font-bold block truncate">Max 52W</span>
+              <strong class="text-gray-700 dark:text-gray-300 font-mono text-xs tabular-nums mt-0.5 block truncate">${fmtPrice(f.fiftyTwoWeekHigh, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+              <span class="text-gray-400 text-[9px] uppercase font-bold block truncate">Media 50D</span>
+              <strong class="text-gray-700 dark:text-gray-300 font-mono text-xs tabular-nums mt-0.5 block truncate">${fmtPrice(f.fiftyDayAverage, f.currency)}</strong>
+            </div>
+            <div class="p-2 rounded-lg bg-white/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 min-w-0 overflow-hidden">
+              <span class="text-gray-400 text-[9px] uppercase font-bold block truncate">Media 200D</span>
+              <strong class="text-gray-700 dark:text-gray-300 font-mono text-xs tabular-nums mt-0.5 block truncate">${fmtPrice(f.twoHundredDayAverage, f.currency)}</strong>
+            </div>
           </div>
         </div>
 
         <!-- Section 5: Profilo Aziendale & Descrizione -->
         ${f.description ? `
-          <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono">
+          <div class="signature-card p-3 space-y-2 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 font-mono min-w-0">
             <div class="text-xs font-bold text-gray-900 dark:text-white flex items-center justify-between border-b border-gray-200/60 dark:border-white/5 pb-1">
               <span>🏢 Profilo Societario</span>
               ${f.website ? `<a href="${f.website}" target="_blank" rel="noopener noreferrer" class="text-emerald-600 hover:underline text-[10px] font-sans">Sito Web Ufficiale &nearr;</a>` : ''}
             </div>
-            <p class="text-[11px] text-gray-600 dark:text-gray-300 font-sans leading-relaxed">
+            <p class="text-[11px] text-gray-600 dark:text-gray-300 font-sans leading-relaxed break-words">
               ${f.description}
             </p>
             <div class="flex flex-wrap items-center gap-3 pt-1 text-[10px] text-gray-400 font-mono">

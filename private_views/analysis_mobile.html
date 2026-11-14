@@ -15,8 +15,15 @@
       padding: 0.4rem 0.55rem !important;
       border-radius: 0.6rem !important;
     }
+    dialog.signature-card,
+    dialog {
+      padding: 0 !important;
+    }
     dialog:modal {
       overscroll-behavior: contain;
+      max-width: calc(100vw - 16px) !important;
+      box-sizing: border-box !important;
+      margin: auto;
     }
     dialog::backdrop {
       overflow: hidden;
@@ -83,34 +90,34 @@
   </main>
 
   <!-- Mobile Fundamentals Modal (Native <dialog>) -->
-  <dialog id="fundamentalsModal" aria-labelledby="modalStockTitle" class="signature-card p-0 rounded-2xl w-[96vw] max-w-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/70 font-sans">
-    <div class="flex flex-col max-h-[90vh]">
-      <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-gray-50/80 dark:bg-white/[0.02]">
-        <div class="flex items-center space-x-2 truncate">
-          <div id="modalStockBadge" class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-mono font-bold text-white text-xs">
+  <dialog id="fundamentalsModal" aria-labelledby="modalStockTitle" class="p-0 rounded-2xl w-[calc(100vw-16px)] max-w-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151518] text-gray-900 dark:text-gray-100 shadow-2xl backdrop:bg-black/70 font-sans overflow-hidden box-border">
+    <div class="flex flex-col max-h-[90vh] max-w-full overflow-hidden">
+      <div class="px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-gray-50/80 dark:bg-white/[0.02] min-w-0">
+        <div class="flex items-center space-x-2 truncate min-w-0 mr-2">
+          <div id="modalStockBadge" class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-mono font-bold text-white text-xs shrink-0">
             --
           </div>
-          <div class="truncate">
-            <div class="flex items-center space-x-1.5">
+          <div class="truncate min-w-0">
+            <div class="flex items-center space-x-1.5 truncate">
               <h2 id="modalStockTitle" class="text-xs font-bold text-gray-900 dark:text-white truncate">--</h2>
-              <span id="modalStockTicker" class="text-[10px] font-mono font-bold px-1 py-0.2 rounded bg-gray-200 dark:bg-white/10">--</span>
+              <span id="modalStockTicker" class="text-[10px] font-mono font-bold px-1 py-0.2 rounded bg-gray-200 dark:bg-white/10 shrink-0">--</span>
             </div>
             <div id="modalStockSubtitle" class="text-[10px] text-gray-400 truncate">--</div>
           </div>
         </div>
 
-        <form method="dialog">
-          <button type="submit" class="p-1 rounded text-gray-400 hover:text-gray-200 text-lg font-bold">&times;</button>
+        <form method="dialog" class="shrink-0">
+          <button type="submit" class="p-1 rounded text-gray-400 hover:text-gray-200 text-lg font-bold leading-none">&times;</button>
         </form>
       </div>
 
-      <div id="modalBody" class="p-3.5 overflow-y-auto space-y-3 text-xs font-mono">
+      <div id="modalBody" class="p-2.5 sm:p-3.5 overflow-y-auto overflow-x-hidden max-w-full min-w-0 space-y-3 text-xs font-mono">
         <div class="py-10 text-center text-gray-400">
           Caricamento analisi fondamentale...
         </div>
       </div>
 
-      <div class="px-4 py-2 border-t border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.02] flex items-center justify-between text-[10px] font-mono text-gray-400">
+      <div class="px-3.5 py-2 sm:px-4 border-t border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.02] flex items-center justify-between text-[10px] font-mono text-gray-400 shrink-0">
         <span>Yahoo Finance API</span>
         <form method="dialog">
           <button type="submit" class="btn-pill px-3 py-1 bg-gray-200 dark:bg-white/10 text-gray-800 dark:text-gray-200 font-bold">Chiudi</button>
