@@ -39,6 +39,7 @@ router.get('/', (req, res) => {
 /**
  * GET /api/settings/:key
  * Retrieves a single setting by key.
+ * If setting is unset, returns 200 with value: null to prevent browser console 404 network errors.
  */
 router.get('/:key', (req, res) => {
   const userId = req.user.id;
@@ -46,17 +47,11 @@ router.get('/:key', (req, res) => {
   const raw = req.query.raw === 'true';
 
   const val = getSetting(userId, key, !raw);
-  if (val === null) {
-    return res.status(404).json({
-      success: false,
-      error: `Impostazione '${key}' non trovata.`
-    });
-  }
 
   return res.json({
     success: true,
     key,
-    value: val
+    value: val !== undefined ? val : null
   });
 });
 

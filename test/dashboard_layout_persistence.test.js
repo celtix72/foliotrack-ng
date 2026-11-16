@@ -123,6 +123,17 @@ describe('Dashboard Layout Automatic Persistence & Server Restart Restoration', 
     assert.deepEqual(retrieved, hiddenList);
   });
 
+  test('GET /api/settings/:key for unset setting returns 200 with value: null (no 404 console error)', async () => {
+    const getRes = await fetch(`${baseUrl}/api/settings/hiddenWidgetsPerf`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(getRes.status, 200);
+    const getData = await getRes.json();
+    assert.equal(getData.success, true);
+    assert.equal(getData.key, 'hiddenWidgetsPerf');
+    assert.equal(getData.value, null);
+  });
+
   test('dashboard.js contains auto-save listeners on grid events and y/x sort order', () => {
     const jsContent = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
 
