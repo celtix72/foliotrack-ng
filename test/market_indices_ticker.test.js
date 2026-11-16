@@ -7,6 +7,7 @@ const http = require('http');
 const TEST_DB = path.join(__dirname, 'test_indices_ticker.db');
 process.env.DB_PATH = TEST_DB;
 process.env.JWT_SECRET = 'test-secret-indices-ticker-very-secure';
+process.env.ADMIN_USERNAME = 'admin';
 process.env.ADMIN_PASSWORD = 'adminTickerPass123!';
 
 const { initDb, closeDb, getDb } = require('../src/db');
@@ -208,6 +209,32 @@ describe('Market Indices Scrolling Ticker Banner & Settings Configuration', () =
     assert.ok(setMobHtml.includes('card-market-ticker-settings'));
     assert.ok(setMobHtml.includes('tickerRefreshSecondsInput'));
     assert.ok(setMobHtml.includes('btn-save-ticker-config'));
+  });
+
+  test('Click on ticker index item opens Chart.js modal with timeframe range selection', async () => {
+    // 1. Verify header_indices.js includes the interactive modal, cursor-pointer, range buttons and Chart.js integration
+    const jsRes = await fetch(`${baseUrl}/header_indices.js`);
+    assert.equal(jsRes.status, 200);
+    const jsContent = await jsRes.text();
+
+    assert.ok(jsContent.includes('ft-index-chart-modal'), 'Must define index chart modal container');
+    assert.ok(jsContent.includes('ft-index-chart-canvas'), 'Must include chart canvas');
+    assert.ok(jsContent.includes('ft-range-btn'), 'Must define timeframe range buttons');
+    assert.ok(jsContent.includes('data-range="1M"') && jsContent.includes('data-range="1Y"'), 'Must support standard ranges like 1M, 1Y');
+    assert.ok(jsContent.includes('openIndexChartModal'), 'Must implement modal opening on index click');
+    assert.ok(jsContent.includes('ensureChartJs'), 'Must support lazy-loading of Chart.js engine');
+    assert.ok(jsContent.includes('cursor-pointer'), 'Ticker items must have cursor-pointer to indicate interactivity');
+    assert.ok(jsContent.includes('openChart'), 'FolioTrackTicker must export openChart programmatic helper');
+
+    // 2. Verify backend endpoint GET /api/market/chart/:ticker returns data points for indices
+    for (const sym of ['^GSPC', 'FTSEMIB.MI', 'BTP10Y', 'GC=F']) {
+      const chartRes = await fetch(`${baseUrl}/api/market/chart/${encodeURIComponent(sym)}?range=1M`);
+      assert.equal(chartRes.status, 200, `Chart endpoint for ${sym} must return 200`);
+      const chartData = await chartRes.json();
+      assert.equal(chartData.success, true);
+      assert.ok(Array.isArray(chartData.points || chartData.data), `Points for ${sym} must be an array`);
+      assert.ok((chartData.points || chartData.data).length > 0, `Must have historical points for ${sym}`);
+    }
   });
 });
 
