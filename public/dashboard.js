@@ -13,9 +13,12 @@
   let selectedPortfolioId = 'all';
   let cachedPortfolioNews = null;
   let isNewsLoading = false;
+  let cachedAlerts = null;
+  let isAlertsLoading = false;
 
-  // 23 Official FolioTrack & Wealthfolio Widgets default grid definition
+  // 24 Official FolioTrack & Wealthfolio Widgets default grid definition
   const WIDGET_DEFINITIONS = [
+    { id: 'alerts', name: 'Avvisi & Eventi (Trimestrali / Dividendi)', category: 'Avvisi', w: 12, h: 2, minW: 3, minH: 1 },
     { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 4, h: 2, minW: 3, minH: 2 },
     { id: 'dayChange', name: 'Variazione Giornaliera (Oggi)', category: 'Performance', w: 3, h: 2, minW: 2, minH: 2 },
     { id: 'cash', name: 'Liquidità', category: 'KPI', w: 2, h: 2, minW: 2, minH: 2 },
@@ -46,8 +49,11 @@
 
   // Dedicated 1 or 2-column layout definition for mobile devices
   const MOBILE_DEFAULT_LAYOUT = [
+    // Alerts & Events banner (auto-collapsing)
+    { id: 'alerts', name: 'Avvisi & Eventi (Trimestrali / Dividendi)', category: 'Avvisi', w: 2, h: 2, minW: 2, minH: 1, x: 0, y: 0 },
+
     // Hero KPI Banner (full width on smartphone)
-    { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 2, h: 2, minW: 2, x: 0, y: 0 },
+    { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 2, h: 2, minW: 2, x: 0, y: 2 },
 
     // Core KPIs paired side-by-side (1 column each = 50% width)
     { id: 'dayChange', name: 'Variazione Giornaliera (Oggi)', category: 'Performance', w: 1, h: 2, x: 0, y: 2 },
@@ -150,12 +156,13 @@
   ];
 
   const DASHBOARD_DESKTOP_LAYOUT = [
-    { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 4, h: 2, minW: 3, minH: 2, x: 0, y: 0 },
-    { id: 'dayChange', name: 'Variazione Giornaliera (Oggi)', category: 'Performance', w: 3, h: 2, minW: 2, minH: 2, x: 4, y: 0 },
-    { id: 'cash', name: 'Liquidità', category: 'KPI', w: 2, h: 2, minW: 2, minH: 2, x: 7, y: 0 },
-    { id: 'pnl', name: 'P&L Totale', category: 'KPI', w: 3, h: 2, minW: 2, minH: 2, x: 9, y: 0 },
-    { id: 'invested', name: 'Versato', category: 'KPI', w: 6, h: 2, minW: 2, minH: 2, x: 0, y: 2 },
-    { id: 'bookCost', name: 'Carico (PMC)', category: 'KPI', w: 6, h: 2, minW: 2, minH: 2, x: 6, y: 2 },
+    { id: 'alerts', name: 'Avvisi & Eventi (Trimestrali / Dividendi)', category: 'Avvisi', w: 12, h: 2, minW: 3, minH: 1, x: 0, y: 0 },
+    { id: 'value', name: 'Patrimonio (NAV)', category: 'KPI', w: 4, h: 2, minW: 3, minH: 2, x: 0, y: 2 },
+    { id: 'dayChange', name: 'Variazione Giornaliera (Oggi)', category: 'Performance', w: 3, h: 2, minW: 2, minH: 2, x: 4, y: 2 },
+    { id: 'cash', name: 'Liquidità', category: 'KPI', w: 2, h: 2, minW: 2, minH: 2, x: 7, y: 2 },
+    { id: 'pnl', name: 'P&L Totale', category: 'KPI', w: 3, h: 2, minW: 2, minH: 2, x: 9, y: 2 },
+    { id: 'invested', name: 'Versato', category: 'KPI', w: 6, h: 2, minW: 2, minH: 2, x: 0, y: 4 },
+    { id: 'bookCost', name: 'Carico (PMC)', category: 'KPI', w: 6, h: 2, minW: 2, minH: 2, x: 6, y: 4 },
     { id: 'categoryQuotes', name: 'Quotazioni per Categoria', category: 'Dettaglio', w: 12, h: 8, minW: 6, minH: 5, x: 0, y: 4 },
     { id: 'holdingsCompact', name: 'Titoli Compatti (Var. Day)', category: 'Dettaglio', w: 12, h: 6, minW: 4, minH: 3, x: 0, y: 12 },
     { id: 'composition', name: 'Titoli & Sparkline', category: 'Dettaglio', w: 9, h: 8, minW: 6, minH: 6, x: 0, y: 18 },
@@ -1390,6 +1397,101 @@
 
   // Widget HTML Renderers for each of the widgets
   const WIDGET_RENDERERS = {
+    // 0. Avvisi & Eventi (Trimestrali e Stacchi Dividendi - Auto-collapsing)
+    alerts: () => {
+      const escapeHtml = (str) => {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      };
+
+      const alerts = cachedAlerts || [];
+      if (alerts.length === 0) {
+        if (isCustomizing) {
+          return `
+            <div class="h-full flex flex-col justify-between border-2 border-dashed border-amber-500/40 rounded-xl p-3 bg-amber-500/5 select-none">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-sm">🔔</span>
+                  <span class="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">Avvisi & Eventi (Trimestrali / Dividendi)</span>
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold">Vuoto (Auto-Collapse)</span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-mono my-auto text-center py-2">
+                Nessun avviso attivo al momento. Questo widget si espande automaticamente quando vi sono trimestrali o dividendi di giornata, e si collassa a spazio zero quando vuoto.
+              </p>
+              <div class="text-[10px] text-gray-400 font-mono text-right">Trascina o sposta per definire la posizione</div>
+            </div>
+          `;
+        }
+        return '';
+      }
+
+      const headerHtml = `
+        <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5 shrink-0">
+          <div class="flex items-center space-x-2">
+            <span class="text-sm">🔔</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-white">Avvisi & Eventi di Giornata</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">${alerts.length} attiv${alerts.length > 1 ? 'i' : 'o'}</span>
+          </div>
+          ${alerts.length > 1 ? `
+            <button type="button" data-ack-all-alerts class="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1 active:scale-95 transition">
+              ✓ Acquisisci tutti
+            </button>
+          ` : ''}
+        </div>
+      `;
+
+      const cardsHtml = alerts.map(a => {
+        const isEarnings = a.type === 'EARNINGS';
+        const typeBadge = isEarnings
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">TRIMESTRALE</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">STACCO DIVIDENDO</span>`;
+
+        const iconBadge = isEarnings
+          ? `<div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-xs shadow-2xs">📊</div>`
+          : `<div class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold text-xs shadow-2xs">💰</div>`;
+
+        const cardBorderClass = isEarnings
+          ? 'border-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-2xs'
+          : 'border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-2xs';
+
+        return `
+          <div id="alert-card-${a.id}" data-alert-card="${a.id}" class="p-2.5 sm:p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition-all duration-300 ${cardBorderClass}">
+            <div class="flex items-start gap-2.5 min-w-0 flex-1">
+              ${iconBadge}
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  ${typeBadge}
+                  <span class="font-mono font-bold text-xs text-gray-900 dark:text-white">${escapeHtml(a.ticker)}</span>
+                  ${a.event_date ? `<span class="text-[10px] font-mono text-gray-400 dark:text-gray-500">${escapeHtml(a.event_date)}</span>` : ''}
+                </div>
+                <h4 class="text-xs font-semibold text-gray-900 dark:text-white mt-0.5 leading-snug">${escapeHtml(a.title)}</h4>
+                <p class="text-[11px] text-gray-600 dark:text-gray-300 font-mono mt-0.5 leading-relaxed">${escapeHtml(a.message)}</p>
+              </div>
+            </div>
+            <button type="button" data-ack-alert="${a.id}" class="shrink-0 self-end sm:self-center px-2.5 py-1 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/10 hover:bg-emerald-50 hover:border-emerald-500/50 dark:hover:bg-emerald-900/30 text-xs font-mono font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all flex items-center gap-1 active:scale-95 shadow-2xs cursor-pointer" title="Acquisisci e chiudi questa notifica">
+              <span class="text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+              <span>Acquisisci</span>
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="h-full flex flex-col justify-between">
+          ${headerHtml}
+          <div class="flex-1 overflow-y-auto space-y-2 mt-2 pr-1 custom-scrollbar min-h-0">
+            ${cardsHtml}
+          </div>
+        </div>
+      `;
+    },
+
     // 1. Portfolio Value (P.LORDO, P.NETTO & VAR. OGGI)
     value: (data) => {
       const t = data.totals || {};
@@ -4088,6 +4190,7 @@
    * Updates only widget DOM contents and charts without destroying GridStack layout
    */
   function updateWidgetContents(viewData) {
+    syncAlertsWidgetWithGrid();
     for (const item of WIDGET_DEFINITIONS) {
       if (hiddenWidgets.has(item.id)) continue;
       const bodyEl = document.getElementById(`widget-body-${item.id}`);
@@ -4624,7 +4727,12 @@
     }
 
     // Filter out hidden widgets
-    const visibleWidgets = layoutToApply.filter(item => !hiddenWidgets.has(item.id));
+    let visibleWidgets = layoutToApply.filter(item => !hiddenWidgets.has(item.id));
+
+    // Auto-collapse alerts widget when empty and not customizing
+    if (!isCustomizing && (!cachedAlerts || cachedAlerts.length === 0)) {
+      visibleWidgets = visibleWidgets.filter(item => item.id !== 'alerts');
+    }
 
     // CRITICAL: Sort widgets by y ascending, then x ascending so GridStack places them top-to-bottom
     // without triggering cascading collision shifts that alter saved positions!
@@ -4720,11 +4828,13 @@
       banner?.classList.remove('hidden');
       controls.forEach(c => c.classList.remove('hidden'));
       closeDrawer();
+      syncAlertsWidgetWithGrid();
     } else {
       grid.setStatic(true);
       banner?.classList.add('hidden');
       controls.forEach(c => c.classList.add('hidden'));
       closeDrawer();
+      syncAlertsWidgetWithGrid();
       if (wasCustomizing) {
         // Save immediately on exiting customization mode
         scheduleAutoSaveLayout(true);
@@ -4831,103 +4941,126 @@
   }
 
   /**
-   * Loads earnings & dividend alerts for today and renders cards with acquisition buttons.
+   * Loads earnings & dividend alerts for today and caches them.
    */
-  async function loadDashboardAlerts() {
-    const containers = [
-      document.getElementById('dashboardAlertsContainer'),
-      document.getElementById('mDashboardAlertsContainer')
-    ].filter(Boolean);
-
-    if (containers.length === 0) return;
-
+  async function loadDashboardAlerts(force = false) {
+    if (isAlertsLoading && !force) return cachedAlerts || [];
+    isAlertsLoading = true;
     try {
       const res = await fetch('/api/alerts');
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data.success || !Array.isArray(data.alerts)) return;
-
-      const alerts = data.alerts;
-      if (alerts.length === 0) {
-        containers.forEach(c => {
-          c.innerHTML = '';
-          c.classList.add('hidden');
-        });
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.alerts)) {
+          cachedAlerts = data.alerts;
+        } else {
+          cachedAlerts = [];
+        }
+      } else {
+        cachedAlerts = [];
       }
-
-      const escapeHtml = (str) => {
-        if (!str) return '';
-        return String(str)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-      };
-
-      const headerHtml = alerts.length > 1 ? `
-        <div class="flex items-center justify-between px-2 py-1 text-xs font-mono text-gray-500 dark:text-gray-400">
-          <span class="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-200">
-            <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            Avvisi di Oggi (${alerts.length})
-          </span>
-          <button type="button" data-ack-all-alerts class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1">
-            ✓ Acquisisci tutti
-          </button>
-        </div>
-      ` : '';
-
-      const cardsHtml = alerts.map(a => {
-        const isEarnings = a.type === 'EARNINGS';
-        const typeBadge = isEarnings
-          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">TRIMESTRALE</span>`
-          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">STACCO DIVIDENDO</span>`;
-
-        const iconBadge = isEarnings
-          ? `<div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">📊</div>`
-          : `<div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">💰</div>`;
-
-        const cardBorderClass = isEarnings
-          ? 'border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-xs'
-          : 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs';
-
-        return `
-          <div id="alert-card-${a.id}" data-alert-card="${a.id}" class="signature-card p-3 sm:p-3.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all duration-300 ${cardBorderClass}">
-            <div class="flex items-start gap-3 min-w-0">
-              ${iconBadge}
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 flex-wrap">
-                  ${typeBadge}
-                  <span class="font-mono font-bold text-xs text-gray-900 dark:text-white">${escapeHtml(a.ticker)}</span>
-                  ${a.event_date ? `<span class="text-[10px] font-mono text-gray-400 dark:text-gray-500">${escapeHtml(a.event_date)}</span>` : ''}
-                </div>
-                <h4 class="text-xs font-semibold text-gray-900 dark:text-white mt-1 leading-snug">${escapeHtml(a.title)}</h4>
-                <p class="text-[11px] sm:text-xs text-gray-600 dark:text-gray-300 font-mono mt-0.5 leading-relaxed">${escapeHtml(a.message)}</p>
-              </div>
-            </div>
-            <button type="button" data-ack-alert="${a.id}" class="shrink-0 self-end sm:self-center px-3 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/10 hover:bg-emerald-50 hover:border-emerald-500/50 dark:hover:bg-emerald-900/30 text-xs font-mono font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer" title="Acquisisci e chiudi questa notifica">
-              <span class="text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
-              <span>Acquisisci</span>
-            </button>
-          </div>
-        `;
-      }).join('');
-
-      const fullHtml = headerHtml + cardsHtml;
-      containers.forEach(c => {
-        c.innerHTML = fullHtml;
-        c.classList.remove('hidden');
-      });
     } catch (err) {
-      console.warn('[Alerts] Failed to load dashboard alerts:', err);
+      console.warn('[Dashboard Warning] Error fetching alerts:', err);
+      cachedAlerts = [];
+    } finally {
+      isAlertsLoading = false;
+    }
+
+    syncAlertsWidgetWithGrid();
+    return cachedAlerts;
+  }
+
+  /**
+   * Collapses the alerts widget and removes it from the grid layout so it occupies zero space.
+   */
+  function collapseAlertsWidget() {
+    if (!grid || isPerformancePage()) return;
+    if (isCustomizing) {
+      const bodyEl = document.getElementById('widget-body-alerts');
+      if (bodyEl && WIDGET_RENDERERS.alerts) {
+        bodyEl.innerHTML = WIDGET_RENDERERS.alerts();
+      }
+      return;
+    }
+    const alertItem = grid.getGridItems().find(el => el.gridstackNode?.id === 'alerts');
+    if (alertItem) {
+      alertItem.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+      alertItem.style.opacity = '0';
+      alertItem.style.transform = 'scale(0.96)';
+      setTimeout(() => {
+        grid.removeWidget(alertItem, true);
+        grid.compact();
+      }, 300);
+    }
+  }
+
+  /**
+   * Synchronizes the alerts widget with GridStack:
+   * - If empty and not customizing: collapses and takes zero space
+   * - If populated or customizing: adds/updates widget in grid
+   */
+  function syncAlertsWidgetWithGrid() {
+    if (!grid || isPerformancePage()) return;
+    if (hiddenWidgets.has('alerts')) return;
+
+    const alertItem = grid.getGridItems().find(el => el.gridstackNode?.id === 'alerts');
+    const hasAlerts = cachedAlerts && cachedAlerts.length > 0;
+
+    if (!hasAlerts && !isCustomizing) {
+      if (alertItem) {
+        grid.removeWidget(alertItem, true);
+        grid.compact();
+      }
+    } else if (hasAlerts || isCustomizing) {
+      if (alertItem) {
+        const bodyEl = document.getElementById('widget-body-alerts');
+        if (bodyEl && WIDGET_RENDERERS.alerts) {
+          bodyEl.innerHTML = WIDGET_RENDERERS.alerts();
+        }
+      } else {
+        const isMobile = isMobileDashboard();
+        const defaultList = getActiveDefaultLayout();
+        const def = defaultList.find(d => d.id === 'alerts') || { w: isMobile ? 2 : 12, h: 2, minW: isMobile ? 1 : 3, minH: 1, x: 0, y: 0 };
+        const saved = (currentSavedLayout || []).find(d => d.id === 'alerts') || def;
+
+        const widgetContent = WIDGET_RENDERERS.alerts ? WIDGET_RENDERERS.alerts() : '';
+        const widgetNode = {
+          id: 'alerts',
+          x: saved.x !== undefined ? saved.x : 0,
+          y: saved.y !== undefined ? saved.y : 0,
+          w: saved.w || (isMobile ? 2 : 12),
+          h: saved.h || 2,
+          minW: isMobile ? 1 : 3,
+          maxW: isMobile ? 2 : undefined,
+          minH: 1,
+          content: `
+            <div class="signature-card h-full p-3 sm:p-4 flex flex-col justify-between relative group overflow-hidden" data-widget-card-id="alerts">
+              <div class="widget-controls ${isCustomizing ? '' : 'hidden'} absolute top-1.5 right-1.5 flex items-center space-x-0.5 z-20 bg-white/95 dark:bg-black/90 rounded-lg p-0.5 backdrop-blur shadow-md border border-gray-200/70 dark:border-white/10">
+                <button type="button" class="p-1 text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-90 transition" data-move-widget-up="alerts" title="Sposta in alto">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" /></svg>
+                </button>
+                <button type="button" class="p-1 text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-90 transition" data-move-widget-down="alerts" title="Sposta in basso">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                <button type="button" class="widget-hide-btn p-1 text-gray-400 hover:text-red-500 rounded transition" data-hide-widget="alerts" title="Nascondi questo widget">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
+                </button>
+                <div class="widget-drag-handle p-1 text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-move" title="Trascina per spostare">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
+                </div>
+              </div>
+              <div id="widget-body-alerts" class="h-full">${widgetContent}</div>
+            </div>
+          `
+        };
+        grid.addWidget(widgetNode);
+        grid.compact();
+      }
     }
   }
 
   // Fetches live portfolio metrics and renders dashboard
   async function refreshDashboard(reinitGrid = false) {
     try {
-      loadDashboardAlerts();
       const res = await fetch('/api/portfolios');
       if (res.ok) {
         const data = await res.json();
@@ -4942,6 +5075,7 @@
           syncPortfolioDropdowns();
 
           await Promise.all([
+            loadDashboardAlerts(),
             loadHiddenWidgets(),
             fetchPerformanceMetrics(selectedPortfolioId)
           ]);
@@ -5115,28 +5249,19 @@
             headers: { 'Content-Type': 'application/json' }
           });
           if (res.ok) {
-            cards.forEach(card => {
-              card.style.maxHeight = '0px';
-              card.style.paddingTop = '0px';
-              card.style.paddingBottom = '0px';
-              card.style.marginTop = '0px';
-              card.style.marginBottom = '0px';
-              card.style.overflow = 'hidden';
-              setTimeout(() => {
-                card.remove();
-                const remaining = document.querySelectorAll('[data-alert-card]');
-                if (remaining.length === 0) {
-                  const containers = [
-                    document.getElementById('dashboardAlertsContainer'),
-                    document.getElementById('mDashboardAlertsContainer')
-                  ].filter(Boolean);
-                  containers.forEach(c => {
-                    c.innerHTML = '';
-                    c.classList.add('hidden');
-                  });
-                }
-              }, 300);
-            });
+            if (Array.isArray(cachedAlerts)) {
+              cachedAlerts = cachedAlerts.filter(a => String(a.id) !== String(alertId));
+            }
+            cards.forEach(card => card.remove());
+
+            if (!cachedAlerts || cachedAlerts.length === 0) {
+              collapseAlertsWidget();
+            } else {
+              const bodyEl = document.getElementById('widget-body-alerts');
+              if (bodyEl && WIDGET_RENDERERS.alerts) {
+                bodyEl.innerHTML = WIDGET_RENDERERS.alerts();
+              }
+            }
             showDashboardToast('Notifica acquisita');
           } else {
             cards.forEach(card => {
@@ -5177,16 +5302,8 @@
             headers: { 'Content-Type': 'application/json' }
           });
           if (res.ok) {
-            setTimeout(() => {
-              const containers = [
-                document.getElementById('dashboardAlertsContainer'),
-                document.getElementById('mDashboardAlertsContainer')
-              ].filter(Boolean);
-              containers.forEach(c => {
-                c.innerHTML = '';
-                c.classList.add('hidden');
-              });
-            }, 300);
+            cachedAlerts = [];
+            collapseAlertsWidget();
             showDashboardToast('Tutte le notifiche sono state acquisite');
           } else {
             allCards.forEach(card => {

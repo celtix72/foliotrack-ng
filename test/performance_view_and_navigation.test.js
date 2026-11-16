@@ -167,10 +167,10 @@ describe('Performance Menu & Dedicated Multi-Period Views', () => {
     assert.equal(api.PERFORMANCE_DESKTOP_LAYOUT.length, 8);
     assert.equal(api.PERFORMANCE_MOBILE_LAYOUT.length, 8);
 
-    // Verify Dashboard desktop & mobile layout lengths (26 - 8 = 18)
-    assert.equal(api.DASHBOARD_DESKTOP_LAYOUT.length, 18);
-    assert.equal(api.DASHBOARD_MOBILE_LAYOUT.length, 18);
-    assert.equal(api.WIDGET_DEFINITIONS.length, 26);
+    // Verify Dashboard desktop & mobile layout lengths (27 - 8 = 19)
+    assert.equal(api.DASHBOARD_DESKTOP_LAYOUT.length, 19);
+    assert.equal(api.DASHBOARD_MOBILE_LAYOUT.length, 19);
+    assert.equal(api.WIDGET_DEFINITIONS.length, 27);
 
     // Verify none of the performance widgets are in Dashboard layouts
     for (const item of api.DASHBOARD_DESKTOP_LAYOUT) {
@@ -203,7 +203,7 @@ describe('Performance Menu & Dedicated Multi-Period Views', () => {
     dom.document.body.getAttribute = () => null;
     assert.equal(api.isPerformancePage(), false, 'isPerformancePage() should return false on /');
     const dashDefs = api.getActiveWidgetDefinitions();
-    assert.equal(dashDefs.length, 18, 'getActiveWidgetDefinitions() on dashboard page must return 18 widgets');
+    assert.equal(dashDefs.length, 19, 'getActiveWidgetDefinitions() on dashboard page must return 19 widgets');
   });
 });
 

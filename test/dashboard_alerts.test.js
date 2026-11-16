@@ -244,15 +244,25 @@ describe('Dashboard Earnings & Dividend Alerts with Acquisition System', () => {
     assert.ok(koAlert.message.includes('The Coca-Cola Company'));
   });
 
-  test('Front-end view templates include alert containers and dashboard.js logic', () => {
+  test('Alerts are integrated as a specific auto-collapsing dashboard widget in public/dashboard.js', () => {
     const desktopHtml = fs.readFileSync(path.join(__dirname, '../private_views/dashboard.html'), 'utf8');
-    assert.ok(desktopHtml.includes('id="dashboardAlertsContainer"'), 'Desktop dashboard must have #dashboardAlertsContainer');
+    assert.equal(desktopHtml.includes('id="dashboardAlertsContainer"'), false, 'Desktop dashboard should not have outer non-widget alerts container');
 
     const mobileHtml = fs.readFileSync(path.join(__dirname, '../private_views/dashboard_mobile.html'), 'utf8');
-    assert.ok(mobileHtml.includes('id="mDashboardAlertsContainer"'), 'Mobile dashboard must have #mDashboardAlertsContainer');
+    assert.equal(mobileHtml.includes('id="mDashboardAlertsContainer"'), false, 'Mobile dashboard should not have outer non-widget alerts container');
 
     const dashboardJs = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
-    assert.ok(dashboardJs.includes('loadDashboardAlerts'), 'dashboard.js must contain loadDashboardAlerts function');
+    // Widget definition & layouts
+    assert.ok(dashboardJs.includes("id: 'alerts'"), 'dashboard.js must contain alerts widget definition');
+    assert.ok(dashboardJs.includes("category: 'Avvisi'"), 'alerts widget must have category Avvisi');
+    assert.ok(dashboardJs.includes("alerts: () => {"), 'WIDGET_RENDERERS must include alerts renderer');
+
+    // Auto-collapse and zero space occupancy logic
+    assert.ok(dashboardJs.includes("collapseAlertsWidget"), 'dashboard.js must contain collapseAlertsWidget function');
+    assert.ok(dashboardJs.includes("syncAlertsWidgetWithGrid"), 'dashboard.js must contain syncAlertsWidgetWithGrid function');
+    assert.ok(dashboardJs.includes("visibleWidgets.filter(item => item.id !== 'alerts')"), 'Empty alerts widget must be filtered out to occupy zero space');
+
+    // Acquisition buttons
     assert.ok(dashboardJs.includes('data-ack-alert'), 'dashboard.js must handle data-ack-alert click');
     assert.ok(dashboardJs.includes('data-ack-all-alerts'), 'dashboard.js must handle data-ack-all-alerts click');
   });
