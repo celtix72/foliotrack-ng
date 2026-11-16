@@ -249,5 +249,134 @@ describe('Portfolio Full CRUD & Multi-Portfolio Selector Verification', () => {
     assert.ok(pageJs.includes('function renderDesktopPortfolios'), 'portfolios_page.js must contain renderDesktopPortfolios');
     assert.ok(pageJs.includes('Controvalore'), 'mobile layout must show Controvalore');
     assert.ok(pageJs.includes('Liquidità'), 'mobile layout must show Liquidità');
+    assert.ok(pageJs.includes('togglePortfolioInclude'), 'portfolios_page.js must implement togglePortfolioInclude');
+    assert.ok(pageJs.includes('input type="checkbox" switch'), 'card templates must render switch checkbox');
+  });
+
+  test('Portfolio inclusion flag (include_in_totals) toggle and global calculation exclusion', async () => {
+    // 1. Create two portfolios with distinct initial cash
+    const p1Res = await fetch(`${baseUrl}/api/portfolios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        name: 'Portafoglio Alpha Inactive Test',
+        type: 'Investimento',
+        currency: 'EUR',
+        initialCash: 10000,
+        include_in_totals: 1
+      })
+    });
+    const p1Data = await p1Res.json();
+    assert.equal(p1Data.success, true);
+    const p1Id = p1Data.portfolio.id;
+
+    const p2Res = await fetch(`${baseUrl}/api/portfolios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        name: 'Portafoglio Beta Active Test',
+        type: 'Investimento',
+        currency: 'EUR',
+        initialCash: 25000,
+        include_in_totals: 1
+      })
+    });
+    const p2Data = await p2Res.json();
+    assert.equal(p2Data.success, true);
+    const p2Id = p2Data.portfolio.id;
+
+    // Both are active initially
+    let getList = await (await fetch(`${baseUrl}/api/portfolios`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    })).json();
+    assert.ok(getList.totals.currentCash >= 35000);
+
+    // 2. Deactivate P1 via PATCH /api/portfolios/:id with include_in_totals: 0
+    const patchRes = await fetch(`${baseUrl}/api/portfolios/${p1Id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({ include_in_totals: 0 })
+    });
+    const patchData = await patchRes.json();
+    assert.equal(patchData.success, true);
+    assert.equal(patchData.portfolio.include_in_totals, 0);
+
+    // 3. Verify GET /api/portfolios totals exclude P1 cash (10000)
+    getList = await (await fetch(`${baseUrl}/api/portfolios`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    })).json();
+    const excludedP1 = getList.portfolios.find(p => p.id === p1Id);
+    assert.ok(excludedP1, 'Deactivated portfolio must still be returned in list');
+    assert.equal(excludedP1.include_in_totals, 0);
+    assert.equal(excludedP1.currentCash, 10000, 'Deactivated portfolio retains its own details');
+
+    const includedP2 = getList.portfolios.find(p => p.id === p2Id);
+    assert.equal(includedP2.include_in_totals, 1);
+
+    // Grand total cash should include P2 (25000) and NOT P1 (10000)
+    assert.ok(getList.totals.currentCash < 35000);
+    assert.ok(getList.totals.currentCash >= 25000);
+
+    // 4. Verify single portfolio detail GET /api/portfolios/:id is accessible even if deactivated
+    const singleRes = await fetch(`${baseUrl}/api/portfolios/${p1Id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(singleRes.status, 200);
+    const singleData = await singleRes.json();
+    assert.equal(singleData.success, true);
+    assert.equal(singleData.portfolio.id, p1Id);
+    assert.equal(singleData.portfolio.currentCash, 10000);
+
+    // 5. Verify transactions can still be recorded for the deactivated portfolio
+    const txRes = await fetch(`${baseUrl}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: p1Id,
+        type: 'BUY',
+        date: new Date().toISOString().split('T')[0],
+        assetTicker: 'AAPL',
+        quantity: 10,
+        price: 150,
+        commission: 2
+      })
+    });
+    const txData = await txRes.json();
+    assert.equal(txData.success, true);
+
+    // 6. Verify Reports API consolidated totals exclude P1
+    const reportRes = await fetch(`${baseUrl}/api/reports/portfolio-data`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const reportData = await reportRes.json();
+    assert.equal(reportData.success, true);
+    const repP1 = reportData.portfolios.find(p => p.id === p1Id);
+    // P1 was excluded from the consolidated report
+    assert.equal(repP1, undefined);
+
+    // But querying P1 specifically returns its report
+    const singleRepRes = await fetch(`${baseUrl}/api/reports/portfolio-data?portfolioId=${p1Id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const singleRepData = await singleRepRes.json();
+    assert.equal(singleRepData.success, true);
+    assert.equal(singleRepData.portfolios.length, 1);
+    assert.equal(singleRepData.portfolios[0].id, p1Id);
+
+    // 7. Reactivate P1 via PUT /api/portfolios/:id with include_in_totals: 1
+    const putRes = await fetch(`${baseUrl}/api/portfolios/${p1Id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({ include_in_totals: 1 })
+    });
+    const putData = await putRes.json();
+    assert.equal(putData.success, true);
+    assert.equal(putData.portfolio.include_in_totals, 1);
+
+    // Verify it is re-included in grand totals
+    getList = await (await fetch(`${baseUrl}/api/portfolios`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    })).json();
+    assert.ok(getList.totals.currentCash >= 33498); // 25000 + (10000 - 1502)
   });
 });

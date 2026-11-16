@@ -222,6 +222,9 @@ router.get('/income-summary', (req, res) => {
       conditions.push('t.portfolioId = ?');
       params.push(pId);
     }
+  } else {
+    // Exclude transactions from portfolios with include_in_totals = 0 when aggregating across all portfolios
+    conditions.push('t.portfolioId IN (SELECT id FROM portfolios WHERE include_in_totals = 1)');
   }
 
   const whereClause = `WHERE ${conditions.join(' AND ')}`;
@@ -398,10 +401,10 @@ router.get('/income-summary', (req, res) => {
   let activeHoldings = [];
   let userPortfolios = [];
   if (userRole === 'admin') {
-    userPortfolios = db.prepare('SELECT id, name, currency FROM portfolios').all();
+    userPortfolios = db.prepare('SELECT id, name, currency, include_in_totals FROM portfolios').all();
   } else {
     userPortfolios = db.prepare(`
-      SELECT p.id, p.name, p.currency
+      SELECT p.id, p.name, p.currency, p.include_in_totals
       FROM portfolios p
       INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
       WHERE pu.user_id = ?
@@ -419,6 +422,7 @@ router.get('/income-summary', (req, res) => {
   } else {
     const mergedMap = new Map();
     for (const p of userPortfolios) {
+      if (!p.include_in_totals) continue;
       const snap = recalculatePortfolio(p.id, assetsMap);
       if (!snap || !snap.metrics || !snap.metrics.holdings) continue;
       for (const h of snap.metrics.holdings) {
@@ -542,20 +546,20 @@ router.get('/projections-detail', (req, res) => {
 
   let userPortfolios = [];
   if (userRole === 'admin') {
-    userPortfolios = db.prepare('SELECT id, name, currency FROM portfolios').all();
+    userPortfolios = db.prepare('SELECT id, name, currency, include_in_totals FROM portfolios').all();
   } else {
     userPortfolios = db.prepare(`
-      SELECT p.id, p.name, p.currency
+      SELECT p.id, p.name, p.currency, p.include_in_totals
       FROM portfolios p
       INNER JOIN portfolio_users pu ON pu.portfolio_id = p.id
       WHERE pu.user_id = ?
     `).all(userId);
   }
 
-  let selectedPortfolioIds = userPortfolios.map(p => p.id);
+  let selectedPortfolioIds = userPortfolios.filter(p => Boolean(p.include_in_totals)).map(p => p.id);
   if (portfolioId && portfolioId !== 'all') {
     const pId = parseInt(portfolioId, 10);
-    if (!isNaN(pId)) selectedPortfolioIds = selectedPortfolioIds.filter(id => id === pId);
+    if (!isNaN(pId)) selectedPortfolioIds = userPortfolios.filter(p => p.id === pId).map(p => p.id);
   }
 
   if (selectedPortfolioIds.length === 0) {

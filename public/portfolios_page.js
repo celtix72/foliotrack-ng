@@ -64,6 +64,7 @@ function escapeHtml(str) {
 function renderMobilePortfolios(portfolios) {
   const totValue = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.totalValue) || 0) : sum, 0);
   const totCash = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.currentCash) || 0) : sum, 0);
+  const activeCount = portfolios.filter(p => p.include_in_totals).length;
 
   let summaryHtml = '';
   if (portfolios.length > 1) {
@@ -71,7 +72,7 @@ function renderMobilePortfolios(portfolios) {
       <div class="signature-card p-2.5 px-3 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20">
         <div class="flex items-center justify-between text-[10px] font-mono font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           <span>Totale Portafogli</span>
-          <span>${portfolios.length} conti</span>
+          <span>${activeCount}/${portfolios.length} inclusi nei calcoli</span>
         </div>
         <div class="grid grid-cols-2 gap-2 mt-1 pt-1 border-t border-emerald-500/15 font-mono">
           <div>
@@ -96,10 +97,11 @@ function renderMobilePortfolios(portfolios) {
     const pnlPct = p.metrics?.unrealizedPnlPercent || 0;
     const isPos = pnl >= 0;
     const badgePnlClass = isPos ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-rose-600 dark:text-rose-400 font-bold';
+    const isIncluded = Boolean(p.include_in_totals);
 
     return `
-      <div class="signature-card p-2.5 px-3 flex flex-col justify-between gap-1.5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] active:scale-[0.99] transition cursor-pointer" onclick="location.href='/portfolios/${p.id}'">
-        <!-- Line 1: Header (Name, Badge, Actions) -->
+      <div class="signature-card p-2.5 px-3 flex flex-col justify-between gap-1.5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] active:scale-[0.99] transition cursor-pointer ${!isIncluded ? 'opacity-85 border-dashed border-gray-300 dark:border-white/10' : ''}" onclick="location.href='/portfolios/${p.id}'">
+        <!-- Line 1: Header (Name, Badge, Toggle & Actions) -->
         <div class="flex items-center justify-between min-w-0">
           <div class="flex items-center space-x-1.5 min-w-0 overflow-hidden">
             <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${p.color || '#4f6b92'};"></span>
@@ -107,10 +109,19 @@ function renderMobilePortfolios(portfolios) {
             <span class="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
               ${escapeHtml(p.type)}
             </span>
-            ${!p.include_in_totals ? '<span class="text-[8px] font-mono px-1 py-0.2 rounded bg-gray-100 dark:bg-white/10 text-gray-400 shrink-0 uppercase">Isolato</span>' : ''}
+            ${!isIncluded ? '<span class="text-[8px] font-mono px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-semibold shrink-0 uppercase">Escluso</span>' : ''}
           </div>
 
-          <div class="flex items-center space-x-1 shrink-0 ml-1" onclick="event.stopPropagation()">
+          <div class="flex items-center space-x-2 shrink-0 ml-1" onclick="event.stopPropagation()">
+            <!-- Direct switch toggle flag -->
+            <label class="relative inline-flex items-center cursor-pointer select-none" title="${isIncluded ? 'Incluso nei calcoli e totali. Tocca per escludere.' : 'Escluso dai calcoli e totali. Tocca per includere.'}">
+              <input type="checkbox" switch class="sr-only peer" ${isIncluded ? 'checked' : ''} onchange="togglePortfolioInclude(${p.id}, this.checked, event)">
+              <div class="w-7 h-3.5 bg-gray-300 dark:bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-emerald-600"></div>
+              <span class="ml-1 text-[9px] font-mono font-medium ${isIncluded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
+                ${isIncluded ? 'ON' : 'OFF'}
+              </span>
+            </label>
+
             <button onclick="openPortfolioModal(${p.id})" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition" title="Modifica dati portafoglio">
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -150,18 +161,55 @@ function renderMobilePortfolios(portfolios) {
 }
 
 function renderDesktopPortfolios(portfolios) {
-  return portfolios.map(p => {
+  const totValue = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.totalValue) || 0) : sum, 0);
+  const totCash = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.currentCash) || 0) : sum, 0);
+  const totInvested = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.investedCapital) || 0) : sum, 0);
+  const activeCount = portfolios.filter(p => p.include_in_totals).length;
+
+  let summaryHtml = '';
+  if (portfolios.length > 1) {
+    summaryHtml = `
+      <div class="col-span-full signature-card p-4 px-6 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+          <div>
+            <div class="text-xs font-mono font-bold text-gray-900 dark:text-white uppercase tracking-wider">Patrimonio Globale Aggregato</div>
+            <div class="text-[11px] font-mono text-gray-500 dark:text-gray-400 mt-0.5">
+              ${activeCount} su ${portfolios.length} portafogli inclusi nei calcoli e nelle performance
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-6 font-mono text-xs">
+          <div>
+            <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Controvalore Totale</span>
+            <span class="text-base font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(totValue)}</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Liquidità Totale</span>
+            <span class="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">${fmtEur(totCash)}</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Capitale Versato</span>
+            <span class="text-base font-bold text-gray-700 dark:text-gray-300 tabular-nums">${fmtEur(totInvested)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const cardsHtml = portfolios.map(p => {
     const pnl = p.metrics?.unrealizedPnl || 0;
     const pnlPct = p.metrics?.unrealizedPnlPercent || 0;
     const isPos = pnl >= 0;
     const badgePnlClass = isPos ? 'badge-profit' : 'badge-loss';
+    const isIncluded = Boolean(p.include_in_totals);
 
     return `
-      <div class="signature-card p-6 flex flex-col justify-between relative group hover:shadow-lg transition-all duration-200">
+      <div class="signature-card p-6 flex flex-col justify-between relative group hover:shadow-lg transition-all duration-200 ${!isIncluded ? 'opacity-85 border-dashed border-gray-300 dark:border-white/10' : ''}">
         <div>
           <!-- Card Header -->
           <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center space-x-2.5">
+            <div class="flex items-center space-x-2.5 min-w-0">
               <span class="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm" style="background-color: ${p.color || '#4f6b92'};"></span>
               <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
                 ${escapeHtml(p.type)}
@@ -174,14 +222,22 @@ function renderDesktopPortfolios(portfolios) {
               </span>
             </div>
             
-            <span class="text-[10px] font-mono ${p.include_in_totals ? 'text-emerald-500' : 'text-gray-400'}" title="${p.include_in_totals ? 'Incluso nel patrimonio globale' : 'Escluso dai totali globali'}">
-              ${p.include_in_totals ? '● Totali' : '○ Isolato'}
-            </span>
+            <!-- Direct On/Off Toggle Flag -->
+            <label class="relative inline-flex items-center gap-1.5 cursor-pointer select-none shrink-0" onclick="event.stopPropagation()" title="${isIncluded ? 'Incluso nei calcoli, performance e totali globali. Clicca per escludere.' : 'Escluso da ogni calcolo e totale globale. Clicca per includere.'}">
+              <input type="checkbox" switch class="sr-only peer" ${isIncluded ? 'checked' : ''} onchange="togglePortfolioInclude(${p.id}, this.checked, event)">
+              <div class="w-8 h-4 bg-gray-300 dark:bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-600"></div>
+              <span class="text-[10px] font-mono font-medium ${isIncluded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
+                ${isIncluded ? 'Calcoli ON' : 'Calcoli OFF'}
+              </span>
+            </label>
           </div>
 
           <!-- Title & Total Value -->
           <div class="mt-4">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white tracking-tight">${escapeHtml(p.name)}</h3>
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white tracking-tight">${escapeHtml(p.name)}</h3>
+              ${!isIncluded ? '<span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-semibold shrink-0">Escluso dai totali</span>' : ''}
+            </div>
             <div class="mt-2 text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">
               ${fmtEur(p.totalValue)}
             </div>
@@ -240,6 +296,8 @@ function renderDesktopPortfolios(portfolios) {
       </div>
     `;
   }).join('');
+
+  return summaryHtml + cardsHtml;
 }
 
 function renderPortfolios(portfolios) {
@@ -419,6 +477,47 @@ async function deletePortfolio(id, name) {
   }
 }
 
+/**
+ * Toggles the portfolio's include_in_totals flag directly from the card.
+ * @param {number} id
+ * @param {boolean} checked
+ * @param {Event} e
+ */
+async function togglePortfolioInclude(id, checked, e) {
+  if (e) {
+    e.stopPropagation();
+  }
+
+  const p = allPortfolios.find(x => x.id === id);
+  const oldVal = p ? p.include_in_totals : !checked;
+
+  try {
+    const res = await fetch(`/api/portfolios/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ include_in_totals: checked ? 1 : 0 })
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      if (e && e.target) e.target.checked = Boolean(oldVal);
+      showToast(data.error || 'Errore durante l\'aggiornamento dello stato', true);
+      return;
+    }
+
+    if (p) {
+      p.include_in_totals = checked ? 1 : 0;
+    }
+
+    showToast(`✓ Portafoglio "${p ? p.name : ''}" ${checked ? 'incluso nei calcoli e totali' : 'escluso dai calcoli e totali'}`);
+    loadPortfolios();
+  } catch (err) {
+    if (e && e.target) e.target.checked = Boolean(oldVal);
+    showToast('Errore di connessione: ' + err.message, true);
+  }
+}
+
 window.openPortfolioModal = openPortfolioModal;
 window.closePortfolioModal = closePortfolioModal;
 window.deletePortfolio = deletePortfolio;
+window.togglePortfolioInclude = togglePortfolioInclude;

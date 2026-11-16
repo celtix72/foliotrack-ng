@@ -52,8 +52,8 @@ router.post('/simulate', (req, res) => {
   // If wealth still null, calculate user's total aggregate wealth
   if (wealth === null) {
     const where = req.user.role === 'admin'
-      ? ''
-      : 'WHERE portfolio_id IN (SELECT portfolio_id FROM portfolio_users WHERE user_id = ?)';
+      ? 'WHERE (include_in_totals = 1 OR include_in_totals IS NULL)'
+      : 'WHERE id IN (SELECT portfolio_id FROM portfolio_users WHERE user_id = ?) AND (include_in_totals = 1 OR include_in_totals IS NULL)';
     const params = req.user.role === 'admin' ? [] : [req.user.id];
     const totalRow = db.prepare(`SELECT SUM(totalValue) as total FROM portfolios ${where}`).get(...params);
     wealth = totalRow && totalRow.total ? Number(totalRow.total) : 50000;

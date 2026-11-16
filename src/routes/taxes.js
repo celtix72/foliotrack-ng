@@ -154,6 +154,9 @@ router.get('/zainetto', (req, res) => {
       where += where ? ' AND pl.portfolioId = ?' : 'WHERE pl.portfolioId = ?';
       params.push(pId);
     }
+  } else {
+    // When aggregating across all portfolios, exclude portfolios with include_in_totals = 0
+    where += where ? ' AND (p.include_in_totals = 1 OR p.include_in_totals IS NULL)' : 'WHERE (p.include_in_totals = 1 OR p.include_in_totals IS NULL)';
   }
 
   const rows = db.prepare(`

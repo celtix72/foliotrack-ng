@@ -430,10 +430,10 @@ router.post('/', (req, res) => {
 });
 
 /**
- * PUT /api/portfolios/:id
+ * PUT /api/portfolios/:id and PATCH /api/portfolios/:id
  * Updates portfolio settings and triggers recalculation.
  */
-router.put('/:id', (req, res) => {
+const handleUpdatePortfolio = (req, res) => {
   const portfolioId = parseInt(req.params.id, 10);
   if (isNaN(portfolioId)) {
     return res.status(400).json({ success: false, error: 'ID portafoglio non valido.' });
@@ -527,7 +527,10 @@ router.put('/:id', (req, res) => {
     success: true,
     portfolio: recalculated
   });
-});
+};
+
+router.put('/:id', handleUpdatePortfolio);
+router.patch('/:id', handleUpdatePortfolio);
 
 /**
  * GET /api/portfolios/:id/export/wealthfolio
