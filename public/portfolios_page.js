@@ -101,7 +101,7 @@ function renderMobilePortfolios(portfolios) {
 
     return `
       <div class="signature-card p-2.5 px-3 flex flex-col justify-between gap-1.5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] active:scale-[0.99] transition cursor-pointer ${!isIncluded ? 'opacity-85 border-dashed border-gray-300 dark:border-white/10' : ''}" onclick="location.href='/portfolios/${p.id}'">
-        <!-- Line 1: Header (Name, Badge, Toggle & Actions) -->
+        <!-- Line 1: Header (Name, Type Badge, Pillow Switch & Actions) -->
         <div class="flex items-center justify-between min-w-0">
           <div class="flex items-center space-x-1.5 min-w-0 overflow-hidden">
             <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${p.color || '#4f6b92'};"></span>
@@ -109,19 +109,15 @@ function renderMobilePortfolios(portfolios) {
             <span class="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
               ${escapeHtml(p.type)}
             </span>
-            ${!isIncluded ? '<span class="text-[8px] font-mono px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-semibold shrink-0 uppercase">Escluso</span>' : ''}
           </div>
 
           <div class="flex items-center space-x-2 shrink-0 ml-1" onclick="event.stopPropagation()">
-            <!-- Direct switch toggle flag (Pillow Switch) -->
-            <label class="ft-switch-container inline-flex items-center gap-1 cursor-pointer select-none shrink-0" title="${isIncluded ? 'Incluso nei calcoli e totali. Tocca per escludere.' : 'Escluso dai calcoli e totali. Tocca per includere.'}">
+            <!-- Pillow Switch Only -->
+            <label class="ft-switch-container inline-flex items-center cursor-pointer select-none shrink-0" title="${isIncluded ? 'Incluso nei calcoli e totali. Tocca per escludere.' : 'Escluso dai calcoli e totali. Tocca per includere.'}">
               <input type="checkbox" switch class="sr-only" ${isIncluded ? 'checked' : ''} onchange="togglePortfolioInclude(${p.id}, this.checked, event)">
               <div class="ft-pillow-switch sm ${isIncluded ? 'active' : ''}" data-switch-id="${p.id}">
                 <span class="ft-switch-knob"></span>
               </div>
-              <span class="ft-switch-label text-[9px] font-mono font-bold transition-colors duration-200 ${isIncluded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
-                ${isIncluded ? 'ON' : 'OFF'}
-              </span>
             </label>
 
             <button onclick="openPortfolioModal(${p.id})" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition" title="Modifica dati portafoglio">
@@ -224,24 +220,18 @@ function renderDesktopPortfolios(portfolios) {
               </span>
             </div>
             
-            <!-- Direct On/Off Toggle Flag (Pillow Switch) -->
-            <label class="ft-switch-container inline-flex items-center gap-1.5 cursor-pointer select-none shrink-0" onclick="event.stopPropagation()" title="${isIncluded ? 'Incluso nei calcoli, performance e totali globali. Clicca per escludere.' : 'Escluso da ogni calcolo e totale globale. Clicca per includere.'}">
+            <!-- Pillow Switch Only -->
+            <label class="ft-switch-container inline-flex items-center cursor-pointer select-none shrink-0" onclick="event.stopPropagation()" title="${isIncluded ? 'Incluso nei calcoli, performance e totali globali. Clicca per escludere.' : 'Escluso da ogni calcolo e totale globale. Clicca per includere.'}">
               <input type="checkbox" switch class="sr-only" ${isIncluded ? 'checked' : ''} onchange="togglePortfolioInclude(${p.id}, this.checked, event)">
               <div class="ft-pillow-switch ${isIncluded ? 'active' : ''}" data-switch-id="${p.id}">
                 <span class="ft-switch-knob"></span>
               </div>
-              <span class="ft-switch-label text-[10px] font-mono font-semibold transition-colors duration-200 ${isIncluded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
-                ${isIncluded ? 'Calcoli ON' : 'Calcoli OFF'}
-              </span>
             </label>
           </div>
 
           <!-- Title & Total Value -->
           <div class="mt-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-bold text-gray-900 dark:text-white tracking-tight">${escapeHtml(p.name)}</h3>
-              ${!isIncluded ? '<span class="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-semibold shrink-0">Escluso dai totali</span>' : ''}
-            </div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white tracking-tight">${escapeHtml(p.name)}</h3>
             <div class="mt-2 text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">
               ${fmtEur(p.totalValue)}
             </div>
@@ -495,27 +485,10 @@ async function togglePortfolioInclude(id, checked, e) {
   const p = allPortfolios.find(x => x.id === id);
   const oldVal = p ? Boolean(p.include_in_totals) : !checked;
 
-  // Immediate optimistic UI animation of the pillow switch & label
+  // Immediate optimistic UI animation of the pillow switch
   const switchEl = document.querySelector(`.ft-pillow-switch[data-switch-id="${id}"]`);
-  const containerEl = switchEl?.closest('.ft-switch-container');
-  const labelEl = containerEl?.querySelector('.ft-switch-label');
-
   if (switchEl) {
-    if (checked) {
-      switchEl.classList.add('active');
-    } else {
-      switchEl.classList.remove('active');
-    }
-  }
-
-  if (labelEl) {
-    if (checked) {
-      labelEl.textContent = isMobileView() ? 'ON' : 'Calcoli ON';
-      labelEl.className = `ft-switch-label ${isMobileView() ? 'text-[9px] font-bold' : 'text-[10px] font-semibold'} font-mono transition-colors duration-200 text-emerald-600 dark:text-emerald-400`;
-    } else {
-      labelEl.textContent = isMobileView() ? 'OFF' : 'Calcoli OFF';
-      labelEl.className = `ft-switch-label ${isMobileView() ? 'text-[9px] font-bold' : 'text-[10px] font-semibold'} font-mono transition-colors duration-200 text-gray-400 dark:text-gray-500`;
-    }
+    switchEl.classList.toggle('active', checked);
   }
 
   try {
@@ -530,10 +503,6 @@ async function togglePortfolioInclude(id, checked, e) {
       // Revert optimistic state
       if (e && e.target) e.target.checked = oldVal;
       if (switchEl) switchEl.classList.toggle('active', oldVal);
-      if (labelEl) {
-        labelEl.textContent = oldVal ? (isMobileView() ? 'ON' : 'Calcoli ON') : (isMobileView() ? 'OFF' : 'Calcoli OFF');
-        labelEl.className = `ft-switch-label ${isMobileView() ? 'text-[9px] font-bold' : 'text-[10px] font-semibold'} font-mono transition-colors duration-200 ${oldVal ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`;
-      }
       showToast(data.error || 'Errore durante l\'aggiornamento dello stato', true);
       return;
     }
@@ -547,10 +516,6 @@ async function togglePortfolioInclude(id, checked, e) {
   } catch (err) {
     if (e && e.target) e.target.checked = oldVal;
     if (switchEl) switchEl.classList.toggle('active', oldVal);
-    if (labelEl) {
-      labelEl.textContent = oldVal ? (isMobileView() ? 'ON' : 'Calcoli ON') : (isMobileView() ? 'OFF' : 'Calcoli OFF');
-      labelEl.className = `ft-switch-label ${isMobileView() ? 'text-[9px] font-bold' : 'text-[10px] font-semibold'} font-mono transition-colors duration-200 ${oldVal ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`;
-    }
     showToast('Errore di connessione: ' + err.message, true);
   }
 }
