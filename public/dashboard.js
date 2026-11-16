@@ -4499,6 +4499,7 @@
    * integer positions and preserving positions of hidden widgets.
    */
   function getCurrentGridLayout() {
+    const isMobile = isMobileDashboard();
     const defaultList = getActiveDefaultLayout();
     if (!grid) return currentSavedLayout;
 
