@@ -22,6 +22,7 @@ const rebalancingRouter = require('./routes/rebalancing');
 const newsRouter = require('./routes/news');
 const analysisRouter = require('./routes/analysis');
 const reportsRouter = require('./routes/reports');
+const { router: alertsRouter } = require('./routes/alerts');
 const { db } = require('./db');
 const { serveWithSidebar, isMobile } = require('./utils/viewRenderer');
 
@@ -103,6 +104,7 @@ app.use('/api/rebalancing', rebalancingRouter);
 app.use('/api/analysis', analysisRouter);
 app.use('/api/news', newsRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/alerts', alertsRouter);
 
 // 404 handler for unmatched API routes
 app.use('/api', (req, res) => {

@@ -4830,9 +4830,104 @@
     });
   }
 
+  /**
+   * Loads earnings & dividend alerts for today and renders cards with acquisition buttons.
+   */
+  async function loadDashboardAlerts() {
+    const containers = [
+      document.getElementById('dashboardAlertsContainer'),
+      document.getElementById('mDashboardAlertsContainer')
+    ].filter(Boolean);
+
+    if (containers.length === 0) return;
+
+    try {
+      const res = await fetch('/api/alerts');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.alerts)) return;
+
+      const alerts = data.alerts;
+      if (alerts.length === 0) {
+        containers.forEach(c => {
+          c.innerHTML = '';
+          c.classList.add('hidden');
+        });
+        return;
+      }
+
+      const escapeHtml = (str) => {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      };
+
+      const headerHtml = alerts.length > 1 ? `
+        <div class="flex items-center justify-between px-2 py-1 text-xs font-mono text-gray-500 dark:text-gray-400">
+          <span class="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-200">
+            <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            Avvisi di Oggi (${alerts.length})
+          </span>
+          <button type="button" data-ack-all-alerts class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1">
+            ✓ Acquisisci tutti
+          </button>
+        </div>
+      ` : '';
+
+      const cardsHtml = alerts.map(a => {
+        const isEarnings = a.type === 'EARNINGS';
+        const typeBadge = isEarnings
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">TRIMESTRALE</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">STACCO DIVIDENDO</span>`;
+
+        const iconBadge = isEarnings
+          ? `<div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">📊</div>`
+          : `<div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">💰</div>`;
+
+        const cardBorderClass = isEarnings
+          ? 'border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-xs'
+          : 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs';
+
+        return `
+          <div id="alert-card-${a.id}" data-alert-card="${a.id}" class="signature-card p-3 sm:p-3.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all duration-300 ${cardBorderClass}">
+            <div class="flex items-start gap-3 min-w-0">
+              ${iconBadge}
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  ${typeBadge}
+                  <span class="font-mono font-bold text-xs text-gray-900 dark:text-white">${escapeHtml(a.ticker)}</span>
+                  ${a.event_date ? `<span class="text-[10px] font-mono text-gray-400 dark:text-gray-500">${escapeHtml(a.event_date)}</span>` : ''}
+                </div>
+                <h4 class="text-xs font-semibold text-gray-900 dark:text-white mt-1 leading-snug">${escapeHtml(a.title)}</h4>
+                <p class="text-[11px] sm:text-xs text-gray-600 dark:text-gray-300 font-mono mt-0.5 leading-relaxed">${escapeHtml(a.message)}</p>
+              </div>
+            </div>
+            <button type="button" data-ack-alert="${a.id}" class="shrink-0 self-end sm:self-center px-3 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/10 hover:bg-emerald-50 hover:border-emerald-500/50 dark:hover:bg-emerald-900/30 text-xs font-mono font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer" title="Acquisisci e chiudi questa notifica">
+              <span class="text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+              <span>Acquisisci</span>
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      const fullHtml = headerHtml + cardsHtml;
+      containers.forEach(c => {
+        c.innerHTML = fullHtml;
+        c.classList.remove('hidden');
+      });
+    } catch (err) {
+      console.warn('[Alerts] Failed to load dashboard alerts:', err);
+    }
+  }
+
   // Fetches live portfolio metrics and renders dashboard
   async function refreshDashboard(reinitGrid = false) {
     try {
+      loadDashboardAlerts();
       const res = await fetch('/api/portfolios');
       if (res.ok) {
         const data = await res.json();
@@ -4994,8 +5089,124 @@
     document.getElementById('drawerShowAllBtn')?.addEventListener('click', showAllWidgets);
     document.getElementById('drawerResetDefaultBtn')?.addEventListener('click', resetDefaultWidgets);
 
-    // Global click listener for touch-friendly move widget buttons (▲ and ▼)
+    // Global click listener for touch-friendly move widget buttons (▲ and ▼) and alerts
     document.addEventListener('click', async (e) => {
+      // Alert single acknowledge
+      const ackBtn = e.target.closest('[data-ack-alert]');
+      if (ackBtn) {
+        e.preventDefault();
+        const alertId = ackBtn.getAttribute('data-ack-alert');
+        if (!alertId) return;
+
+        ackBtn.disabled = true;
+        const originalHtml = ackBtn.innerHTML;
+        ackBtn.innerHTML = `<span class="animate-spin inline-block text-xs">↻</span>`;
+
+        const cards = document.querySelectorAll(`[data-alert-card="${alertId}"]`);
+        cards.forEach(card => {
+          card.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+          card.style.opacity = '0';
+          card.style.transform = 'scale(0.96)';
+        });
+
+        try {
+          const res = await fetch(`/api/alerts/${alertId}/acknowledge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (res.ok) {
+            cards.forEach(card => {
+              card.style.maxHeight = '0px';
+              card.style.paddingTop = '0px';
+              card.style.paddingBottom = '0px';
+              card.style.marginTop = '0px';
+              card.style.marginBottom = '0px';
+              card.style.overflow = 'hidden';
+              setTimeout(() => {
+                card.remove();
+                const remaining = document.querySelectorAll('[data-alert-card]');
+                if (remaining.length === 0) {
+                  const containers = [
+                    document.getElementById('dashboardAlertsContainer'),
+                    document.getElementById('mDashboardAlertsContainer')
+                  ].filter(Boolean);
+                  containers.forEach(c => {
+                    c.innerHTML = '';
+                    c.classList.add('hidden');
+                  });
+                }
+              }, 300);
+            });
+            showDashboardToast('Notifica acquisita');
+          } else {
+            cards.forEach(card => {
+              card.style.opacity = '1';
+              card.style.transform = 'none';
+            });
+            ackBtn.disabled = false;
+            ackBtn.innerHTML = originalHtml;
+            showDashboardToast('Errore durante l\'acquisizione', true);
+          }
+        } catch (err) {
+          cards.forEach(card => {
+            card.style.opacity = '1';
+            card.style.transform = 'none';
+          });
+          ackBtn.disabled = false;
+          ackBtn.innerHTML = originalHtml;
+          showDashboardToast('Errore di connessione', true);
+        }
+        return;
+      }
+
+      // Alert acknowledge all
+      const ackAllBtn = e.target.closest('[data-ack-all-alerts]');
+      if (ackAllBtn) {
+        e.preventDefault();
+        ackAllBtn.disabled = true;
+        const allCards = document.querySelectorAll('[data-alert-card]');
+        allCards.forEach(card => {
+          card.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+          card.style.opacity = '0';
+          card.style.transform = 'scale(0.96)';
+        });
+
+        try {
+          const res = await fetch('/api/alerts/acknowledge-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (res.ok) {
+            setTimeout(() => {
+              const containers = [
+                document.getElementById('dashboardAlertsContainer'),
+                document.getElementById('mDashboardAlertsContainer')
+              ].filter(Boolean);
+              containers.forEach(c => {
+                c.innerHTML = '';
+                c.classList.add('hidden');
+              });
+            }, 300);
+            showDashboardToast('Tutte le notifiche sono state acquisite');
+          } else {
+            allCards.forEach(card => {
+              card.style.opacity = '1';
+              card.style.transform = 'none';
+            });
+            ackAllBtn.disabled = false;
+            showDashboardToast('Errore durante l\'acquisizione', true);
+          }
+        } catch (err) {
+          allCards.forEach(card => {
+            card.style.opacity = '1';
+            card.style.transform = 'none';
+          });
+          ackAllBtn.disabled = false;
+          showDashboardToast('Errore di connessione', true);
+        }
+        return;
+      }
+
       const upBtn = e.target.closest('[data-move-widget-up]');
       if (upBtn) {
         e.preventDefault();
@@ -5427,6 +5638,7 @@
 
   window.FolioTrackDashboard = {
     refresh: refreshDashboard,
+    loadAlerts: loadDashboardAlerts,
     refreshMarket: handleManualMarketRefresh,
     refreshNews: () => loadPortfolioNews(true),
     loadNews: () => loadPortfolioNews(false),

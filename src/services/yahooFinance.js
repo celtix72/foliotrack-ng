@@ -307,12 +307,13 @@ async function getFundamentals(symbol) {
 
     let dividendYield = 0.0;
     const cleanUpper = cleanSymbol.toUpperCase();
+    const curPrice = fd.currentPrice || sd.regularMarketPrice || 0;
     if (cleanUpper === 'PYPL' || cleanUpper === 'NEXI.MI') {
       dividendYield = 0.0;
     } else if (cleanUpper === 'NOV.DE') {
       dividendYield = 1.25;
-    } else if (sd.dividendRate && (price || fd.currentPrice) > 0) {
-      dividendYield = Number(((Number(sd.dividendRate) / (price || fd.currentPrice)) * 100).toFixed(2));
+    } else if (sd.dividendRate && curPrice > 0) {
+      dividendYield = Number(((Number(sd.dividendRate) / curPrice) * 100).toFixed(2));
     } else if (sd.dividendYield !== undefined && sd.dividendYield !== null) {
       const rawDec = Number(sd.dividendYield);
       dividendYield = rawDec < 1.0 ? Number((rawDec * 100).toFixed(2)) : Number(rawDec.toFixed(2));
@@ -336,13 +337,23 @@ async function getFundamentals(symbol) {
       }
 
       const nextEarningsDates = earn.earningsChart?.earningsDate || cal.earnings?.earningsDate || [];
-      const nextEarningsDate = nextEarningsDates.length ? nextEarningsDates[0] : null;
+      const rawNextDate = nextEarningsDates.length ? nextEarningsDates[0] : null;
+
+      const toIsoDateStr = (d) => {
+        if (!d) return null;
+        try {
+          const dt = new Date(d);
+          return isNaN(dt.getTime()) ? null : dt.toISOString().split('T')[0];
+        } catch {
+          return null;
+        }
+      };
 
       latestQuarter = {
         quarter: lastQEarnings?.date || lastQFin?.date || 'N/D',
         fiscalQuarter: lastQEarnings?.fiscalQuarter || lastQFin?.fiscalQuarter || null,
-        periodEndDate: lastQEarnings?.periodEndDate || null,
-        reportedDate: lastQEarnings?.reportedDate || null,
+        periodEndDate: toIsoDateStr(lastQEarnings?.periodEndDate),
+        reportedDate: toIsoDateStr(lastQEarnings?.reportedDate),
         epsActual,
         epsEstimate,
         epsDifference: lastQEarnings?.difference !== undefined ? Number(lastQEarnings.difference) : (epsActual !== null && epsEstimate !== null ? Number((epsActual - epsEstimate).toFixed(3)) : null),
@@ -350,7 +361,7 @@ async function getFundamentals(symbol) {
         revenue: lastQFin?.revenue || null,
         earnings: lastQFin?.earnings || null,
         profitMargin: lastQFin?.profitMargin ? Number((lastQFin.profitMargin * 100).toFixed(2)) : null,
-        nextEarningsDate,
+        nextEarningsDate: toIsoDateStr(rawNextDate),
         isNextEarningsEstimate: earn.earningsChart?.isEarningsDateEstimate ?? true
       };
     }
@@ -488,6 +499,8 @@ async function getFundamentals(symbol) {
       dividendYield: dividendYield > 0 ? dividendYield : null,
       payoutRatio: sd.payoutRatio ? (sd.payoutRatio * 100) : null,
       fiveYearAvgDividendYield: sd.fiveYearAvgDividendYield || null,
+      exDividendDate: cal.exDividendDate ? new Date(cal.exDividendDate).toISOString().split('T')[0] : (sd.exDividendDate ? new Date(sd.exDividendDate).toISOString().split('T')[0] : null),
+      dividendDate: cal.dividendDate ? new Date(cal.dividendDate).toISOString().split('T')[0] : null,
       beta: sd.beta || ks.beta || null,
       fiftyTwoWeekHigh: sd.fiftyTwoWeekHigh || null,
       fiftyTwoWeekLow: sd.fiftyTwoWeekLow || null,

@@ -335,6 +335,25 @@ function createSchema(database) {
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS dashboard_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL DEFAULT 1,
+      portfolio_id INTEGER DEFAULT NULL,
+      ticker TEXT NOT NULL COLLATE NOCASE,
+      type TEXT NOT NULL CHECK(type IN ('EARNINGS', 'DIVIDEND')),
+      event_date TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      details TEXT,
+      is_acknowledged INTEGER NOT NULL DEFAULT 0,
+      acknowledged_at TEXT DEFAULT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, ticker, type, event_date)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_dashboard_alerts_user_ack ON dashboard_alerts(user_id, is_acknowledged, event_date);
+    CREATE INDEX IF NOT EXISTS idx_dashboard_alerts_ticker ON dashboard_alerts(ticker);
+
     CREATE INDEX IF NOT EXISTS idx_analysis_watchlist_ticker ON analysis_watchlist(ticker);
     CREATE INDEX IF NOT EXISTS idx_portfolio_news_ticker ON portfolio_news(ticker);
     CREATE INDEX IF NOT EXISTS idx_portfolio_news_pubDate ON portfolio_news(pubDate DESC);
@@ -421,6 +440,23 @@ function createSchema(database) {
         data TEXT NOT NULL,
         updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
       );
+      CREATE TABLE IF NOT EXISTS dashboard_alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL DEFAULT 1,
+        portfolio_id INTEGER DEFAULT NULL,
+        ticker TEXT NOT NULL COLLATE NOCASE,
+        type TEXT NOT NULL CHECK(type IN ('EARNINGS', 'DIVIDEND')),
+        event_date TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        details TEXT,
+        is_acknowledged INTEGER NOT NULL DEFAULT 0,
+        acknowledged_at TEXT DEFAULT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_id, ticker, type, event_date)
+      );
+      CREATE INDEX IF NOT EXISTS idx_dashboard_alerts_user_ack ON dashboard_alerts(user_id, is_acknowledged, event_date);
+      CREATE INDEX IF NOT EXISTS idx_dashboard_alerts_ticker ON dashboard_alerts(ticker);
       CREATE INDEX IF NOT EXISTS idx_analysis_watchlist_ticker ON analysis_watchlist(ticker);
     `);
   } catch {}
