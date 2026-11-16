@@ -183,16 +183,65 @@ router.get('/portfolio-data', (req, res) => {
     // Sort holdings by currentValue descending
     formattedHoldings.sort((a, b) => b.currentValue - a.currentValue);
 
-    // Calculate portfolio unrealized capital gains tax taking into account minusvalenze compensation strictly within same portfolio and same category
-    const portfolioTax = calculatePortfolioUnrealizedTax(formattedHoldings, detailedLosses);
+    // Calculate portfolio taxation:
+    // If portfolio is Pensione, tax is applied directly to NAV based on p.taxRate (default 15%)
+    let portfolioTax;
+    let portfolioEstimatedTax = 0.0;
+
+    if (p.type === 'Pensione') {
+      const pTaxRate = p.taxRate !== undefined && p.taxRate !== null && !isNaN(Number(p.taxRate))
+        ? Number(p.taxRate)
+        : 15.0;
+      const rateFraction = pTaxRate > 1.0 ? pTaxRate / 100.0 : pTaxRate;
+      const ratePercent = pTaxRate > 1.0 ? pTaxRate : pTaxRate * 100.0;
+      portfolioEstimatedTax = totalVal * rateFraction;
+
+      portfolioTax = {
+        isPension: true,
+        taxRate: ratePercent,
+        taxRateFormatted: `${ratePercent.toLocaleString('it-IT', { maximumFractionDigits: 2 })}%`,
+        totalEstimatedTax: portfolioEstimatedTax,
+        grossValue: totalVal,
+        netValue: Math.max(0.0, totalVal - portfolioEstimatedTax),
+        equity: {
+          grossGain: 0,
+          availableMinusvalenze: 0,
+          compensatedAmount: 0,
+          taxableGain: 0,
+          taxRate: 0.26,
+          taxRateFormatted: '26%',
+          taxDue: 0,
+          netGain: 0
+        },
+        bond: {
+          grossGain: 0,
+          availableMinusvalenze: 0,
+          compensatedAmount: 0,
+          taxableGain: 0,
+          taxRate: 0.125,
+          taxRateFormatted: '12,5%',
+          taxDue: 0,
+          netGain: 0
+        },
+        totalGrossGain: 0,
+        totalCompensated: 0,
+        totalTaxable: 0,
+        potentialTaxSaving: 0
+      };
+    } else {
+      portfolioTax = calculatePortfolioUnrealizedTax(formattedHoldings, detailedLosses);
+      portfolioEstimatedTax = Number(portfolioTax.totalEstimatedTax) || 0.0;
+    }
 
     const portfolioReport = {
       id: p.id,
       name: p.name,
       type: p.type || 'Investimento',
+      taxRate: p.taxRate,
       currency: p.currency || 'EUR',
       includeInTotals: Boolean(p.include_in_totals),
       totalValue: totalVal,
+      netValue: Math.max(0.0, totalVal - portfolioEstimatedTax),
       investedCapital: invCap,
       currentCash: cash,
       unrealizedPnl: unPnl,
@@ -204,8 +253,8 @@ router.get('/portfolio-data', (req, res) => {
       assetCount: formattedHoldings.length,
       holdings: formattedHoldings,
       taxation: portfolioTax,
-      estimatedTax: portfolioTax.totalEstimatedTax,
-      netGain: totalGain - portfolioTax.totalEstimatedTax,
+      estimatedTax: portfolioEstimatedTax,
+      netGain: totalGain - portfolioEstimatedTax,
       minusvalenze: {
         totalResidual: pResidualLosses,
         potentialTaxSaving: pPotentialTaxSaving,

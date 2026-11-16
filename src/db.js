@@ -138,6 +138,7 @@ function createSchema(database) {
       assetCount INTEGER NOT NULL DEFAULT 0,
       color TEXT DEFAULT '#4f6b92',
       include_in_totals INTEGER NOT NULL DEFAULT 1,
+      taxRate REAL DEFAULT NULL,
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -394,6 +395,7 @@ function createSchema(database) {
   try { database.exec("CREATE INDEX IF NOT EXISTS idx_portfolio_losses_port_type_exp ON portfolio_losses(portfolioId, assetType, expiryDate)"); } catch {}
   try { database.exec("ALTER TABLE portfolios ADD COLUMN netValue REAL DEFAULT 0.0"); } catch {}
   try { database.exec("ALTER TABLE portfolios ADD COLUMN estimatedTax REAL DEFAULT 0.0"); } catch {}
+  try { database.exec("ALTER TABLE portfolios ADD COLUMN taxRate REAL DEFAULT NULL"); } catch {}
   try { database.exec("ALTER TABLE dividend_projections ADD COLUMN source TEXT DEFAULT 'AUTO'"); } catch {}
   try { database.exec("ALTER TABLE dividend_projections ADD COLUMN providerYield REAL DEFAULT 0.0"); } catch {}
   try { database.exec("ALTER TABLE dividend_projections ADD COLUMN portfolioYield REAL DEFAULT 0.0"); } catch {}

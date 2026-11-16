@@ -13,6 +13,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('cancelPortfolioModalBtn')?.addEventListener('click', closePortfolioModal);
   document.getElementById('portfolioForm')?.addEventListener('submit', handleSavePortfolio);
 
+  const typeSelect = document.getElementById('modalPortfolioType');
+  if (typeSelect) {
+    typeSelect.addEventListener('change', () => {
+      const pensionGroup = document.getElementById('modalPensionTaxGroup');
+      const taxInput = document.getElementById('modalPortfolioTaxRate');
+      if (pensionGroup) {
+        if (typeSelect.value === 'Pensione') {
+          pensionGroup.classList.remove('hidden');
+          if (taxInput && (!taxInput.value || taxInput.value === '0')) {
+            taxInput.value = '15';
+          }
+        } else {
+          pensionGroup.classList.add('hidden');
+        }
+      }
+    });
+  }
+
   // Close modal when clicking on backdrop
   document.getElementById('portfolioModal')?.addEventListener('click', (e) => {
     if (e.target.id === 'portfolioModal') closePortfolioModal();
@@ -98,6 +116,9 @@ function renderMobilePortfolios(portfolios) {
     const isPos = pnl >= 0;
     const badgePnlClass = isPos ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-rose-600 dark:text-rose-400 font-bold';
     const isIncluded = Boolean(p.include_in_totals);
+    const isPension = p.type === 'Pensione';
+    const pensionTaxRate = p.taxRate !== null && p.taxRate !== undefined && !isNaN(Number(p.taxRate)) ? Number(p.taxRate) : 15.0;
+    const netValue = p.netValue !== undefined ? Number(p.netValue) : (p.metrics?.netValue !== undefined ? Number(p.metrics.netValue) : (p.totalValue * (1 - pensionTaxRate / 100)));
 
     return `
       <div class="signature-card p-2.5 px-3 flex flex-col justify-between gap-1.5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] active:scale-[0.99] transition cursor-pointer ${!isIncluded ? 'opacity-85 border-dashed border-gray-300 dark:border-white/10' : ''}" onclick="location.href='/portfolios/${p.id}'">
@@ -137,11 +158,19 @@ function renderMobilePortfolios(portfolios) {
         <!-- Line 2: Dati essenziali: Controvalore e Liquidità -->
         <div class="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-white/5 font-mono">
           <div>
-            <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Controvalore</span>
-            <div class="flex items-baseline space-x-1 mt-0.5">
-              <span class="text-sm font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(p.totalValue)}</span>
-              ${pnlPct !== 0 ? `<span class="text-[9px] tabular-nums ${badgePnlClass}">(${fmtPct(pnlPct)})</span>` : ''}
-            </div>
+            ${isPension ? `
+              <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Lordo &bull; <span class="text-emerald-600 dark:text-emerald-400">Netto (-${pensionTaxRate}%)</span></span>
+              <div class="flex items-baseline space-x-1 mt-0.5">
+                <span class="text-xs font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(p.totalValue)}</span>
+                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">/ ${fmtEur(netValue)}</span>
+              </div>
+            ` : `
+              <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Controvalore</span>
+              <div class="flex items-baseline space-x-1 mt-0.5">
+                <span class="text-sm font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(p.totalValue)}</span>
+                ${pnlPct !== 0 ? `<span class="text-[9px] tabular-nums ${badgePnlClass}">(${fmtPct(pnlPct)})</span>` : ''}
+              </div>
+            `}
           </div>
 
           <div class="text-right">
@@ -201,6 +230,10 @@ function renderDesktopPortfolios(portfolios) {
     const isPos = pnl >= 0;
     const badgePnlClass = isPos ? 'badge-profit' : 'badge-loss';
     const isIncluded = Boolean(p.include_in_totals);
+    const isPension = p.type === 'Pensione';
+    const pensionTaxRate = p.taxRate !== null && p.taxRate !== undefined && !isNaN(Number(p.taxRate)) ? Number(p.taxRate) : 15.0;
+    const netValue = p.netValue !== undefined ? Number(p.netValue) : (p.metrics?.netValue !== undefined ? Number(p.metrics.netValue) : (p.totalValue * (1 - pensionTaxRate / 100)));
+    const estimatedTax = p.estimatedTax !== undefined ? Number(p.estimatedTax) : (p.metrics?.estimatedTax !== undefined ? Number(p.metrics.estimatedTax) : (p.totalValue * (pensionTaxRate / 100)));
 
     return `
       <div class="signature-card p-6 flex flex-col justify-between relative group hover:shadow-lg transition-all duration-200 ${!isIncluded ? 'opacity-85 border-dashed border-gray-300 dark:border-white/10' : ''}">
@@ -232,9 +265,28 @@ function renderDesktopPortfolios(portfolios) {
           <!-- Title & Total Value -->
           <div class="mt-4">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white tracking-tight">${escapeHtml(p.name)}</h3>
-            <div class="mt-2 text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">
-              ${fmtEur(p.totalValue)}
-            </div>
+            ${isPension ? `
+              <div class="mt-2 flex items-baseline gap-4 flex-wrap">
+                <div>
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400 block font-semibold">Lordo</span>
+                  <div class="text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">
+                    ${fmtEur(p.totalValue)}
+                  </div>
+                </div>
+                <div class="border-l border-gray-200 dark:border-white/10 pl-3">
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block font-semibold">
+                    Netto (-${pensionTaxRate}%)
+                  </span>
+                  <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight">
+                    ${fmtEur(netValue)}
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <div class="mt-2 text-3xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">
+                ${fmtEur(p.totalValue)}
+              </div>
+            `}
           </div>
 
           <!-- P&L Badge -->
@@ -258,8 +310,13 @@ function renderDesktopPortfolios(portfolios) {
               <span class="font-bold text-gray-800 dark:text-gray-200 tabular-nums">${p.assetCount} titoli</span>
             </div>
             <div>
-              <span class="text-gray-400 text-[10px] uppercase block">Data Inizio</span>
-              <span class="text-gray-600 dark:text-gray-400 tabular-nums">${escapeHtml(p.startDate || '-')}</span>
+              ${isPension ? `
+                <span class="text-gray-400 text-[10px] uppercase block">Imp. Stimata (-${pensionTaxRate}%)</span>
+                <span class="font-bold text-blue-600 dark:text-blue-400 tabular-nums">${fmtEur(estimatedTax)}</span>
+              ` : `
+                <span class="text-gray-400 text-[10px] uppercase block">Data Inizio</span>
+                <span class="text-gray-600 dark:text-gray-400 tabular-nums">${escapeHtml(p.startDate || '-')}</span>
+              `}
             </div>
           </div>
         </div>
@@ -362,6 +419,8 @@ function openPortfolioModal(portfolioId = null) {
   const modal = document.getElementById('portfolioModal');
   const title = document.getElementById('portfolioModalTitle');
   const form = document.getElementById('portfolioForm');
+  const pensionGroup = document.getElementById('modalPensionTaxGroup');
+  const taxInput = document.getElementById('modalPortfolioTaxRate');
   if (!modal || !form) return;
 
   form.reset();
@@ -379,6 +438,14 @@ function openPortfolioModal(portfolioId = null) {
       document.getElementById('modalPortfolioInitialCash').value = p.initialCash || 0;
       document.getElementById('modalPortfolioColor').value = p.color || '#4f6b92';
       document.getElementById('modalPortfolioIncludeTotals').checked = Boolean(p.include_in_totals);
+
+      if (p.type === 'Pensione') {
+        if (pensionGroup) pensionGroup.classList.remove('hidden');
+        if (taxInput) taxInput.value = p.taxRate !== null && p.taxRate !== undefined ? p.taxRate : 15;
+      } else {
+        if (pensionGroup) pensionGroup.classList.add('hidden');
+        if (taxInput) taxInput.value = '';
+      }
     }
   } else {
     title.textContent = 'Nuovo Portafoglio';
@@ -386,6 +453,8 @@ function openPortfolioModal(portfolioId = null) {
     document.getElementById('modalPortfolioInitialCash').value = 0;
     document.getElementById('modalPortfolioColor').value = '#4f6b92';
     document.getElementById('modalPortfolioIncludeTotals').checked = true;
+    if (pensionGroup) pensionGroup.classList.add('hidden');
+    if (taxInput) taxInput.value = '15';
   }
 
   modal.classList.remove('hidden');
@@ -407,15 +476,24 @@ async function handleSavePortfolio(e) {
   const id = document.getElementById('modalPortfolioId').value;
   const isEdit = Boolean(id);
 
+  const type = document.getElementById('modalPortfolioType').value;
+  const taxRateInput = document.getElementById('modalPortfolioTaxRate');
+  let taxRateVal = null;
+  if (type === 'Pensione' && taxRateInput) {
+    taxRateVal = parseFloat(taxRateInput.value);
+    if (isNaN(taxRateVal) || taxRateVal < 0) taxRateVal = 15.0;
+  }
+
   const payload = {
     name: document.getElementById('modalPortfolioName').value.trim(),
-    type: document.getElementById('modalPortfolioType').value,
+    type: type,
     currency: document.getElementById('modalPortfolioCurrency').value,
     costBasisMethod: document.getElementById('modalPortfolioCostBasis').value,
     startDate: document.getElementById('modalPortfolioStartDate').value,
     initialCash: parseFloat(document.getElementById('modalPortfolioInitialCash').value) || 0,
     color: document.getElementById('modalPortfolioColor').value,
-    include_in_totals: document.getElementById('modalPortfolioIncludeTotals').checked ? 1 : 0
+    include_in_totals: document.getElementById('modalPortfolioIncludeTotals').checked ? 1 : 0,
+    taxRate: taxRateVal
   };
 
   try {

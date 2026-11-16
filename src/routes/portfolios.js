@@ -110,10 +110,59 @@ function recalculatePortfolio(portfolioId, assetsMap = null) {
     detailedLosses = [];
   }
 
-  // Calculate portfolio unrealized capital gains tax (26% equity, 12.5% bond/monetary with compensation)
-  const taxation = calculatePortfolioUnrealizedTax(metrics.holdings || [], detailedLosses);
-  const estimatedTax = Number(taxation.totalEstimatedTax) || 0.0;
-  const netValue = (Number(metrics.totalValue) || 0.0) - estimatedTax;
+  // Calculate portfolio taxation:
+  // For pension portfolios (Pensione), tax is applied directly to NAV based on configured taxRate (default 15%)
+  let taxation;
+  let estimatedTax = 0.0;
+  let netValue = Number(metrics.totalValue) || 0.0;
+
+  if (portfolio.type === 'Pensione') {
+    const pTaxRate = portfolio.taxRate !== undefined && portfolio.taxRate !== null && !isNaN(Number(portfolio.taxRate))
+      ? Number(portfolio.taxRate)
+      : 15.0;
+
+    const rateFraction = pTaxRate > 1.0 ? pTaxRate / 100.0 : pTaxRate;
+    const ratePercent = pTaxRate > 1.0 ? pTaxRate : pTaxRate * 100.0;
+    estimatedTax = (Number(metrics.totalValue) || 0.0) * rateFraction;
+    netValue = Math.max(0.0, (Number(metrics.totalValue) || 0.0) - estimatedTax);
+
+    taxation = {
+      isPension: true,
+      taxRate: ratePercent,
+      taxRateFormatted: `${ratePercent.toLocaleString('it-IT', { maximumFractionDigits: 2 })}%`,
+      totalEstimatedTax: estimatedTax,
+      grossValue: Number(metrics.totalValue) || 0.0,
+      netValue,
+      equity: {
+        grossGain: 0,
+        availableMinusvalenze: 0,
+        compensatedAmount: 0,
+        taxableGain: 0,
+        taxRate: 0.26,
+        taxRateFormatted: '26%',
+        taxDue: 0,
+        netGain: 0
+      },
+      bond: {
+        grossGain: 0,
+        availableMinusvalenze: 0,
+        compensatedAmount: 0,
+        taxableGain: 0,
+        taxRate: 0.125,
+        taxRateFormatted: '12,5%',
+        taxDue: 0,
+        netGain: 0
+      },
+      totalGrossGain: 0,
+      totalCompensated: 0,
+      totalTaxable: 0,
+      potentialTaxSaving: 0
+    };
+  } else {
+    taxation = calculatePortfolioUnrealizedTax(metrics.holdings || [], detailedLosses);
+    estimatedTax = Number(taxation.totalEstimatedTax) || 0.0;
+    netValue = (Number(metrics.totalValue) || 0.0) - estimatedTax;
+  }
 
   metrics.taxation = taxation;
   metrics.estimatedTax = estimatedTax;
@@ -361,7 +410,8 @@ router.post('/', (req, res) => {
     initialCash = 0.0,
     startDate = new Date().toISOString().split('T')[0],
     color = '#4f6b92',
-    include_in_totals = 1
+    include_in_totals = 1,
+    taxRate = null
   } = req.body || {};
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -379,12 +429,22 @@ router.post('/', (req, res) => {
   const initCashNum = Number(initialCash) || 0.0;
   const includeTotalsNum = include_in_totals ? 1 : 0;
 
+  let taxRateNum = null;
+  if (taxRate !== undefined && taxRate !== null && taxRate !== '') {
+    const parsed = Number(taxRate);
+    if (!isNaN(parsed) && parsed >= 0) {
+      taxRateNum = parsed;
+    }
+  } else if (type === 'Pensione') {
+    taxRateNum = 15.0;
+  }
+
   const createTx = db.transaction(() => {
     const insertPortfolio = db.prepare(`
       INSERT INTO portfolios (
         name, type, currency, costBasisMethod, startDate,
-        initialCash, currentCash, investedCapital, color, include_in_totals
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        initialCash, currentCash, investedCapital, color, include_in_totals, taxRate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = insertPortfolio.run(
@@ -397,7 +457,8 @@ router.post('/', (req, res) => {
       initCashNum,
       initCashNum,
       color,
-      includeTotalsNum
+      includeTotalsNum,
+      taxRateNum
     );
 
     const portfolioId = info.lastInsertRowid;
@@ -456,6 +517,7 @@ const handleUpdatePortfolio = (req, res) => {
     costBasisMethod,
     color,
     include_in_totals,
+    taxRate,
     startDate,
     initialCash
   } = req.body || {};
@@ -469,6 +531,18 @@ const handleUpdatePortfolio = (req, res) => {
   const updatedStartDate = startDate !== undefined ? startDate : portfolio.startDate;
   const updatedInitialCash = initialCash !== undefined ? Number(initialCash) || 0.0 : portfolio.initialCash;
 
+  let updatedTaxRate = portfolio.taxRate;
+  if (taxRate !== undefined) {
+    if (taxRate === null || taxRate === '') {
+      updatedTaxRate = updatedType === 'Pensione' ? 15.0 : null;
+    } else {
+      const parsed = Number(taxRate);
+      updatedTaxRate = (!isNaN(parsed) && parsed >= 0) ? parsed : (updatedType === 'Pensione' ? 15.0 : null);
+    }
+  } else if (updatedType === 'Pensione' && (updatedTaxRate === null || updatedTaxRate === undefined)) {
+    updatedTaxRate = 15.0;
+  }
+
   db.prepare(`
     UPDATE portfolios
     SET name = ?,
@@ -477,6 +551,7 @@ const handleUpdatePortfolio = (req, res) => {
         costBasisMethod = ?,
         color = ?,
         include_in_totals = ?,
+        taxRate = ?,
         startDate = ?,
         initialCash = ?,
         updatedAt = datetime('now')
@@ -488,6 +563,7 @@ const handleUpdatePortfolio = (req, res) => {
     updatedCostBasis,
     updatedColor,
     updatedInclude,
+    updatedTaxRate,
     updatedStartDate,
     updatedInitialCash,
     portfolioId

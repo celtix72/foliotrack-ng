@@ -58,7 +58,7 @@
     <!-- Total Value & Quick Metrics Card -->
     <div class="signature-card p-4 space-y-3 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent">
       <div>
-        <span class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Patrimonio Totale</span>
+        <span id="mStatNavLabel" class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Patrimonio Totale</span>
         <div id="mStatNav" class="text-2xl font-bold font-mono tabular-nums text-gray-900 dark:text-white">€ 0.00</div>
         <div id="mStat1D" class="text-xs font-mono font-semibold text-gray-400 mt-0.5">0.00% 1D</div>
       </div>
@@ -239,7 +239,20 @@
         const pnlPct = (portfolioData.metrics && portfolioData.metrics.unrealizedPnLPercent) || 0;
         const p1d = portfolioData.performance1D || 0;
 
-        document.getElementById('mStatNav').textContent = fmtEur(nav);
+        if (portfolioData.type === 'Pensione') {
+          const pTaxRate = portfolioData.taxRate !== null && portfolioData.taxRate !== undefined && !isNaN(Number(portfolioData.taxRate)) ? Number(portfolioData.taxRate) : 15.0;
+          const netVal = portfolioData.netValue !== undefined ? Number(portfolioData.netValue) : (portfolioData.metrics?.netValue !== undefined ? Number(portfolioData.metrics.netValue) : (nav * (1 - pTaxRate / 100)));
+          const lbl = document.getElementById('mStatNavLabel');
+          if (lbl) lbl.innerHTML = `Patrimonio <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">(Lordo / Netto -${pTaxRate}%)</span>`;
+          document.getElementById('mStatNav').innerHTML = `
+            <span>${fmtEur(nav)}</span>
+            <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">Netto: ${fmtEur(netVal)}</div>
+          `;
+        } else {
+          const lbl = document.getElementById('mStatNavLabel');
+          if (lbl) lbl.textContent = 'Patrimonio Totale';
+          document.getElementById('mStatNav').textContent = fmtEur(nav);
+        }
         const p1dEl = document.getElementById('mStat1D');
         p1dEl.textContent = `${p1d >= 0 ? '+' : ''}${p1d.toFixed(1)}% 1D`;
         p1dEl.className = `text-xs font-mono font-semibold ${p1d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;

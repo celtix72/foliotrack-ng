@@ -82,7 +82,7 @@
       <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <!-- 1. Total Value (NAV) -->
         <div class="signature-card p-4 space-y-1">
-          <span class="text-xs text-gray-500 font-medium">Valore Totale (NAV)</span>
+          <span id="statNavLabel" class="text-xs text-gray-500 font-medium">Valore Totale (NAV)</span>
           <div id="statNav" class="text-xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">€ 0.00</div>
           <div id="stat1D" class="text-xs font-mono font-medium text-gray-400">0.00% 1D</div>
         </div>
@@ -462,7 +462,20 @@
         const p1d = portfolioData.performance1D || 0;
         const dividends = portfolioData.totalDividends || 0;
 
-        document.getElementById('statNav').textContent = fmtEur(nav);
+        if (portfolioData.type === 'Pensione') {
+          const pTaxRate = portfolioData.taxRate !== null && portfolioData.taxRate !== undefined && !isNaN(Number(portfolioData.taxRate)) ? Number(portfolioData.taxRate) : 15.0;
+          const netVal = portfolioData.netValue !== undefined ? Number(portfolioData.netValue) : (portfolioData.metrics?.netValue !== undefined ? Number(portfolioData.metrics.netValue) : (nav * (1 - pTaxRate / 100)));
+          const lbl = document.getElementById('statNavLabel');
+          if (lbl) lbl.innerHTML = `Valore Totale <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">(Lordo / Netto -${pTaxRate}%)</span>`;
+          document.getElementById('statNav').innerHTML = `
+            <span>${fmtEur(nav)}</span>
+            <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">Netto: ${fmtEur(netVal)}</div>
+          `;
+        } else {
+          const lbl = document.getElementById('statNavLabel');
+          if (lbl) lbl.textContent = 'Valore Totale (NAV)';
+          document.getElementById('statNav').textContent = fmtEur(nav);
+        }
         const p1dEl = document.getElementById('stat1D');
         p1dEl.textContent = `${p1d >= 0 ? '+' : ''}${p1d.toFixed(1)}% 1D`;
         p1dEl.className = `text-xs font-mono font-medium ${p1d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;

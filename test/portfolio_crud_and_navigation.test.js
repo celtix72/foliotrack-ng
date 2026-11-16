@@ -7,6 +7,7 @@ const http = require('http');
 const TEST_DB = path.join(__dirname, 'test_portfolio_crud.db');
 process.env.DB_PATH = TEST_DB;
 process.env.JWT_SECRET = 'test-secret-jwt-very-long-and-secure-crud-test';
+process.env.ADMIN_USERNAME = 'admin';
 process.env.ADMIN_PASSWORD = 'adminCrudPassword123!';
 
 const { initDb, closeDb, getDb } = require('../src/db');
@@ -380,5 +381,92 @@ describe('Portfolio Full CRUD & Multi-Portfolio Selector Verification', () => {
       headers: { Authorization: `Bearer ${authToken}` }
     })).json();
     assert.ok(getList.totals.currentCash >= 33498); // 25000 + (10000 - 1502)
+  });
+
+  test('Pensione Portfolio: taxRate setting, NAV taxation, and Lordo / Netto calculation', async () => {
+    // 1. Create a Pensione portfolio with initial cash 20000 and taxRate 15%
+    const createRes = await fetch(`${baseUrl}/api/portfolios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        name: 'Fondo Pensione Integrativo',
+        type: 'Pensione',
+        currency: 'EUR',
+        costBasisMethod: 'WAC',
+        initialCash: 20000,
+        taxRate: 15.0,
+        include_in_totals: 1
+      })
+    });
+    assert.equal(createRes.status, 201);
+    const createData = await createRes.json();
+    assert.equal(createData.success, true);
+    const pensionPort = createData.portfolio;
+    assert.equal(pensionPort.type, 'Pensione');
+    assert.equal(pensionPort.taxRate, 15.0);
+    assert.equal(pensionPort.totalValue, 20000);
+    // NAV Lordo = 20000, tax 15% = 3000, NAV Netto = 17000
+    assert.equal(pensionPort.estimatedTax, 3000);
+    assert.equal(pensionPort.netValue, 17000);
+    assert.equal(pensionPort.taxation.isPension, true);
+    assert.equal(pensionPort.taxation.taxRate, 15.0);
+
+    // 2. Update taxRate to 9.0% (e.g. after 35 years of contribution)
+    const updateRes = await fetch(`${baseUrl}/api/portfolios/${pensionPort.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        taxRate: 9.0
+      })
+    });
+    assert.equal(updateRes.status, 200);
+    const updateData = await updateRes.json();
+    assert.equal(updateData.success, true);
+    assert.equal(updateData.portfolio.taxRate, 9.0);
+    // NAV Lordo = 20000, tax 9% = 1800, NAV Netto = 18200
+    assert.equal(updateData.portfolio.estimatedTax, 1800);
+    assert.equal(updateData.portfolio.netValue, 18200);
+
+    // 3. Verify GET /api/portfolios returns pension portfolio with Lordo & Netto
+    const listRes = await fetch(`${baseUrl}/api/portfolios`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const listData = await listRes.json();
+    const found = listData.portfolios.find(p => p.id === pensionPort.id);
+    assert.ok(found);
+    assert.equal(found.totalValue, 20000);
+    assert.equal(found.netValue, 18200);
+    assert.equal(found.estimatedTax, 1800);
+
+    // 4. Verify Reports API returns pension tax breakdown
+    const repRes = await fetch(`${baseUrl}/api/reports/portfolio-data?portfolioId=${pensionPort.id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const repData = await repRes.json();
+    assert.equal(repData.success, true);
+    const pReport = repData.portfolios[0];
+    assert.equal(pReport.type, 'Pensione');
+    assert.equal(pReport.taxRate, 9.0);
+    assert.equal(pReport.totalValue, 20000);
+    assert.equal(pReport.netValue, 18200);
+    assert.equal(pReport.estimatedTax, 1800);
+    assert.equal(pReport.taxation.isPension, true);
+
+    // 5. Template and script file verification
+    const desktopHtml = fs.readFileSync(path.join(__dirname, '../private_views/portfolios.html'), 'utf8');
+    const mobileHtml = fs.readFileSync(path.join(__dirname, '../private_views/portfolios_mobile.html'), 'utf8');
+    const pageJs = fs.readFileSync(path.join(__dirname, '../public/portfolios_page.js'), 'utf8');
+    const detailDesktopHtml = fs.readFileSync(path.join(__dirname, '../private_views/portfolio_detail.html'), 'utf8');
+    const detailMobileHtml = fs.readFileSync(path.join(__dirname, '../private_views/portfolio_detail_mobile.html'), 'utf8');
+
+    assert.ok(desktopHtml.includes('modalPensionTaxGroup'));
+    assert.ok(desktopHtml.includes('modalPortfolioTaxRate'));
+    assert.ok(mobileHtml.includes('modalPensionTaxGroup'));
+    assert.ok(mobileHtml.includes('modalPortfolioTaxRate'));
+    assert.ok(pageJs.includes('modalPensionTaxGroup'));
+    assert.ok(pageJs.includes('pensionTaxRate'));
+    assert.ok(pageJs.includes('Netto'));
+    assert.ok(detailDesktopHtml.includes('statNavLabel'));
+    assert.ok(detailMobileHtml.includes('mStatNavLabel'));
   });
 });
