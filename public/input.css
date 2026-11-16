@@ -130,6 +130,80 @@
     transition: all 0.15s ease-in-out;
   }
 
+  /* FolioTrack Modern Pillow Switch */
+  .ft-pillow-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    border-radius: 9999px;
+    background-color: #cbd5e1;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .dark .ft-pillow-switch {
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+
+  .ft-pillow-switch.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: rgba(5, 150, 105, 0.4);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  }
+
+  .ft-switch-knob {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background-color: #ffffff;
+    box-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.28), 0 0.5px 1px rgba(0, 0, 0, 0.12);
+    transform: translateX(0);
+    transition: transform 0.25s cubic-bezier(0.34, 1.25, 0.64, 1), width 0.15s ease;
+  }
+
+  .ft-pillow-switch.active .ft-switch-knob {
+    transform: translateX(16px);
+  }
+
+  .ft-pillow-switch:hover .ft-switch-knob {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  }
+
+  .ft-pillow-switch:active .ft-switch-knob {
+    width: 16px;
+  }
+
+  /* Compact Mobile Switch Variant */
+  .ft-pillow-switch.sm {
+    width: 32px;
+    height: 18px;
+    padding: 2px;
+  }
+
+  .ft-pillow-switch.sm .ft-switch-knob {
+    width: 12px;
+    height: 12px;
+    transform: translateX(0);
+  }
+
+  .ft-pillow-switch.sm.active .ft-switch-knob {
+    transform: translateX(14px);
+  }
+
+  .ft-pillow-switch.sm:active .ft-switch-knob {
+    width: 14px;
+  }
+
   /* Background Gradient Container */
   .signature-bg {
     background: linear-gradient(180deg, #fafafa 0%, #f6f6f6 100%);

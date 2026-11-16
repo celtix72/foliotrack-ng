@@ -251,6 +251,8 @@ describe('Portfolio Full CRUD & Multi-Portfolio Selector Verification', () => {
     assert.ok(pageJs.includes('Liquidità'), 'mobile layout must show Liquidità');
     assert.ok(pageJs.includes('togglePortfolioInclude'), 'portfolios_page.js must implement togglePortfolioInclude');
     assert.ok(pageJs.includes('input type="checkbox" switch'), 'card templates must render switch checkbox');
+    assert.ok(pageJs.includes('ft-pillow-switch'), 'card templates must render ft-pillow-switch');
+    assert.ok(pageJs.includes('ft-switch-knob'), 'card templates must render ft-switch-knob');
   });
 
   test('Portfolio inclusion flag (include_in_totals) toggle and global calculation exclusion', async () => {

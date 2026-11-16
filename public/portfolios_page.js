@@ -113,11 +113,13 @@ function renderMobilePortfolios(portfolios) {
           </div>
 
           <div class="flex items-center space-x-2 shrink-0 ml-1" onclick="event.stopPropagation()">
-            <!-- Direct switch toggle flag -->
-            <label class="relative inline-flex items-center cursor-pointer select-none" title="${isIncluded ? 'Incluso nei calcoli e totali. Tocca per escludere.' : 'Escluso dai calcoli e totali. Tocca per includere.'}">
-              <input type="checkbox" switch class="sr-only peer" ${isIncluded ? 'checked' : ''} onchange="togglePortfolioInclude(${p.id}, this.checked, event)">
-              <div class="w-7 h-3.5 bg-gray-300 dark:bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-emerald-600"></div>
-              <span class="ml-1 text-[9px] font-mono font-medium ${isIncluded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
+            <!-- Direct switch toggle flag (Pillow Switch) -->
+            <label class="ft-switch-container inline-flex items-center gap-1 cursor-pointer select-none shrink-0" title="${isIncluded ? 'Incluso nei calcoli e totali. Tocca per escludere.' : 'Escluso dai calcoli e totali. Tocca per includere.'}">
+              <input type="checkbox" switch class="sr-only" ${isIncluded ? 'checked' : ''} onchange="togglePortfolioInclude(${p.id}, this.checked, event)">
+              <div class="ft-pillow-switch sm ${isIncluded ? 'active' : ''}" data-switch-id="${p.id}">
+                <span class="ft-switch-knob"></span>
+              </div>
+              <span class="ft-switch-label text-[9px] font-mono font-bold transition-colors duration-200 ${isIncluded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
                 ${isIncluded ? 'ON' : 'OFF'}
               </span>
             </label>
@@ -222,11 +224,13 @@ function renderDesktopPortfolios(portfolios) {
               </span>
             </div>
             
-            <!-- Direct On/Off Toggle Flag -->
-            <label class="relative inline-flex items-center gap-1.5 cursor-pointer select-none shrink-0" onclick="event.stopPropagation()" title="${isIncluded ? 'Incluso nei calcoli, performance e totali globali. Clicca per escludere.' : 'Escluso da ogni calcolo e totale globale. Clicca per includere.'}">
-              <input type="checkbox" switch class="sr-only peer" ${isIncluded ? 'checked' : ''} onchange="togglePortfolioInclude(${p.id}, this.checked, event)">
-              <div class="w-8 h-4 bg-gray-300 dark:bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-600"></div>
-              <span class="text-[10px] font-mono font-medium ${isIncluded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
+            <!-- Direct On/Off Toggle Flag (Pillow Switch) -->
+            <label class="ft-switch-container inline-flex items-center gap-1.5 cursor-pointer select-none shrink-0" onclick="event.stopPropagation()" title="${isIncluded ? 'Incluso nei calcoli, performance e totali globali. Clicca per escludere.' : 'Escluso da ogni calcolo e totale globale. Clicca per includere.'}">
+              <input type="checkbox" switch class="sr-only" ${isIncluded ? 'checked' : ''} onchange="togglePortfolioInclude(${p.id}, this.checked, event)">
+              <div class="ft-pillow-switch ${isIncluded ? 'active' : ''}" data-switch-id="${p.id}">
+                <span class="ft-switch-knob"></span>
+              </div>
+              <span class="ft-switch-label text-[10px] font-mono font-semibold transition-colors duration-200 ${isIncluded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}">
                 ${isIncluded ? 'Calcoli ON' : 'Calcoli OFF'}
               </span>
             </label>
@@ -489,7 +493,30 @@ async function togglePortfolioInclude(id, checked, e) {
   }
 
   const p = allPortfolios.find(x => x.id === id);
-  const oldVal = p ? p.include_in_totals : !checked;
+  const oldVal = p ? Boolean(p.include_in_totals) : !checked;
+
+  // Immediate optimistic UI animation of the pillow switch & label
+  const switchEl = document.querySelector(`.ft-pillow-switch[data-switch-id="${id}"]`);
+  const containerEl = switchEl?.closest('.ft-switch-container');
+  const labelEl = containerEl?.querySelector('.ft-switch-label');
+
+  if (switchEl) {
+    if (checked) {
+      switchEl.classList.add('active');
+    } else {
+      switchEl.classList.remove('active');
+    }
+  }
+
+  if (labelEl) {
+    if (checked) {
+      labelEl.textContent = isMobileView() ? 'ON' : 'Calcoli ON';
+      labelEl.className = `ft-switch-label ${isMobileView() ? 'text-[9px] font-bold' : 'text-[10px] font-semibold'} font-mono transition-colors duration-200 text-emerald-600 dark:text-emerald-400`;
+    } else {
+      labelEl.textContent = isMobileView() ? 'OFF' : 'Calcoli OFF';
+      labelEl.className = `ft-switch-label ${isMobileView() ? 'text-[9px] font-bold' : 'text-[10px] font-semibold'} font-mono transition-colors duration-200 text-gray-400 dark:text-gray-500`;
+    }
+  }
 
   try {
     const res = await fetch(`/api/portfolios/${id}`, {
@@ -500,7 +527,13 @@ async function togglePortfolioInclude(id, checked, e) {
 
     const data = await res.json();
     if (!data.success) {
-      if (e && e.target) e.target.checked = Boolean(oldVal);
+      // Revert optimistic state
+      if (e && e.target) e.target.checked = oldVal;
+      if (switchEl) switchEl.classList.toggle('active', oldVal);
+      if (labelEl) {
+        labelEl.textContent = oldVal ? (isMobileView() ? 'ON' : 'Calcoli ON') : (isMobileView() ? 'OFF' : 'Calcoli OFF');
+        labelEl.className = `ft-switch-label ${isMobileView() ? 'text-[9px] font-bold' : 'text-[10px] font-semibold'} font-mono transition-colors duration-200 ${oldVal ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`;
+      }
       showToast(data.error || 'Errore durante l\'aggiornamento dello stato', true);
       return;
     }
@@ -512,7 +545,12 @@ async function togglePortfolioInclude(id, checked, e) {
     showToast(`✓ Portafoglio "${p ? p.name : ''}" ${checked ? 'incluso nei calcoli e totali' : 'escluso dai calcoli e totali'}`);
     loadPortfolios();
   } catch (err) {
-    if (e && e.target) e.target.checked = Boolean(oldVal);
+    if (e && e.target) e.target.checked = oldVal;
+    if (switchEl) switchEl.classList.toggle('active', oldVal);
+    if (labelEl) {
+      labelEl.textContent = oldVal ? (isMobileView() ? 'ON' : 'Calcoli ON') : (isMobileView() ? 'OFF' : 'Calcoli OFF');
+      labelEl.className = `ft-switch-label ${isMobileView() ? 'text-[9px] font-bold' : 'text-[10px] font-semibold'} font-mono transition-colors duration-200 ${oldVal ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`;
+    }
     showToast('Errore di connessione: ' + err.message, true);
   }
 }
