@@ -260,6 +260,90 @@ describe('Mobile Custom Widgets: Category Quotes & Top Winner/Loser 1D (Photos 1
     assert.ok(!etfHtml.includes('MSF.DE'), 'Filtered ETF view must not include MSF.DE');
   });
 
+  test('WIDGET_RENDERERS.categoryQuotes sorts holdings inside each category section by VAL GIORNO descending (dal maggiore GAIN al minore GAIN)', () => {
+    const code = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
+
+    const renderersMatch = code.match(/const WIDGET_RENDERERS = \{([\s\S]*?)\n  \};/);
+    const evalEnv = vm.createContext({
+      localStorage: {
+        getItem: () => null,
+        setItem: () => {}
+      },
+      document: {
+        getElementById: () => null,
+        querySelector: () => ({})
+      }
+    });
+
+    vm.runInContext(`
+      ${code.substring(code.indexOf('function formatEur'), code.indexOf('const WIDGET_RENDERERS'))}
+      const WIDGET_RENDERERS = {
+        ${renderersMatch[1]}
+      };
+      this.renderCategoryQuotes = WIDGET_RENDERERS.categoryQuotes;
+    `, evalEnv);
+
+    const todayIso = new Date().toISOString().split('T')[0];
+
+    const mockHoldings = {
+      activeHoldings: [
+        {
+          ticker: 'LOSS_BIG',
+          type: 'EQUITY',
+          currency: 'EUR',
+          quantity: 10,
+          currentPrice: 100.0,
+          dayPnlEur: -250.0,
+          changePercent: -5.0,
+          quoteDate: todayIso
+        },
+        {
+          ticker: 'GAIN_HUGE',
+          type: 'EQUITY',
+          currency: 'EUR',
+          quantity: 10,
+          currentPrice: 150.0,
+          dayPnlEur: 450.0,
+          changePercent: 10.0,
+          quoteDate: todayIso
+        },
+        {
+          ticker: 'GAIN_MEDIUM',
+          type: 'EQUITY',
+          currency: 'EUR',
+          quantity: 10,
+          currentPrice: 120.0,
+          dayPnlEur: 120.0,
+          changePercent: 2.0,
+          quoteDate: todayIso
+        },
+        {
+          ticker: 'LOSS_SMALL',
+          type: 'EQUITY',
+          currency: 'EUR',
+          quantity: 10,
+          currentPrice: 80.0,
+          dayPnlEur: -15.0,
+          changePercent: -0.5,
+          quoteDate: todayIso
+        }
+      ]
+    };
+
+    const html = evalEnv.renderCategoryQuotes(mockHoldings);
+
+    // Verify ordering in output: GAIN_HUGE (+450) -> GAIN_MEDIUM (+120) -> LOSS_SMALL (-15) -> LOSS_BIG (-250)
+    const posHuge = html.indexOf('data-open-asset="GAIN_HUGE"');
+    const posMedium = html.indexOf('data-open-asset="GAIN_MEDIUM"');
+    const posSmallLoss = html.indexOf('data-open-asset="LOSS_SMALL"');
+    const posBigLoss = html.indexOf('data-open-asset="LOSS_BIG"');
+
+    assert.ok(posHuge !== -1 && posMedium !== -1 && posSmallLoss !== -1 && posBigLoss !== -1);
+    assert.ok(posHuge < posMedium, 'GAIN_HUGE must precede GAIN_MEDIUM');
+    assert.ok(posMedium < posSmallLoss, 'GAIN_MEDIUM must precede LOSS_SMALL');
+    assert.ok(posSmallLoss < posBigLoss, 'LOSS_SMALL must precede LOSS_BIG');
+  });
+
   test('WIDGET_RENDERERS.moversDay renders TOP WINNER / LOSER (1D) with % and Valore toggle (Photo 3)', () => {
     const code = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
 

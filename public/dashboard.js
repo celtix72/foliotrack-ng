@@ -1187,6 +1187,7 @@
         totCostBasis += cost;
         totUnrealizedPnl += pnl;
         totDayPnl += dayVal;
+        h._computedDayVal = Number(dayVal) || 0;
       }
 
       const totUnrealizedPnlPct = totCostBasis > 0 ? (totUnrealizedPnl / totCostBasis) * 100 : 0;
@@ -1198,17 +1199,24 @@
       cat.totDayPnl = totDayPnl;
       cat.currSym = currSym;
 
+      // Sort holdings inside each category section by "VAL GIORNO" descending (dal maggiore GAIN al minore GAIN)
       cat.holdings.sort((a, b) => {
-        const aClosed = !isHoldingQuotedToday(a);
-        const bClosed = !isHoldingQuotedToday(b);
-        if (!aClosed && bClosed) return -1;
-        if (aClosed && !bClosed) return 1;
+        const aDayVal = a._computedDayVal !== undefined ? a._computedDayVal : 0;
+        const bDayVal = b._computedDayVal !== undefined ? b._computedDayVal : 0;
 
-        if (!aClosed && !bClosed) {
-          const aPct = Number(a.changePercent) || 0;
-          const bPct = Number(b.changePercent) || 0;
-          if (bPct !== aPct) return bPct - aPct;
+        // Primary sort: VAL GIORNO descending
+        if (Math.abs(bDayVal - aDayVal) > 0.0001) {
+          return bDayVal - aDayVal;
         }
+
+        // Secondary sort: % GIORNO descending
+        const aPct = Number(a.changePercent) || 0;
+        const bPct = Number(b.changePercent) || 0;
+        if (Math.abs(bPct - aPct) > 0.0001) {
+          return bPct - aPct;
+        }
+
+        // Tertiary sort: Ticker alphabetically
         return (a.ticker || '').localeCompare(b.ticker || '');
       });
     }
@@ -2596,19 +2604,23 @@
                         maximumFractionDigits: 2
                       }) + ' ' + cat.currSym;
 
-                      let dayVal = 0;
+                      let dayVal = h._computedDayVal !== undefined ? h._computedDayVal : 0;
                       let dayPct = 0;
 
                       if (isToday && !isClosed) {
-                        const rawDay = isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur;
-                        if (rawDay !== undefined && rawDay !== null && !isNaN(rawDay)) {
-                          dayVal = Number(rawDay);
-                        } else if (h.changeValue && h.quantity) {
-                          dayVal = Number(h.changeValue) * Number(h.quantity);
+                        if (h._computedDayVal === undefined) {
+                          const rawDay = isNonEur && h.dayPnlNative !== undefined ? h.dayPnlNative : h.dayPnlEur;
+                          if (rawDay !== undefined && rawDay !== null && !isNaN(rawDay)) {
+                            dayVal = Number(rawDay);
+                          } else if (h.changeValue && h.quantity) {
+                            dayVal = Number(h.changeValue) * Number(h.quantity);
+                          }
                         }
                         dayPct = Number(h.changePercent) || 0;
                       } else if (isPre) {
-                        dayVal = isNonEur ? preInfo.pnlNative : preInfo.pnlEur;
+                        if (h._computedDayVal === undefined) {
+                          dayVal = isNonEur ? preInfo.pnlNative : preInfo.pnlEur;
+                        }
                         dayPct = preInfo.changePercent;
                       }
 
