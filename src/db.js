@@ -255,6 +255,8 @@ function createSchema(database) {
       cashValue REAL NOT NULL,
       assetValue REAL NOT NULL,
       netDeposits REAL NOT NULL,
+      equityValue REAL NOT NULL DEFAULT 0.0,
+      equityNetDeposits REAL NOT NULL DEFAULT 0.0,
       user_id INTEGER,
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(portfolioId, date),
@@ -421,6 +423,8 @@ function createSchema(database) {
   try { database.exec("ALTER TABLE dividend_projections ADD COLUMN manualYield REAL DEFAULT NULL"); } catch {}
   try { database.exec("ALTER TABLE dividend_projections ADD COLUMN isConfirmed INTEGER DEFAULT 0"); } catch {}
   try { database.exec("ALTER TABLE dividend_projections ADD COLUMN notes TEXT DEFAULT NULL"); } catch {}
+  try { database.exec("ALTER TABLE portfolio_history ADD COLUMN equityValue REAL NOT NULL DEFAULT 0.0"); } catch {}
+  try { database.exec("ALTER TABLE portfolio_history ADD COLUMN equityNetDeposits REAL NOT NULL DEFAULT 0.0"); } catch {}
 
   try {
     database.exec(`

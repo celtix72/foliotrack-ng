@@ -4,6 +4,7 @@ const borsa = require('./borsaItaliana');
 const google = require('./googleFinance');
 const { recalculatePortfolio } = require('../routes/portfolios');
 const { broadcastMarketUpdate } = require('./marketEvents');
+const { resolveAssetTaxInfo } = require('../utils/taxEngine');
 
 /**
  * Normalizes ticker symbols.
@@ -616,13 +617,15 @@ function reconstructPortfolioHistoryFromQuotes(portfolioId = null, daysBack = 18
 
   const upsertStmt = db.prepare(`
     INSERT INTO portfolio_history (
-      portfolioId, date, totalValue, cashValue, assetValue, netDeposits, user_id, createdAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      portfolioId, date, totalValue, cashValue, assetValue, netDeposits, equityValue, equityNetDeposits, user_id, createdAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(portfolioId, date) DO UPDATE SET
       totalValue = excluded.totalValue,
       cashValue = excluded.cashValue,
       assetValue = excluded.assetValue,
       netDeposits = excluded.netDeposits,
+      equityValue = excluded.equityValue,
+      equityNetDeposits = excluded.equityNetDeposits,
       createdAt = datetime('now')
   `);
 
@@ -667,13 +670,21 @@ function reconstructPortfolioHistoryFromQuotes(portfolioId = null, daysBack = 18
     const earliestTxDateStr = txs[0].date ? txs[0].date.split('T')[0] : startDateStr;
     const effectiveStartStr = earliestTxDateStr > startDateStr ? earliestTxDateStr : startDateStr;
 
-    // Pre-load asset metadata (currency and current price)
-    const assetRows = db.prepare('SELECT ticker, currency, currentPrice FROM assets').all();
+    // Pre-load asset metadata (currency, current price, and isEquity flag)
+    const assetRows = db.prepare('SELECT ticker, name, type, sector, currency, currentPrice FROM assets').all();
     const assetMeta = {};
     for (const a of assetRows) {
+      let isEq = false;
+      try {
+        const tax = resolveAssetTaxInfo(a);
+        isEq = tax.taxCategory === 'EQUITY';
+      } catch {
+        isEq = (a.type || '').toUpperCase() === 'EQUITY';
+      }
       assetMeta[a.ticker] = {
         currency: (a.currency || 'EUR').toUpperCase(),
-        currentPrice: Number(a.currentPrice) || 0
+        currentPrice: Number(a.currentPrice) || 0,
+        isEquity: isEq
       };
     }
 
@@ -687,6 +698,7 @@ function reconstructPortfolioHistoryFromQuotes(portfolioId = null, daysBack = 18
     const hasInitialDeposit = txs.some(t => t.type === 'DEPOSIT' && t.notes === 'Deposito iniziale');
     let currentCash = hasInitialDeposit ? 0.0 : (Number(p.initialCash) || 0.0);
     let netDeposits = hasInitialDeposit ? 0.0 : (Number(p.initialCash) || 0.0);
+    let equityNetDeposits = 0.0;
     const positions = {};
     const lastKnownPrices = {};
     let txIdx = 0;
@@ -694,7 +706,7 @@ function reconstructPortfolioHistoryFromQuotes(portfolioId = null, daysBack = 18
     // Apply transactions prior to effectiveStartStr
     while (txIdx < txs.length && (txs[txIdx].date.split('T')[0] < effectiveStartStr)) {
       const tx = txs[txIdx];
-      applyTxToSimulation(tx, positions, (delta) => { currentCash += delta; }, (delta) => { netDeposits += delta; }, lastKnownPrices);
+      applyTxToSimulation(tx, positions, (delta) => { currentCash += delta; }, (delta) => { netDeposits += delta; }, lastKnownPrices, (delta) => { equityNetDeposits += delta; }, assetMeta);
       txIdx++;
     }
 
@@ -709,19 +721,20 @@ function reconstructPortfolioHistoryFromQuotes(portfolioId = null, daysBack = 18
         // Apply transactions up to current date
         while (txIdx < txs.length && txs[txIdx].date.split('T')[0] <= dateStr) {
           const tx = txs[txIdx];
-          applyTxToSimulation(tx, positions, (delta) => { currentCash += delta; }, (delta) => { netDeposits += delta; }, lastKnownPrices);
+          applyTxToSimulation(tx, positions, (delta) => { currentCash += delta; }, (delta) => { netDeposits += delta; }, lastKnownPrices, (delta) => { equityNetDeposits += delta; }, assetMeta);
           txIdx++;
         }
 
-        // Calculate total asset value with proper multi-currency conversion
+        // Calculate total asset value and equity-only asset value with proper multi-currency conversion
         let assetValue = 0.0;
+        let equityValue = 0.0;
         const pCurr = (p.currency || 'EUR').toUpperCase();
         for (const [ticker, qty] of Object.entries(positions)) {
           if (qty <= 0.00001) continue;
           if (quotesByTicker[ticker] && quotesByTicker[ticker][dateStr] !== undefined && quotesByTicker[ticker][dateStr] !== null) {
             lastKnownPrices[ticker] = Number(quotesByTicker[ticker][dateStr]);
           }
-          const meta = assetMeta[ticker] || { currency: 'EUR', currentPrice: 0.0 };
+          const meta = assetMeta[ticker] || { currency: 'EUR', currentPrice: 0.0, isEquity: false };
           const rawPrice = lastKnownPrices[ticker] || meta.currentPrice || 0.0;
           const assetCurr = meta.currency;
           let fxRate = 1.0;
@@ -732,11 +745,15 @@ function reconstructPortfolioHistoryFromQuotes(portfolioId = null, daysBack = 18
               fxRate = 1.0 / currsMap[`${pCurr}/${assetCurr}`];
             }
           }
-          assetValue += qty * rawPrice * fxRate;
+          const itemVal = qty * rawPrice * fxRate;
+          assetValue += itemVal;
+          if (meta.isEquity) {
+            equityValue += itemVal;
+          }
         }
 
         const totalValue = currentCash + assetValue;
-        upsertStmt.run(p.id, dateStr, totalValue, currentCash, assetValue, netDeposits, userId);
+        upsertStmt.run(p.id, dateStr, totalValue, currentCash, assetValue, netDeposits, equityValue, equityNetDeposits, userId);
         totalReconstructedPoints++;
 
         curDateStr = addDaysToDateStr(curDateStr, 1);
@@ -750,7 +767,7 @@ function reconstructPortfolioHistoryFromQuotes(portfolioId = null, daysBack = 18
   return { success: true, pointsReconstructed: totalReconstructedPoints };
 }
 
-function applyTxToSimulation(tx, positions, updateCash, updateNetDeposits, lastKnownPrices = null) {
+function applyTxToSimulation(tx, positions, updateCash, updateNetDeposits, lastKnownPrices = null, updateEquityNetDeposits = null, assetMeta = {}) {
   const qty = Number(tx.quantity) || 0.0;
   const price = Number(tx.price) || 0.0;
   const commission = Number(tx.commission) || 0.0;
@@ -758,6 +775,7 @@ function applyTxToSimulation(tx, positions, updateCash, updateNetDeposits, lastK
   const fxRate = Number(tx.exchangeRate) || 1.0;
   const specifiedAmount = Number(tx.amount) || 0.0;
   const ticker = tx.assetTicker ? tx.assetTicker.toUpperCase().trim() : null;
+  const isEquity = ticker && assetMeta[ticker] ? Boolean(assetMeta[ticker].isEquity) : false;
 
   switch (tx.type) {
     case 'DEPOSIT': {
@@ -788,6 +806,9 @@ function applyTxToSimulation(tx, positions, updateCash, updateNetDeposits, lastK
       if (lastKnownPrices && price > 0) {
         lastKnownPrices[ticker] = price;
       }
+      if (isEquity && updateEquityNetDeposits) {
+        updateEquityNetDeposits(totalCostEur);
+      }
       break;
     }
     case 'SELL': {
@@ -800,6 +821,9 @@ function applyTxToSimulation(tx, positions, updateCash, updateNetDeposits, lastK
       if (lastKnownPrices && price > 0) {
         lastKnownPrices[ticker] = price;
       }
+      if (isEquity && updateEquityNetDeposits) {
+        updateEquityNetDeposits(-netProceedsEur);
+      }
       break;
     }
     case 'DIVIDEND':
@@ -808,6 +832,9 @@ function applyTxToSimulation(tx, positions, updateCash, updateNetDeposits, lastK
         ? specifiedAmount
         : ((qty > 0 && price > 0 ? qty * price : 0.0) - tax);
       updateCash(netIncome);
+      if (isEquity && updateEquityNetDeposits) {
+        updateEquityNetDeposits(-netIncome);
+      }
       break;
     }
     case 'FEE':

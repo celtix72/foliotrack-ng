@@ -7,8 +7,9 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, checkPortfolioAccess } = require('./portfolios');
-const { reconstructPortfolioHistoryFromQuotes, ensureHistoricalQuotesIfMissing } = require('../services/marketService');
+const { reconstructPortfolioHistoryFromQuotes, ensureHistoricalQuotesIfMissing, fetchUnifiedHistorical, PRESET_INDICES } = require('../services/marketService');
 const { calculateXIRR, calculateTWR } = require('../utils/finance');
+const { resolveAssetTaxInfo } = require('../utils/taxEngine');
 
 const router = express.Router();
 
@@ -35,13 +36,15 @@ function recordDailySnapshot(portfolioId = null, snapshotDate = null) {
 
   const upsertStmt = db.prepare(`
     INSERT INTO portfolio_history (
-      portfolioId, date, totalValue, cashValue, assetValue, netDeposits, user_id, createdAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      portfolioId, date, totalValue, cashValue, assetValue, netDeposits, equityValue, equityNetDeposits, user_id, createdAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(portfolioId, date) DO UPDATE SET
       totalValue = excluded.totalValue,
       cashValue = excluded.cashValue,
       assetValue = excluded.assetValue,
       netDeposits = excluded.netDeposits,
+      equityValue = excluded.equityValue,
+      equityNetDeposits = excluded.equityNetDeposits,
       createdAt = datetime('now')
   `);
 
@@ -55,6 +58,20 @@ function recordDailySnapshot(portfolioId = null, snapshotDate = null) {
       const assetVal = Math.max(0.0, totalVal - cashVal);
       const netDeps = Number(recalculated.investedCapital) || 0.0;
 
+      let eqVal = 0.0;
+      let eqDeps = 0.0;
+      if (recalculated.holdings && Array.isArray(recalculated.holdings)) {
+        for (const h of recalculated.holdings) {
+          try {
+            const tax = resolveAssetTaxInfo(h);
+            if (tax.taxCategory === 'EQUITY') {
+              eqVal += Number(h.totalValue) || 0.0;
+              eqDeps += Number(h.totalCost) || 0.0;
+            }
+          } catch {}
+        }
+      }
+
       // Find owner user_id
       const owner = db.prepare(`
         SELECT user_id FROM portfolio_users
@@ -64,7 +81,7 @@ function recordDailySnapshot(portfolioId = null, snapshotDate = null) {
 
       const userId = owner ? owner.user_id : null;
 
-      upsertStmt.run(p.id, dateStr, totalVal, cashVal, assetVal, netDeps, userId);
+      upsertStmt.run(p.id, dateStr, totalVal, cashVal, assetVal, netDeps, eqVal, eqDeps, userId);
 
       results.push({
         portfolioId: p.id,
@@ -72,7 +89,9 @@ function recordDailySnapshot(portfolioId = null, snapshotDate = null) {
         totalValue: totalVal,
         cashValue: cashVal,
         assetValue: assetVal,
-        netDeposits: netDeps
+        netDeposits: netDeps,
+        equityValue: eqVal,
+        equityNetDeposits: eqDeps
       });
     }
   });
@@ -111,10 +130,11 @@ function backfillHistoryIfEmpty(portfolioId, days = 1825) {
 
 /**
  * GET /api/history/performance
- * Returns historical NAV time-series, cumulative returns %, and drawdown series.
+ * Returns historical NAV time-series, cumulative returns %, drawdown series,
+ * and optional benchmark comparison (e.g. S&P 500, FTSE MIB) scoped to equity-only or all portfolios excluding liquidity.
  */
-router.get('/performance', (req, res) => {
-  const { portfolioId, range = '1Y' } = req.query;
+router.get('/performance', async (req, res) => {
+  const { portfolioId, range = '1Y', benchmark, scope = 'all' } = req.query;
   const userId = req.user.id;
   const userRole = req.user.role;
 
@@ -129,6 +149,9 @@ router.get('/performance', (req, res) => {
       return res.status(403).json({ success: false, error: 'Accesso negato al portafoglio.' });
     }
   }
+
+  const isEquityOnly = scope === 'equity_only';
+  const excludeLiquidity = scope === 'all_no_liquidity' || scope === 'no_liquidity';
 
   // Ensure real history is reconstructed from real transactions and quotes
   try {
@@ -149,6 +172,14 @@ router.get('/performance', (req, res) => {
       for (const p of portfoliosToCheck) {
         ensureRealPortfolioHistory(p.id, 1825);
         recordDailySnapshot(p.id);
+      }
+    }
+
+    // If equity_only is requested and equityValue hasn't been populated yet, trigger one-time reconstruction
+    if (isEquityOnly) {
+      const checkMaxEq = db.prepare('SELECT MAX(equityValue) as maxEq FROM portfolio_history').get();
+      if (!checkMaxEq || !checkMaxEq.maxEq || checkMaxEq.maxEq <= 0) {
+        reconstructPortfolioHistoryFromQuotes(pId, 1825);
       }
     }
   } catch (err) {
@@ -172,20 +203,30 @@ router.get('/performance', (req, res) => {
   const params = [daysBack];
 
   // Exclude empty pre-creation dates with 0 value and 0 deposits
-  conditions.push('(totalValue > 0 OR netDeposits > 0 OR cashValue != 0 OR assetValue > 0)');
+  if (isEquityOnly) {
+    conditions.push('(equityValue > 0 OR equityNetDeposits > 0)');
+  } else {
+    conditions.push('(totalValue > 0 OR netDeposits > 0 OR cashValue != 0 OR assetValue > 0)');
+  }
 
   if (pId) {
-    conditions.push('portfolioId = ?');
+    if (excludeLiquidity) {
+      conditions.push(`portfolioId IN (
+        SELECT id FROM portfolios WHERE id = ? AND type != 'Liquidità'
+      )`);
+    } else {
+      conditions.push('portfolioId = ?');
+    }
     params.push(pId);
   } else if (userRole === 'admin') {
     conditions.push(`portfolioId IN (
-      SELECT id FROM portfolios WHERE include_in_totals = 1
+      SELECT id FROM portfolios WHERE include_in_totals = 1 ${excludeLiquidity ? "AND type != 'Liquidità'" : ''}
     )`);
   } else {
     conditions.push(`portfolioId IN (
       SELECT p.id FROM portfolios p
       JOIN portfolio_users pu ON p.id = pu.portfolio_id
-      WHERE pu.user_id = ? AND p.include_in_totals = 1
+      WHERE pu.user_id = ? AND p.include_in_totals = 1 ${excludeLiquidity ? "AND p.type != 'Liquidità'" : ''}
     )`);
     params.push(userId);
   }
@@ -195,10 +236,10 @@ router.get('/performance', (req, res) => {
   // Query daily history (grouped by date if aggregating multiple portfolios)
   const rows = db.prepare(`
     SELECT date,
-           SUM(totalValue) as totalValue,
-           SUM(cashValue) as cashValue,
-           SUM(assetValue) as assetValue,
-           SUM(netDeposits) as netDeposits
+           SUM(${isEquityOnly ? 'equityValue' : 'totalValue'}) as totalValue,
+           SUM(${isEquityOnly ? '0' : 'cashValue'}) as cashValue,
+           SUM(${isEquityOnly ? 'equityValue' : 'assetValue'}) as assetValue,
+           SUM(${isEquityOnly ? 'equityNetDeposits' : 'netDeposits'}) as netDeposits
     FROM portfolio_history
     ${whereClause}
     GROUP BY date
@@ -270,15 +311,81 @@ router.get('/performance', (req, res) => {
     periodReturnPercent = Number(((cumFactor - 1.0) * 100.0).toFixed(2));
   }
 
+  // Benchmark index comparison processing
+  let benchmarkData = null;
+  if (benchmark && benchmark.trim()) {
+    const bTicker = benchmark.trim().toUpperCase();
+    try {
+      let bPoints = await fetchUnifiedHistorical(bTicker, range);
+      if (!bPoints || bPoints.length === 0) {
+        bPoints = db.prepare(`
+          SELECT date, close FROM asset_quotes
+          WHERE ticker = ? AND date >= date('now', '-' || ? || ' days')
+          ORDER BY date ASC
+        `).all(bTicker, daysBack);
+      }
+
+      if (bPoints && bPoints.length > 0) {
+        const bMap = {};
+        for (const pt of bPoints) {
+          bMap[pt.date] = Number(pt.close) || 0;
+        }
+
+        const initialDate = series.length > 0 ? series[0].date : bPoints[0].date;
+        let basePrice = bMap[initialDate];
+        if (!basePrice) {
+          const prior = bPoints.filter(p => p.date <= initialDate);
+          if (prior.length > 0) {
+            basePrice = prior[prior.length - 1].close;
+          } else {
+            basePrice = bPoints[0].close;
+          }
+        }
+
+        if (basePrice > 0) {
+          let lastKnownBPrice = basePrice;
+          const bSeries = [];
+          for (const s of series) {
+            if (bMap[s.date] !== undefined && bMap[s.date] > 0) {
+              lastKnownBPrice = bMap[s.date];
+            }
+            const bReturnPct = Number((((lastKnownBPrice - basePrice) / basePrice) * 100.0).toFixed(2));
+            bSeries.push({
+              date: s.date,
+              close: lastKnownBPrice,
+              returnPercent: bReturnPct
+            });
+          }
+
+          const finalBReturn = bSeries.length > 0 ? bSeries[bSeries.length - 1].returnPercent : 0.0;
+          const preset = (PRESET_INDICES || []).find(i => i.symbol.toUpperCase() === bTicker);
+          const bName = preset ? preset.name : bTicker;
+
+          benchmarkData = {
+            symbol: bTicker,
+            name: bName,
+            basePrice,
+            periodReturnPercent: finalBReturn,
+            series: bSeries
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[History Benchmark Warning]', err.message);
+    }
+  }
+
   return res.json({
     success: true,
     range,
+    scope,
     periodGain,
     periodReturnPercent,
     maxDrawdown,
     currentPeak: peak,
     pointCount: series.length,
-    series
+    series,
+    benchmark: benchmarkData
   });
 });
 

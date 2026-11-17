@@ -257,6 +257,8 @@
   let activeCompositionSort = localStorage.getItem('foliotrack_comp_sort') || 'day_desc';
   let activeHistoryRange = localStorage.getItem('foliotrack_perf_range') || '1Y';
   let activeHistoryMetric = localStorage.getItem('foliotrack_perf_metric') || 'NAV';
+  let activePerfBenchmark = localStorage.getItem('foliotrack_perf_benchmark') || '';
+  let activePerfScope = localStorage.getItem('foliotrack_perf_scope') || 'equity_only';
   let activeTwrrPeriod = localStorage.getItem('foliotrack_twrr_period') || '1Y';
   let currentPerformanceMetrics = null;
   let widgetSearchQuery = '';
@@ -1709,6 +1711,32 @@
                 </svg>
                 <span class="hidden md:inline font-semibold">Ricalcola</span>
               </button>
+            </div>
+          </div>
+
+          <!-- Comparison Bar: Benchmark Index & Asset Scope -->
+          <div class="flex flex-wrap items-center justify-between gap-1 py-1 px-1.5 my-0.5 rounded-lg bg-gray-50/80 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 text-[10px] sm:text-[11px] font-mono shrink-0">
+            <div class="flex items-center space-x-1.5 min-w-0">
+              <span class="text-gray-400 font-semibold uppercase text-[9px] sm:text-[10px] shrink-0">Vs Indice:</span>
+              <select id="perf-benchmark-select" class="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono outline-hidden cursor-pointer truncate max-w-[150px] sm:max-w-none">
+                <option value="" ${!activePerfBenchmark ? 'selected' : ''}>Nessun confronto</option>
+                <option value="^GSPC" ${activePerfBenchmark === '^GSPC' ? 'selected' : ''}>S&P 500 (^GSPC)</option>
+                <option value="FTSEMIB.MI" ${activePerfBenchmark === 'FTSEMIB.MI' ? 'selected' : ''}>FTSE MIB (FTSEMIB.MI)</option>
+                <option value="^IXIC" ${activePerfBenchmark === '^IXIC' ? 'selected' : ''}>NASDAQ (^IXIC)</option>
+                <option value="^STOXX50E" ${activePerfBenchmark === '^STOXX50E' ? 'selected' : ''}>Euro Stoxx 50 (^STOXX50E)</option>
+                <option value="^GDAXI" ${activePerfBenchmark === '^GDAXI' ? 'selected' : ''}>DAX 40 (^GDAXI)</option>
+                <option value="^FTSE" ${activePerfBenchmark === '^FTSE' ? 'selected' : ''}>FTSE 100 (^FTSE)</option>
+                <option value="BTC-EUR" ${activePerfBenchmark === 'BTC-EUR' ? 'selected' : ''}>Bitcoin (BTC-EUR)</option>
+                <option value="GC=F" ${activePerfBenchmark === 'GC=F' ? 'selected' : ''}>Oro USD (GC=F)</option>
+              </select>
+            </div>
+
+            <div id="perf-scope-container" class="flex items-center space-x-1.5 ${!activePerfBenchmark ? 'opacity-40 pointer-events-none' : ''}">
+              <span class="text-gray-400 font-semibold uppercase text-[9px] sm:text-[10px] shrink-0">Asset:</span>
+              <select id="perf-scope-select" class="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono outline-hidden cursor-pointer" ${!activePerfBenchmark ? 'disabled' : ''}>
+                <option value="equity_only" ${activePerfScope === 'equity_only' ? 'selected' : ''}>Solo Azionario (Azioni + ETF)</option>
+                <option value="all_no_liquidity" ${activePerfScope === 'all_no_liquidity' ? 'selected' : ''}>Intero Portafoglio (escl. Liq.)</option>
+              </select>
             </div>
           </div>
 
@@ -3916,17 +3944,46 @@
     if (loadingEl) loadingEl.classList.remove('hidden');
 
     try {
-      const q = portfolioId && portfolioId !== 'all'
-        ? `portfolioId=${encodeURIComponent(portfolioId)}&range=${encodeURIComponent(range)}`
-        : `range=${encodeURIComponent(range)}`;
+      const qParams = new URLSearchParams();
+      if (portfolioId && portfolioId !== 'all') {
+        qParams.append('portfolioId', portfolioId);
+      }
+      qParams.append('range', range);
+      if (activePerfBenchmark) {
+        qParams.append('benchmark', activePerfBenchmark);
+      }
+      if (activePerfScope) {
+        qParams.append('scope', activePerfScope);
+      }
 
-      const res = await fetch(`/api/history/performance?${q}`);
+      const res = await fetch(`/api/history/performance?${qParams.toString()}`);
       if (!res.ok) throw new Error('Network error');
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'API error');
 
       const series = data.series || [];
-      const isMetricNav = metric === 'NAV';
+      const hasBenchmark = Boolean(data.benchmark && Array.isArray(data.benchmark.series) && data.benchmark.series.length > 0);
+      const isMetricNav = metric === 'NAV' && !hasBenchmark;
+
+      // Synchronize benchmark and scope DOM select elements if rendered
+      const benchSelect = document.getElementById('perf-benchmark-select');
+      const scopeSelect = document.getElementById('perf-scope-select');
+      const scopeCont = document.getElementById('perf-scope-container');
+      if (benchSelect && benchSelect.value !== activePerfBenchmark) {
+        benchSelect.value = activePerfBenchmark;
+      }
+      if (scopeSelect && scopeSelect.value !== activePerfScope) {
+        scopeSelect.value = activePerfScope;
+      }
+      if (scopeCont && scopeSelect) {
+        if (activePerfBenchmark) {
+          scopeCont.classList.remove('opacity-40', 'pointer-events-none');
+          scopeSelect.disabled = false;
+        } else {
+          scopeCont.classList.add('opacity-40', 'pointer-events-none');
+          scopeSelect.disabled = true;
+        }
+      }
 
       // Update widget header dynamic badges
       const valEl = document.getElementById('perf-display-val');
@@ -3953,10 +4010,18 @@
           valEl.textContent = isMetricNav ? formatEur(last.totalValue) : formatPct(periodPct);
         }
         if (badgeEl) {
-          badgeEl.className = isPos ? 'badge-profit text-xs font-mono font-semibold' : 'badge-loss text-xs font-mono font-semibold';
-          badgeEl.textContent = isMetricNav
-            ? `${formatEurSigned(periodGain)} (${formatPct(periodPct)})`
-            : `${formatEurSigned(periodGain)} nel periodo ${range}`;
+          if (hasBenchmark && data.benchmark) {
+            const bPct = data.benchmark.periodReturnPercent || 0;
+            const alpha = periodPct - bPct;
+            const alphaSign = alpha >= 0 ? '+' : '';
+            badgeEl.className = alpha >= 0 ? 'badge-profit text-xs font-mono font-semibold' : 'badge-loss text-xs font-mono font-semibold';
+            badgeEl.textContent = `vs ${data.benchmark.name}: ${formatPct(bPct)} (Alpha: ${alphaSign}${alpha.toFixed(2)}%)`;
+          } else {
+            badgeEl.className = isPos ? 'badge-profit text-xs font-mono font-semibold' : 'badge-loss text-xs font-mono font-semibold';
+            badgeEl.textContent = isMetricNav
+              ? `${formatEurSigned(periodGain)} (${formatPct(periodPct)})`
+              : `${formatEurSigned(periodGain)} nel periodo ${range}`;
+          }
         }
         if (ddEl) {
           ddEl.textContent = `Max DD: -${(data.maxDrawdown || 0).toFixed(2)}%`;
@@ -4009,24 +4074,50 @@
       gradient.addColorStop(0, fillGradientColor);
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
 
+      const scopeTag = activePerfScope === 'equity_only' ? 'Azionario' : 'escl. Liquidità';
+      const mainDatasetLabel = hasBenchmark
+        ? `Portafoglio (${scopeTag})`
+        : (isMetricNav ? 'Patrimonio (€)' : `Rendimento ${range} (%)`);
+
+      const datasets = [{
+        label: mainDatasetLabel,
+        data: values,
+        borderColor: primaryColor,
+        borderWidth: 2,
+        backgroundColor: hasBenchmark ? 'rgba(0, 0, 0, 0.0)' : gradient,
+        fill: !hasBenchmark,
+        tension: 0.25,
+        pointRadius: series.length > 60 ? 0 : 2,
+        pointHoverRadius: 5,
+        pointBackgroundColor: primaryColor,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1.5
+      }];
+
+      if (hasBenchmark && data.benchmark) {
+        const bValues = data.benchmark.series.map(b => b.returnPercent);
+        datasets.push({
+          label: `Benchmark: ${data.benchmark.name}`,
+          data: bValues,
+          borderColor: '#a855f7',
+          borderWidth: 2,
+          borderDash: [5, 4],
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.25,
+          pointRadius: series.length > 60 ? 0 : 2,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#a855f7',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5
+        });
+      }
+
       activeCharts['chart-performance'] = new Chart(canvas, {
         type: 'line',
         data: {
           labels,
-          datasets: [{
-            label: isMetricNav ? 'Patrimonio (€)' : `Rendimento ${range} (%)`,
-            data: values,
-            borderColor: primaryColor,
-            borderWidth: 2,
-            backgroundColor: gradient,
-            fill: true,
-            tension: 0.25,
-            pointRadius: series.length > 60 ? 0 : 2,
-            pointHoverRadius: 5,
-            pointBackgroundColor: primaryColor,
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 1.5
-          }]
+          datasets
         },
         options: {
           responsive: true,
@@ -4036,7 +4127,17 @@
             mode: 'index'
           },
           plugins: {
-            legend: { display: false },
+            legend: {
+              display: hasBenchmark,
+              position: 'top',
+              align: 'end',
+              labels: {
+                boxWidth: 12,
+                boxHeight: 2,
+                font: { family: 'JetBrains Mono', size: isMobileDashboard() ? 8 : 9 },
+                color: textColor
+              }
+            },
             tooltip: {
               backgroundColor: isDark ? 'rgba(20, 20, 22, 0.95)' : 'rgba(255, 255, 255, 0.95)',
               titleColor: isDark ? '#ffffff' : '#111827',
@@ -4053,18 +4154,32 @@
                 },
                 label: (ctx) => {
                   const idx = ctx.dataIndex;
+                  if (ctx.datasetIndex === 1 && hasBenchmark && data.benchmark) {
+                    const bVal = data.benchmark.series[idx]?.returnPercent || 0;
+                    return ` ${data.benchmark.name}: ${formatPct(bVal)}`;
+                  }
                   const item = series[idx];
                   if (!item) return '';
                   const itemPeriodPct = item.periodReturnPercent !== undefined ? item.periodReturnPercent : item.returnPercent;
-                  return isMetricNav
+                  return isMetricNav && !hasBenchmark
                     ? ` Patrimonio: ${formatEur(item.totalValue)}`
-                    : ` Rendimento (${range}): ${formatPct(itemPeriodPct)}`;
+                    : ` Portafoglio (${scopeTag}): ${formatPct(itemPeriodPct)}`;
                 },
                 afterLabel: (ctx) => {
+                  if (ctx.datasetIndex === 1) return [];
                   const idx = ctx.dataIndex;
                   const item = series[idx];
-                  if (!item) return '';
+                  if (!item) return [];
                   const itemPeriodPct = item.periodReturnPercent !== undefined ? item.periodReturnPercent : item.returnPercent;
+                  if (hasBenchmark && data.benchmark && data.benchmark.series[idx]) {
+                    const bVal = data.benchmark.series[idx].returnPercent || 0;
+                    const diff = itemPeriodPct - bVal;
+                    const diffSign = diff >= 0 ? '+' : '';
+                    return [
+                      ` Differenziale (Alpha): ${diffSign}${diff.toFixed(2)}%`,
+                      ` Drawdown: -${(item.drawdownPercent || 0).toFixed(2)}%`
+                    ];
+                  }
                   return [
                     ` Titoli: ${formatEur(item.assetValue)}`,
                     ` Liquidità: ${formatEur(item.cashValue)}`,
@@ -5417,6 +5532,18 @@
         if (m && m !== activeHistoryMetric) {
           activeHistoryMetric = m;
           localStorage.setItem('foliotrack_perf_metric', m);
+          if (m === 'NAV' && activePerfBenchmark) {
+            activePerfBenchmark = '';
+            localStorage.setItem('foliotrack_perf_benchmark', '');
+            const benchSelect = document.getElementById('perf-benchmark-select');
+            if (benchSelect) benchSelect.value = '';
+            const scopeCont = document.getElementById('perf-scope-container');
+            const scopeSelect = document.getElementById('perf-scope-select');
+            if (scopeCont && scopeSelect) {
+              scopeCont.classList.add('opacity-40', 'pointer-events-none');
+              scopeSelect.disabled = true;
+            }
+          }
           document.querySelectorAll('[data-perf-metric]').forEach(btn => {
             const isTarget = btn.getAttribute('data-perf-metric') === m;
             btn.className = `perf-metric-btn px-2.5 py-1 rounded-md transition text-[11px] ${isTarget ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`;
@@ -5578,6 +5705,43 @@
         const mode = moversModeBtn.getAttribute('data-movers-mode');
         setMoversMode(mode);
         return;
+      }
+    });
+
+    // Delegated change listeners for performance benchmark and scope selectors
+    document.addEventListener('change', (e) => {
+      if (e.target && e.target.id === 'perf-benchmark-select') {
+        activePerfBenchmark = e.target.value;
+        localStorage.setItem('foliotrack_perf_benchmark', activePerfBenchmark);
+
+        const scopeCont = document.getElementById('perf-scope-container');
+        const scopeSelect = document.getElementById('perf-scope-select');
+        if (scopeCont && scopeSelect) {
+          if (activePerfBenchmark) {
+            scopeCont.classList.remove('opacity-40', 'pointer-events-none');
+            scopeSelect.disabled = false;
+          } else {
+            scopeCont.classList.add('opacity-40', 'pointer-events-none');
+            scopeSelect.disabled = true;
+          }
+        }
+
+        if (activePerfBenchmark && activeHistoryMetric !== 'RETURN') {
+          activeHistoryMetric = 'RETURN';
+          localStorage.setItem('foliotrack_perf_metric', 'RETURN');
+          document.querySelectorAll('[data-perf-metric]').forEach(btn => {
+            const isTarget = btn.getAttribute('data-perf-metric') === 'RETURN';
+            btn.className = `perf-metric-btn px-2.5 py-1 rounded-md transition text-[11px] ${isTarget ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`;
+          });
+        }
+
+        renderPerformanceChart(selectedPortfolioId, activeHistoryRange, activeHistoryMetric);
+      }
+
+      if (e.target && e.target.id === 'perf-scope-select') {
+        activePerfScope = e.target.value;
+        localStorage.setItem('foliotrack_perf_scope', activePerfScope);
+        renderPerformanceChart(selectedPortfolioId, activeHistoryRange, activeHistoryMetric);
       }
     });
 
