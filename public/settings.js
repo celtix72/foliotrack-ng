@@ -145,6 +145,14 @@ function initEventListeners() {
   document.getElementById('cancelAssetModalBtn')?.addEventListener('click', closeAssetModal);
   document.getElementById('assetForm')?.addEventListener('submit', handleSaveAsset);
 
+  document.getElementById('modalAssetType')?.addEventListener('change', (e) => {
+    const val = (e.target.value || '').toUpperCase().replace(/[\s-]+/g, '_');
+    if (['DEPOSITO_VINCOLATO', 'BUONO_POSTALE', 'TFR', 'FONDO_PENSIONE'].includes(val)) {
+      const ds = document.getElementById('modalAssetDataSource');
+      if (ds) ds.value = 'MANUAL';
+    }
+  });
+
   document.getElementById('assetSearchInput')?.addEventListener('input', () => {
     clearTimeout(assetDebounceTimer);
     assetDebounceTimer = setTimeout(loadAssets, 250);
@@ -676,9 +684,19 @@ async function loadAssets() {
             </div>
           </td>
           <td class="px-3 py-2.5 text-xs text-gray-500">
-            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-gray-100 dark:bg-white/10">
-              ${a.type || 'EQUITY'}
-            </span>
+            ${(() => {
+              const normT = String(a.type || 'EQUITY').toUpperCase().replace(/[\s-]+/g, '_');
+              if (normT === 'DEPOSITO_VINCOLATO') {
+                return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">Deposito Vincolato</span>';
+              } else if (normT === 'BUONO_POSTALE') {
+                return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Buono Postale</span>';
+              } else if (normT === 'TFR') {
+                return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">TFR</span>';
+              } else if (normT === 'FONDO_PENSIONE') {
+                return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Fondo Pensione</span>';
+              }
+              return `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-gray-100 dark:bg-white/10">${a.type || 'EQUITY'}</span>`;
+            })()}
           </td>
           <td class="px-3 py-2.5 text-xs text-gray-400 font-mono">
             ${a.currency || 'EUR'} ${a.exchange ? '• ' + a.exchange : ''}
@@ -755,6 +773,36 @@ async function handleAssetSourceChange(ticker, newSource) {
 }
 
 async function syncSingleQuote(ticker) {
+  const currentAsset = (currentAssetsList || []).find(x => x.ticker.toUpperCase() === ticker.toUpperCase());
+  const normType = String(currentAsset?.type || '').toUpperCase().replace(/[\s-]+/g, '_');
+  const isManType = ['DEPOSITO_VINCOLATO', 'BUONO_POSTALE', 'TFR', 'FONDO_PENSIONE'].includes(normType);
+
+  if (currentAsset && (currentAsset.dataSource === 'MANUAL' || isManType)) {
+    const input = prompt(`Aggiorna manualmente la quotazione/valore per ${ticker} (Valore attuale: ${currentAsset.currentPrice || 0}):`, currentAsset.currentPrice || '');
+    if (input !== null && input.trim() !== '') {
+      const newPrice = parseFloat(input.trim().replace(',', '.'));
+      if (!isNaN(newPrice) && newPrice >= 0) {
+        try {
+          const res = await fetch(`/api/assets/${encodeURIComponent(ticker)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPrice: newPrice })
+          });
+          const data = await res.json();
+          if (data.success) {
+            showToast(`✓ Valore aggiornato per ${ticker}: ${newPrice.toFixed(2)} €`);
+          } else {
+            showToast(data.error || 'Errore aggiornamento prezzo', true);
+          }
+        } catch (e) {
+          showToast('Errore di connessione', true);
+        }
+      }
+    }
+    await loadAssets();
+    return;
+  }
+
   const btn = document.querySelector(`button[data-action="sync-quote"][data-ticker="${ticker}"]`);
   if (btn) {
     btn.disabled = true;
@@ -1357,7 +1405,7 @@ async function loadClassifications() {
         'Utilities', 'Materials', 'Real Estate', 'Communication Services',
         'Government', 'Broad Market'
       ];
-      const typeList = ['EQUITY', 'ETF', 'BOND', 'COMMODITY', 'CRYPTO', 'CASH'];
+      const typeList = ['EQUITY', 'ETF', 'BOND', 'COMMODITY', 'CRYPTO', 'CASH', 'DEPOSITO_VINCOLATO', 'BUONO_POSTALE', 'TFR', 'FONDO_PENSIONE'];
       const regList = ['Global', 'Americas', 'Europe', 'Asia', 'Emerging Markets'];
 
       taxBody.innerHTML = assets.map(a => `

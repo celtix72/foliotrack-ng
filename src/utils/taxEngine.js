@@ -6,6 +6,8 @@
  * - Minusvalenze compensation applies strictly within the SAME portfolio and on the SAME asset category.
  */
 
+const { normalizeAssetType } = require('./constants');
+
 const TAX_RATES = {
   EQUITY: 0.26,
   BOND: 0.125
@@ -94,8 +96,53 @@ function resolveAssetTaxInfo(asset) {
   }
 
   const rawType = (asset.type || '').toUpperCase().trim();
+  const normType = normalizeAssetType(rawType, asset.ticker);
   const rawSector = (asset.sector || '').toUpperCase().trim();
   const nameStr = `${asset.name || ''} ${asset.ticker || ''}`.toLowerCase();
+
+  // BUONO POSTALE: Buoni Fruttiferi Postali garantiti dallo Stato -> 12.5%
+  if (normType === 'BUONO_POSTALE') {
+    return {
+      taxCategory: 'BOND',
+      taxRate: 0.125,
+      taxRatePercent: 12.5,
+      taxRateFormatted: '12,5%',
+      label: 'Buono Postale (12,5%)'
+    };
+  }
+
+  // DEPOSITO VINCOLATO: Rendimento da deposito vincolato bancario -> 26% (ritenuta d'imposta alla fonte, non compensabile con minus azionarie)
+  if (normType === 'DEPOSITO_VINCOLATO') {
+    return {
+      taxCategory: 'DEPOSITO',
+      taxRate: 0.26,
+      taxRatePercent: 26.0,
+      taxRateFormatted: '26%',
+      label: 'Deposito Vincolato'
+    };
+  }
+
+  // TFR: Trattamento di Fine Rapporto (aliquota separata / rivalutazione 17%)
+  if (normType === 'TFR') {
+    return {
+      taxCategory: 'TFR',
+      taxRate: 0.17,
+      taxRatePercent: 17.0,
+      taxRateFormatted: '17%',
+      label: 'TFR'
+    };
+  }
+
+  // FONDO PENSIONE: Previdenza complementare (imposta sostitutiva 20%)
+  if (normType === 'FONDO_PENSIONE') {
+    return {
+      taxCategory: 'FONDO_PENSIONE',
+      taxRate: 0.20,
+      taxRatePercent: 20.0,
+      taxRateFormatted: '20%',
+      label: 'Fondo Pensione'
+    };
+  }
 
   // CASH
   if (rawType === 'CASH') {

@@ -1031,15 +1031,61 @@
   /**
    * Resolves uniform asset category, title, currency, and sort priority for both holdings and closed positions.
    */
-  function getAssetCategoryInfo(type, currency) {
-    const normType = String(type || 'EQUITY').toUpperCase();
-    const curr = String(currency || 'EUR').toUpperCase();
+  function getAssetCategoryInfo(type, currency, ticker = '') {
+    const rawType = String(type || 'EQUITY').trim().toUpperCase();
+    const normType = rawType.replace(/[\s-]+/g, '_');
+    const curr = String(currency || 'EUR').trim().toUpperCase();
+    const tick = String(ticker || '').trim().toUpperCase();
     let catKey = 'AZIONI EUR';
     let catTitle = 'AZIONI EUR';
     let catCurrency = curr;
     let sortPriority = 10;
 
-    if (normType === 'ETF') {
+    const isDeposit = normType === 'DEPOSITO_VINCOLATO' ||
+                      normType === 'DEPOSITO' ||
+                      normType === 'CONTO_DEPOSITO' ||
+                      normType === 'TIME_DEPOSIT' ||
+                      normType === 'DEPOSITI_VINCOLATI' ||
+                      normType === 'DEPOSITI' ||
+                      tick.startsWith('CD_') ||
+                      tick.startsWith('CD-') ||
+                      tick.includes('IFIS');
+
+    const isBuono = normType === 'BUONO_POSTALE' ||
+                    normType === 'BUONI_POSTALI' ||
+                    normType === 'POSTAL_BOND' ||
+                    normType === 'BFP' ||
+                    normType === 'BUONO' ||
+                    normType === 'BUONI' ||
+                    tick.startsWith('BFP');
+
+    const isTfr = normType === 'TFR' || tick === 'TFR';
+
+    const isFondoPens = normType === 'FONDO_PENSIONE' ||
+                        normType === 'FONDI_PENSIONE' ||
+                        normType === 'PENSION_FUND' ||
+                        normType === 'PREVIDENZA' ||
+                        normType === 'PENSIONE' ||
+                        tick.includes('PENSIONE') ||
+                        tick.includes('FONDO_PENS');
+
+    if (isDeposit) {
+      catKey = 'DEPOSITI VINCOLATI';
+      catTitle = 'DEPOSITI VINCOLATI';
+      sortPriority = 65;
+    } else if (isBuono) {
+      catKey = 'BUONI POSTALI';
+      catTitle = 'BUONI POSTALI';
+      sortPriority = 45;
+    } else if (isTfr) {
+      catKey = 'TFR';
+      catTitle = 'TFR';
+      sortPriority = 66;
+    } else if (isFondoPens) {
+      catKey = 'FONDI PENSIONE';
+      catTitle = 'FONDI PENSIONE';
+      sortPriority = 67;
+    } else if (normType === 'ETF') {
       catKey = curr === 'EUR' ? 'ETF' : `ETF ${curr}`;
       catTitle = catKey;
       sortPriority = 30;
@@ -1060,7 +1106,7 @@
       catTitle = 'LIQUIDITÀ';
       sortPriority = 70;
     } else {
-      // Equity / Stocks
+      // Equity / Stocks fallback
       if (curr === 'EUR') {
         catKey = 'AZIONI EUR';
         catTitle = 'AZIONI EUR';
@@ -1092,57 +1138,16 @@
     const groups = new Map();
 
     for (const h of holdings) {
-      const type = (h.type || 'EQUITY').toUpperCase();
-      const curr = (h.currency || 'EUR').toUpperCase();
-      let catKey = 'AZIONI EUR';
-      let catTitle = 'AZIONI EUR';
-      let catCurrency = curr;
-      let sortPriority = 10;
-
-      if (type === 'ETF') {
-        catKey = curr === 'EUR' ? 'ETF' : `ETF ${curr}`;
-        catTitle = catKey;
-        sortPriority = 30;
-      } else if (type.includes('BOND') || type === 'FIXED_INCOME') {
-        catKey = curr === 'EUR' ? 'OBBLIGAZIONI' : `OBBLIGAZIONI ${curr}`;
-        catTitle = catKey;
-        sortPriority = 40;
-      } else if (type === 'CRYPTO') {
-        catKey = 'CRYPTO';
-        catTitle = 'CRYPTO';
-        sortPriority = 50;
-      } else if (type.includes('COMMODIT') || type === 'GOLD') {
-        catKey = 'MATERIE PRIME / ORO';
-        catTitle = 'MATERIE PRIME / ORO';
-        sortPriority = 60;
-      } else if (type === 'CASH' || type === 'LIQUIDITY') {
-        catKey = 'LIQUIDITÀ';
-        catTitle = 'LIQUIDITÀ';
-        sortPriority = 70;
-      } else {
-        // Equity / Stocks
-        if (curr === 'EUR') {
-          catKey = 'AZIONI EUR';
-          catTitle = 'AZIONI EUR';
-          sortPriority = 10;
-        } else if (curr === 'USD') {
-          catKey = 'AZIONI USD';
-          catTitle = 'AZIONI USD';
-          sortPriority = 20;
-        } else {
-          catKey = `AZIONI ${curr}`;
-          catTitle = `AZIONI ${curr}`;
-          sortPriority = 25;
-        }
-      }
+      const info = getAssetCategoryInfo(h.type, h.currency, h.ticker);
+      const catKey = info.key;
 
       if (!groups.has(catKey)) {
         groups.set(catKey, {
-          id: catKey.replace(/[^a-zA-Z0-9]/g, '_'),
+          id: info.id,
           key: catKey,
-          title: catTitle,
-          currency: catCurrency,
-          sortPriority,
+          title: info.title,
+          currency: info.currency,
+          sortPriority: info.sortPriority,
           holdings: []
         });
       }
@@ -1231,8 +1236,8 @@
   function groupGainsByCategory(holdings = [], closedPositions = []) {
     const categoryMap = new Map();
 
-    function getOrCreateCategory(type, currency) {
-      const info = getAssetCategoryInfo(type, currency);
+    function getOrCreateCategory(type, currency, ticker = '') {
+      const info = getAssetCategoryInfo(type, currency, ticker);
       if (!categoryMap.has(info.key)) {
         categoryMap.set(info.key, {
           id: info.id,
@@ -1249,7 +1254,7 @@
     // 1. Process active open holdings
     for (const h of holdings) {
       if (!h || !h.ticker) continue;
-      const cat = getOrCreateCategory(h.type, h.currency);
+      const cat = getOrCreateCategory(h.type, h.currency, h.ticker);
       const ticker = h.ticker;
       const qty = Number(h.quantity) || 0;
       const cost = Number(h.totalCost !== undefined ? h.totalCost : ((h.pmc || h.costBasis || 0) * qty)) || 0;
@@ -1294,7 +1299,7 @@
         }
       }
       if (!targetCat) {
-        targetCat = getOrCreateCategory(cp.type, cp.currency);
+        targetCat = getOrCreateCategory(cp.type, cp.currency, cp.ticker);
       }
 
       const ticker = cp.ticker;
@@ -5954,6 +5959,8 @@
     setCategoryQuotesFilter,
     setCategoryGainsFilter,
     setCategoryGainsStatus,
+    getAssetCategoryInfo,
+    groupHoldingsByCategory,
     groupGainsByCategory,
     setPerfMatrixFilter,
     setMoversMode,

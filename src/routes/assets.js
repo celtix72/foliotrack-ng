@@ -4,6 +4,9 @@ const { requireAuth } = require('../middlewares/authMiddleware');
 const {
   GICS_SECTORS,
   ASSET_TYPES,
+  MANUAL_ASSET_TYPES,
+  normalizeAssetType,
+  isManualAssetType,
   PORTFOLIO_TYPES,
   RISK_CATEGORIES,
   REGIONS,
@@ -285,9 +288,13 @@ router.post('/', (req, res) => {
 
   const cleanTicker = ticker.toUpperCase().trim();
   const cleanName = (name || cleanTicker).trim();
-  const validSource = ['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL', 'DELISTED'].includes(dataSource.toUpperCase())
-    ? dataSource.toUpperCase()
-    : 'YAHOO';
+  const cleanType = normalizeAssetType(type, cleanTicker);
+  const isManualType = isManualAssetType(cleanType, cleanTicker);
+  const validSource = isManualType
+    ? 'MANUAL'
+    : (['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL', 'DELISTED'].includes(String(dataSource).toUpperCase())
+        ? String(dataSource).toUpperCase()
+        : 'YAHOO');
 
   const stmt = db.prepare(`
     INSERT INTO assets (
@@ -316,7 +323,7 @@ router.post('/', (req, res) => {
   stmt.run(
     cleanTicker,
     cleanName,
-    type.toUpperCase(),
+    cleanType,
     exchange,
     currency.toUpperCase(),
     Number(currentPrice) || 0.0,
@@ -333,8 +340,8 @@ router.post('/', (req, res) => {
 
   const saved = db.prepare('SELECT * FROM assets WHERE ticker = ?').get(cleanTicker);
 
-  // Download realtime quote and ensure 5Y historical quotes una tantum if not manual and not delisted
-  if (validSource !== 'MANUAL' && validSource !== 'DELISTED') {
+  // Download realtime quote and ensure 5Y historical quotes una tantum if not manual, not delisted, and not a manual asset type
+  if (validSource !== 'MANUAL' && validSource !== 'DELISTED' && !isManualType) {
     fetchUnifiedQuote(cleanTicker)
       .catch(e => console.warn(`[Asset Create] Realtime quote fetch failed for ${cleanTicker}:`, e.message));
     ensureHistoricalQuotesIfMissing(cleanTicker)
@@ -377,7 +384,8 @@ router.put('/:ticker', (req, res) => {
   } = req.body || {};
 
   const cleanName = name !== undefined ? String(name).trim() : existing.name;
-  const cleanType = type !== undefined ? String(type).toUpperCase() : existing.type;
+  const cleanType = type !== undefined ? normalizeAssetType(type, ticker) : existing.type;
+  const isManualType = isManualAssetType(cleanType, ticker);
   const cleanExchange = exchange !== undefined ? String(exchange).trim() : existing.exchange;
   const cleanCurrency = currency !== undefined ? String(currency).toUpperCase() : existing.currency;
   const cleanPrice = currentPrice !== undefined ? Number(currentPrice) || 0.0 : existing.currentPrice;
@@ -391,7 +399,9 @@ router.put('/:ticker', (req, res) => {
   const cleanPe = pe !== undefined ? (pe ? Number(pe) : null) : existing.pe;
 
   let cleanSource = existing.dataSource || 'YAHOO';
-  if (dataSource !== undefined) {
+  if (isManualType) {
+    cleanSource = 'MANUAL';
+  } else if (dataSource !== undefined) {
     cleanSource = ['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL', 'DELISTED'].includes(String(dataSource).toUpperCase())
       ? String(dataSource).toUpperCase()
       : cleanSource;
@@ -465,15 +475,20 @@ router.put('/:ticker/classification', (req, res) => {
     return res.status(404).json({ success: false, error: `Titolo '${ticker}' non trovato.` });
   }
 
-  const cleanType = type !== undefined ? String(type).toUpperCase() : existing.type;
+  const cleanType = type !== undefined ? normalizeAssetType(type, ticker) : existing.type;
   const cleanSector = sector !== undefined ? String(sector) : existing.sector;
   const cleanRegion = region !== undefined ? String(region) : existing.region;
+  const isManualType = isManualAssetType(cleanType, ticker);
 
   db.prepare(`
     UPDATE assets
-    SET type = ?, sector = ?, region = ?, updatedAt = datetime('now')
+    SET type = ?,
+        sector = ?,
+        region = ?,
+        dataSource = CASE WHEN ? THEN 'MANUAL' ELSE dataSource END,
+        updatedAt = datetime('now')
     WHERE ticker = ?
-  `).run(cleanType, cleanSector, cleanRegion, ticker);
+  `).run(cleanType, cleanSector, cleanRegion, isManualType ? 1 : 0, ticker);
 
   const updated = db.prepare('SELECT * FROM assets WHERE ticker = ?').get(ticker);
   return res.json({
@@ -497,19 +512,21 @@ router.post('/:ticker/sync-quote', async (req, res) => {
       });
     }
 
-    if (asset.dataSource === 'DELISTED' || asset.dataSource === 'MANUAL') {
+    const isManualType = isManualAssetType(asset.type);
+    if (asset.dataSource === 'DELISTED' || asset.dataSource === 'MANUAL' || isManualType) {
+      const sourceLabel = asset.dataSource === 'DELISTED' ? 'DELISTED' : 'MANUAL';
       return res.json({
         success: true,
-        message: `Titolo '${ticker}' è contrassegnato come ${asset.dataSource}. Aggiornamento quotazioni live disattivato.`,
+        message: `Titolo '${ticker}' è di tipo ${asset.type || 'MANUAL'}. Aggiornamento quotazioni live disattivato.`,
         quote: {
           ticker,
           name: asset.name,
           currentPrice: asset.currentPrice,
-          changePercent: asset.dataSource === 'DELISTED' ? 0 : (asset.changePercent || 0),
-          changeValue: asset.dataSource === 'DELISTED' ? 0 : (asset.changeValue || 0),
-          source: asset.dataSource,
-          isManual: asset.dataSource === 'MANUAL',
-          isDelisted: asset.dataSource === 'DELISTED'
+          changePercent: sourceLabel === 'DELISTED' ? 0 : (asset.changePercent || 0),
+          changeValue: sourceLabel === 'DELISTED' ? 0 : (asset.changeValue || 0),
+          source: sourceLabel,
+          isManual: true,
+          isDelisted: sourceLabel === 'DELISTED'
         },
         asset
       });
@@ -550,14 +567,16 @@ router.post('/:ticker/sync-history', async (req, res) => {
 
   try {
     const asset = db.prepare('SELECT * FROM assets WHERE ticker = ?').get(ticker);
-    if (asset && (asset.dataSource === 'DELISTED' || asset.dataSource === 'MANUAL')) {
+    const isManualType = asset && isManualAssetType(asset.type);
+    if (asset && (asset.dataSource === 'DELISTED' || asset.dataSource === 'MANUAL' || isManualType)) {
+      const sourceLabel = asset.dataSource === 'DELISTED' ? 'DELISTED' : 'MANUAL';
       const count = db.prepare('SELECT COUNT(*) as c FROM asset_quotes WHERE ticker = ?').get(ticker).c;
       return res.json({
         success: true,
         ticker,
         period,
         count,
-        message: `Titolo '${ticker}' è contrassegnato come ${asset.dataSource}. Storico esistente mantenuto (${count} punti).`
+        message: `Titolo '${ticker}' è contrassegnato come ${sourceLabel}. Storico esistente mantenuto (${count} punti).`
       });
     }
 

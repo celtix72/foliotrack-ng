@@ -3,6 +3,11 @@ const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, getAssetsMap, checkPortfolioAccess } = require('./portfolios');
 const {
+  isManualAssetType,
+  getAssetTypeLabel,
+  normalizeAssetType
+} = require('../utils/constants');
+const {
   resolveAssetTaxInfo,
   calculatePortfolioUnrealizedTax,
   processPortfolioClosedPositionsTaxes
@@ -68,6 +73,12 @@ router.get('/portfolio-data', (req, res) => {
   let grandMinusvalenze = 0.0;
   let grandMinusvalenzeExpiringThisYear = 0.0;
   let grandLatentLosses = 0.0;
+  let grandManualValue = 0.0;
+  let grandManualGain = 0.0;
+  let grandManualCount = 0;
+  let grandMarketValue = 0.0;
+  let grandMarketCount = 0;
+  const allManualHoldingsSummary = [];
 
   for (const p of portfolios) {
     const full = recalculatePortfolio(p.id, assetsMap);
@@ -149,6 +160,8 @@ router.get('/portfolio-data', (req, res) => {
       const weight = totalVal > 0 ? (val / totalVal) * 100.0 : 0.0;
 
       const taxInfo = resolveAssetTaxInfo(h);
+      const isManual = isManualAssetType(h.type);
+      const manualCatLabel = isManual ? getAssetTypeLabel(h.type) : null;
 
       if (pnl < 0) {
         portfolioLatentLosses += Math.abs(pnl);
@@ -161,6 +174,8 @@ router.get('/portfolio-data', (req, res) => {
         ticker: h.ticker,
         name: h.name || h.ticker,
         type: h.type || 'EQUITY',
+        isManualType: isManual,
+        manualCategory: manualCatLabel,
         taxCategory: taxInfo.taxCategory,
         taxCategoryLabel: taxInfo.label,
         taxRate: taxInfo.taxRate,
@@ -182,6 +197,17 @@ router.get('/portfolio-data', (req, res) => {
 
     // Sort holdings by currentValue descending
     formattedHoldings.sort((a, b) => b.currentValue - a.currentValue);
+
+    // Split holdings into market instruments and manual/administered instruments
+    const marketHoldings = formattedHoldings.filter(h => !isManualAssetType(h.type));
+    const manualHoldings = formattedHoldings.filter(h => isManualAssetType(h.type));
+    const manualHoldingsTotalVal = manualHoldings.reduce((sum, h) => sum + h.currentValue, 0.0);
+    const manualHoldingsTotalGain = manualHoldings.reduce((sum, h) => sum + h.gain, 0.0);
+    const manualHoldingsWeight = totalVal > 0 ? (manualHoldingsTotalVal / totalVal) * 100.0 : 0.0;
+
+    const marketHoldingsTotalVal = marketHoldings.reduce((sum, h) => sum + h.currentValue, 0.0);
+    const marketHoldingsTotalGain = marketHoldings.reduce((sum, h) => sum + h.gain, 0.0);
+    const marketHoldingsWeight = totalVal > 0 ? (marketHoldingsTotalVal / totalVal) * 100.0 : 0.0;
 
     // Calculate portfolio taxation:
     // If portfolio is Pensione, tax is applied directly to NAV based on p.taxRate (default 15%)
@@ -252,6 +278,16 @@ router.get('/portfolio-data', (req, res) => {
       dayPnlPercent: Number(metrics.dayPnlPercent) || 0.0,
       assetCount: formattedHoldings.length,
       holdings: formattedHoldings,
+      marketHoldings,
+      manualHoldings,
+      hasManualHoldings: manualHoldings.length > 0,
+      hasMarketHoldings: marketHoldings.length > 0,
+      manualHoldingsTotalValue: manualHoldingsTotalVal,
+      manualHoldingsTotalGain: manualHoldingsTotalGain,
+      manualHoldingsWeight,
+      marketHoldingsTotalValue: marketHoldingsTotalVal,
+      marketHoldingsTotalGain: marketHoldingsTotalGain,
+      marketHoldingsWeight,
       taxation: portfolioTax,
       estimatedTax: portfolioEstimatedTax,
       netGain: totalGain - portfolioEstimatedTax,
@@ -278,6 +314,20 @@ router.get('/portfolio-data', (req, res) => {
       grandMinusvalenze += pResidualLosses;
       grandMinusvalenzeExpiringThisYear += pExpiringThisYear;
       grandLatentLosses += portfolioLatentLosses;
+      grandManualValue += manualHoldingsTotalVal;
+      grandManualGain += manualHoldingsTotalGain;
+      grandManualCount += manualHoldings.length;
+      grandMarketValue += marketHoldingsTotalVal;
+      grandMarketCount += marketHoldings.length;
+
+      manualHoldings.forEach(mh => {
+        allManualHoldingsSummary.push({
+          portfolioId: p.id,
+          portfolioName: p.name,
+          portfolioType: p.type || 'Investimento',
+          ...mh
+        });
+      });
     }
   }
 
@@ -324,6 +374,11 @@ router.get('/portfolio-data', (req, res) => {
       totalLatentLosses: grandLatentLosses,
       portfolioCount: enrichedPortfolios.length,
       assetCount: enrichedPortfolios.reduce((sum, p) => sum + p.assetCount, 0),
+      manualAssetsValue: grandManualValue,
+      manualAssetsGain: grandManualGain,
+      manualAssetsCount: grandManualCount,
+      marketAssetsValue: grandMarketValue,
+      marketAssetsCount: grandMarketCount,
       taxation: {
         equity: {
           taxableGain: grandEquityTaxable,
@@ -341,6 +396,7 @@ router.get('/portfolio-data', (req, res) => {
         netGain: grandTotalGain - grandTotalEstimatedTax
       }
     },
+    manualAssetsSummary: allManualHoldingsSummary,
     portfolios: enrichedPortfolios
   });
 });

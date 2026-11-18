@@ -4,7 +4,7 @@ const { db, getSetting } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, checkPortfolioAccess, getAssetsMap } = require('./portfolios');
 const { computeTransactionCashDelta } = require('../utils/finance');
-const { TRANSACTION_TYPES } = require('../utils/constants');
+const { TRANSACTION_TYPES, normalizeAssetType, isManualAssetType } = require('../utils/constants');
 const { parseBrokerCsv, detectBroker } = require('../utils/brokerParsers');
 const { exportWealthfolioCsv } = require('../utils/exportFormats');
 const { validateImportActivities } = require('../utils/importValidator');
@@ -26,23 +26,48 @@ router.use(requireAuth);
 /**
  * Ensures an asset exists in the assets table.
  * If not present, creates a base record.
+ * Automatically classifies manual non-equity assets (Conto Deposito, Buono Postale, TFR, Fondo Pensione)
+ * and sets dataSource to MANUAL.
  *
  * @param {string} ticker
  * @param {number} currentPrice
  * @param {string} currency
+ * @param {string} [assetType]
  */
-function ensureAssetExists(ticker, currentPrice = 0.0, currency = 'EUR') {
+function ensureAssetExists(ticker, currentPrice = 0.0, currency = 'EUR', assetType = null) {
   if (!ticker) return;
   const cleanTicker = ticker.toUpperCase().trim();
   const existing = db.prepare('SELECT ticker, type FROM assets WHERE ticker = ?').get(cleanTicker);
 
+  let targetType = 'EQUITY';
+  if (assetType) {
+    targetType = normalizeAssetType(assetType, cleanTicker);
+  } else if (cleanTicker.startsWith('CD_') || cleanTicker.startsWith('CD-') || cleanTicker.includes('IFIS') || cleanTicker.includes('DEPOSIT')) {
+    targetType = 'DEPOSITO_VINCOLATO';
+  } else if (cleanTicker.startsWith('BFP') || cleanTicker.includes('BUONO')) {
+    targetType = 'BUONO_POSTALE';
+  } else if (cleanTicker === 'TFR') {
+    targetType = 'TFR';
+  } else if (cleanTicker.includes('PENSIONE') || cleanTicker.includes('FONDO_PENS')) {
+    targetType = 'FONDO_PENSIONE';
+  }
+
+  const isManual = isManualAssetType(targetType, cleanTicker);
+
   if (!existing) {
     db.prepare(`
-      INSERT INTO assets (ticker, name, type, currency, currentPrice, sector, region)
-      VALUES (?, ?, 'EQUITY', ?, ?, 'Unclassified', 'Global')
-    `).run(cleanTicker, cleanTicker, currency, Number(currentPrice) || 0.0);
-  } else if (!existing.type) {
-    db.prepare("UPDATE assets SET type = 'EQUITY' WHERE ticker = ?").run(cleanTicker);
+      INSERT INTO assets (ticker, name, type, currency, currentPrice, sector, region, dataSource)
+      VALUES (?, ?, ?, ?, ?, 'Unclassified', 'Global', ?)
+    `).run(cleanTicker, cleanTicker, targetType, currency, Number(currentPrice) || 0.0, isManual ? 'MANUAL' : 'YAHOO');
+  } else if (!existing.type || existing.type === 'EQUITY' || (existing.type === 'CASH' && isManual)) {
+    if (assetType || targetType !== 'EQUITY') {
+      db.prepare(`
+        UPDATE assets
+        SET type = ?,
+            dataSource = CASE WHEN ? THEN 'MANUAL' ELSE dataSource END
+        WHERE ticker = ?
+      `).run(targetType, isManual ? 1 : 0, cleanTicker);
+    }
   }
 }
 
@@ -266,6 +291,14 @@ router.get('/', (req, res) => {
         subConds.push("UPPER(a.type) = 'CRYPTO'");
       } else if (at === 'COMMODITY') {
         subConds.push("UPPER(a.type) = 'COMMODITY'");
+      } else if (at === 'DEPOSITO_VINCOLATO' || at === 'DEPOSITO VINCOLATO') {
+        subConds.push("UPPER(a.type) IN ('DEPOSITO_VINCOLATO', 'DEPOSITO VINCOLATO')");
+      } else if (at === 'BUONO_POSTALE' || at === 'BUONO POSTALE') {
+        subConds.push("UPPER(a.type) IN ('BUONO_POSTALE', 'BUONO POSTALE')");
+      } else if (at === 'TFR') {
+        subConds.push("UPPER(a.type) = 'TFR'");
+      } else if (at === 'FONDO_PENSIONE' || at === 'FONDO PENSIONE') {
+        subConds.push("UPPER(a.type) IN ('FONDO_PENSIONE', 'FONDO PENSIONE')");
       } else {
         subConds.push("UPPER(a.type) = ?");
         params.push(at);
@@ -786,6 +819,7 @@ router.post('/', (req, res) => {
     portfolioId,
     type,
     assetTicker,
+    assetType,
     date = new Date().toISOString().split('T')[0],
     quantity = 0.0,
     price = 0.0,
@@ -867,7 +901,7 @@ router.post('/', (req, res) => {
     }
 
     // Auto-create asset entry if missing
-    ensureAssetExists(cleanTicker, prc, portfolio.currency);
+    ensureAssetExists(cleanTicker, prc, portfolio.currency, assetType);
   }
 
   const calculatedAmount = computeTransactionAmount(cleanType, qty, prc, comm, tx, fx, amount);
@@ -985,6 +1019,7 @@ router.put('/:id', (req, res) => {
   const {
     type = existingTx.type,
     assetTicker = existingTx.assetTicker,
+    assetType,
     date = existingTx.date,
     quantity = existingTx.quantity,
     price = existingTx.price,
@@ -1002,6 +1037,11 @@ router.put('/:id', (req, res) => {
   const comm = Number(commission) || 0.0;
   const tx = Number(tax) || 0.0;
   const fx = Number(exchangeRate) || 1.0;
+
+  if (cleanTicker) {
+    const parentPort = db.prepare('SELECT currency FROM portfolios WHERE id = ?').get(existingTx.portfolioId);
+    ensureAssetExists(cleanTicker, prc, parentPort?.currency || 'EUR', assetType);
+  }
 
   if (cleanType === 'SELL') {
     if (qty <= 0) {

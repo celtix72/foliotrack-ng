@@ -465,6 +465,31 @@ function createSchema(database) {
     `);
   } catch {}
 
+  // Safe migration: fix manual non-equity instruments (Conto Deposito, Buono Postale, TFR, Fondo Pensione)
+  try {
+    database.exec(`
+      UPDATE assets
+      SET type = 'DEPOSITO_VINCOLATO', dataSource = 'MANUAL'
+      WHERE (ticker LIKE 'CD_%' OR ticker LIKE 'CD-%' OR name LIKE '%Conto Deposito%' OR name LIKE '%Deposito Vincolato%')
+        AND (type = 'EQUITY' OR type = 'CASH' OR type = 'DEPOSITO' OR type IS NULL);
+
+      UPDATE assets
+      SET type = 'BUONO_POSTALE', dataSource = 'MANUAL'
+      WHERE (ticker LIKE 'BFP%' OR name LIKE '%Buon%Postal%')
+        AND (type = 'EQUITY' OR type = 'BOND' OR type IS NULL);
+
+      UPDATE assets
+      SET type = 'TFR', dataSource = 'MANUAL'
+      WHERE UPPER(ticker) = 'TFR'
+        AND (type = 'EQUITY' OR type IS NULL);
+
+      UPDATE assets
+      SET type = 'FONDO_PENSIONE', dataSource = 'MANUAL'
+      WHERE (name LIKE '%Fondo Pensione%' OR ticker LIKE '%PENS%')
+        AND (type = 'EQUITY' OR type IS NULL);
+    `);
+  } catch {}
+
   seedCurrencies(database);
 }
 

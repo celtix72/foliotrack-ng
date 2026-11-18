@@ -16,6 +16,13 @@ const GICS_SECTORS = [
   'Communication Services'
 ];
 
+const MANUAL_ASSET_TYPES = [
+  'DEPOSITO_VINCOLATO',
+  'BUONO_POSTALE',
+  'TFR',
+  'FONDO_PENSIONE'
+];
+
 const ASSET_TYPES = [
   'EQUITY',
   'ETF',
@@ -23,8 +30,85 @@ const ASSET_TYPES = [
   'CRYPTO',
   'COMMODITY',
   'MUTUAL_FUND',
-  'CASH'
+  'CASH',
+  ...MANUAL_ASSET_TYPES
 ];
+
+/**
+ * Normalizes an asset type string (handles space/underscore variants and ticker heuristics).
+ *
+ * @param {string} [type]
+ * @param {string} [ticker]
+ * @returns {string}
+ */
+function normalizeAssetType(type, ticker = '') {
+  const tick = String(ticker || '').trim().toUpperCase();
+  if (tick.startsWith('CD_') || tick.startsWith('CD-') || tick.includes('IFIS')) {
+    return 'DEPOSITO_VINCOLATO';
+  }
+  if (tick.startsWith('BFP') || tick.includes('BUONO_POST')) {
+    return 'BUONO_POSTALE';
+  }
+  if (tick === 'TFR') {
+    return 'TFR';
+  }
+  if (tick.includes('PENSIONE') || tick.includes('FONDO_PENS')) {
+    return 'FONDO_PENSIONE';
+  }
+
+  if (!type) return 'EQUITY';
+  const clean = String(type).trim().toUpperCase().replace(/[\s-]+/g, '_');
+  if (['DEPOSITO_VINCOLATO', 'DEPOSITO', 'CONTO_DEPOSITO', 'TIME_DEPOSIT', 'DEPOSITI_VINCOLATI', 'DEPOSITI'].includes(clean)) {
+    return 'DEPOSITO_VINCOLATO';
+  }
+  if (['BUONO_POSTALE', 'BUONI_POSTALI', 'POSTAL_BOND', 'BFP', 'BUONO', 'BUONI'].includes(clean)) {
+    return 'BUONO_POSTALE';
+  }
+  if (clean === 'TFR') {
+    return 'TFR';
+  }
+  if (['FONDO_PENSIONE', 'FONDI_PENSIONE', 'PENSION_FUND', 'PREVIDENZA', 'PENSIONE'].includes(clean)) {
+    return 'FONDO_PENSIONE';
+  }
+  return clean;
+}
+
+/**
+ * Checks whether an asset type (or ticker) is a manual, non-realtime monitored type
+ * (Deposito Vincolato, Buono Postale, TFR, Fondo Pensione).
+ *
+ * @param {string} [type]
+ * @param {string} [ticker]
+ * @returns {boolean}
+ */
+function isManualAssetType(type, ticker = '') {
+  const norm = normalizeAssetType(type, ticker);
+  return MANUAL_ASSET_TYPES.includes(norm);
+}
+
+/**
+ * Returns human-readable Italian label for an asset type.
+ *
+ * @param {string} [type]
+ * @returns {string}
+ */
+function getAssetTypeLabel(type) {
+  const norm = normalizeAssetType(type);
+  switch (norm) {
+    case 'DEPOSITO_VINCOLATO': return 'Deposito Vincolato';
+    case 'BUONO_POSTALE': return 'Buono Postale';
+    case 'TFR': return 'TFR';
+    case 'FONDO_PENSIONE': return 'Fondo Pensione';
+    case 'EQUITY': return 'Azioni';
+    case 'ETF': return 'ETF';
+    case 'BOND': return 'Obbligazioni';
+    case 'COMMODITY': return 'Materie Prime';
+    case 'CRYPTO': return 'Criptovalute';
+    case 'CASH': return 'Liquidità';
+    case 'MUTUAL_FUND': return 'Fondo Comune';
+    default: return String(type);
+  }
+}
 
 const PORTFOLIO_TYPES = [
   'Investimento',
@@ -61,6 +145,10 @@ const REGIONS = [
 module.exports = {
   GICS_SECTORS,
   ASSET_TYPES,
+  MANUAL_ASSET_TYPES,
+  normalizeAssetType,
+  isManualAssetType,
+  getAssetTypeLabel,
   PORTFOLIO_TYPES,
   TRANSACTION_TYPES,
   RISK_CATEGORIES,

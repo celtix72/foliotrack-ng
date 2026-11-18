@@ -312,38 +312,91 @@
           const pGainClass = pGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
           const pGainSign = pGainPos ? '+' : '';
 
+          const mHoldings = p.marketHoldings || [];
+          const manHoldings = p.manualHoldings || [];
+          const hasMan = p.hasManualHoldings || manHoldings.length > 0;
+          const hasMkt = p.hasMarketHoldings || mHoldings.length > 0;
+
+          function renderMobileHoldingRow(h) {
+            const hGainPos = h.gain >= 0;
+            const hGainClass = hGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+            const hGainSign = hGainPos ? '+' : '';
+            const isBond = h.taxRate === 0.125 || h.taxCategory === 'BOND';
+            const taxBadgeClass = isBond
+              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20';
+
+            let typeBadgeHtml = '';
+            const normType = String(h.type || 'EQUITY').toUpperCase().replace(/[\s-]+/g, '_');
+            if (normType === 'DEPOSITO_VINCOLATO') {
+              typeBadgeHtml = '<span class="text-[8px] px-1 rounded bg-cyan-500/10 text-cyan-600 font-bold border border-cyan-500/20">DEP. VINCOLATO</span>';
+            } else if (normType === 'BUONO_POSTALE') {
+              typeBadgeHtml = '<span class="text-[8px] px-1 rounded bg-amber-500/10 text-amber-600 font-bold border border-amber-500/20">BUONO POSTALE</span>';
+            } else if (normType === 'TFR') {
+              typeBadgeHtml = '<span class="text-[8px] px-1 rounded bg-purple-500/10 text-purple-600 font-bold border border-purple-500/20">TFR</span>';
+            } else if (normType === 'FONDO_PENSIONE') {
+              typeBadgeHtml = '<span class="text-[8px] px-1 rounded bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20">FONDO PENSIONE</span>';
+            } else {
+              typeBadgeHtml = `<span class="text-[8px] px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-500">${h.type}</span>`;
+            }
+
+            return `
+              <div class="py-1.5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+                <div class="min-w-0 pr-2">
+                  <div class="flex items-center space-x-1.5 truncate">
+                    <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
+                    ${typeBadgeHtml}
+                    <span class="text-[8px] px-1 rounded font-bold ${taxBadgeClass}">${h.taxRateFormatted || (isBond ? '12,5%' : '26%')}</span>
+                  </div>
+                  <div class="text-[10px] text-gray-400 truncate mt-0.5">
+                    Qta: <strong>${formatNumber(h.quantity)}</strong> • PMC: ${formatMoney(h.pmc, h.currency)} • Att: ${formatMoney(h.currentPrice, h.currency)}
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="font-bold text-gray-900 dark:text-white">${formatMoney(h.currentValue, h.currency)}</div>
+                  <div class="text-[10px] font-semibold ${hGainClass}">${hGainSign}${formatMoney(h.gain, h.currency)}</div>
+                </div>
+              </div>
+            `;
+          }
+
           let holdingsRows = '';
           if (!p.holdings || p.holdings.length === 0) {
             holdingsRows = '<div class="text-[10px] text-gray-400 font-mono py-2 text-center">Nessun asset (solo liquidità).</div>';
-          } else {
-            p.holdings.forEach(h => {
-              const hGainPos = h.gain >= 0;
-              const hGainClass = hGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
-              const hGainSign = hGainPos ? '+' : '';
-              const isBond = h.taxRate === 0.125 || h.taxCategory === 'BOND';
-              const taxBadgeClass = isBond
-                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20';
+          } else if (hasMan && hasMkt) {
+            const mktRows = mHoldings.map(renderMobileHoldingRow).join('');
+            const manRows = manHoldings.map(renderMobileHoldingRow).join('');
 
-              holdingsRows += `
-                <div class="py-1.5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
-                  <div class="min-w-0 pr-2">
-                    <div class="flex items-center space-x-1.5 truncate">
-                      <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
-                      <span class="text-[8px] px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-500">${h.type}</span>
-                      <span class="text-[8px] px-1 rounded font-bold ${taxBadgeClass}">${h.taxRateFormatted || (isBond ? '12,5%' : '26%')}</span>
-                    </div>
-                    <div class="text-[10px] text-gray-400 truncate mt-0.5">
-                      Qta: <strong>${formatNumber(h.quantity)}</strong> • PMC: ${formatMoney(h.pmc, h.currency)} • Att: ${formatMoney(h.currentPrice, h.currency)}
-                    </div>
-                  </div>
-                  <div class="text-right shrink-0">
-                    <div class="font-bold text-gray-900 dark:text-white">${formatMoney(h.currentValue, h.currency)}</div>
-                    <div class="text-[10px] font-semibold ${hGainClass}">${hGainSign}${formatMoney(h.gain, h.currency)}</div>
-                  </div>
+            holdingsRows = `
+              <div class="space-y-1">
+                <div class="text-[10px] font-mono font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
+                  <span>📈 Mercato Quotato (${mHoldings.length})</span>
+                  <span>${formatMoney(p.marketHoldingsTotalValue, p.currency)}</span>
                 </div>
-              `;
-            });
+                ${mktRows}
+              </div>
+
+              <div class="mt-2.5 pt-2 border-t border-indigo-500/20 bg-indigo-500/[0.03] p-2 rounded-lg space-y-1">
+                <div class="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>🏛️ Depositi, Buoni, TFR & Pensione (${manHoldings.length})</span>
+                  <span>${formatMoney(p.manualHoldingsTotalValue, p.currency)}</span>
+                </div>
+                ${manRows}
+              </div>
+            `;
+          } else if (hasMan) {
+            const manRows = manHoldings.map(renderMobileHoldingRow).join('');
+            holdingsRows = `
+              <div class="bg-indigo-500/[0.03] p-2 rounded-lg space-y-1 border border-indigo-500/20">
+                <div class="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>🏛️ Depositi, Buoni, TFR & Pensione (${manHoldings.length})</span>
+                  <span>${formatMoney(p.totalValue, p.currency)}</span>
+                </div>
+                ${manRows}
+              </div>
+            `;
+          } else {
+            holdingsRows = p.holdings.map(renderMobileHoldingRow).join('');
           }
 
           const m = p.minusvalenze || { totalResidual: 0, items: [] };

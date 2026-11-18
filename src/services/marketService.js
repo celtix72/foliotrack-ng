@@ -5,6 +5,7 @@ const google = require('./googleFinance');
 const { recalculatePortfolio } = require('../routes/portfolios');
 const { broadcastMarketUpdate } = require('./marketEvents');
 const { resolveAssetTaxInfo } = require('../utils/taxEngine');
+const { isManualAssetType } = require('../utils/constants');
 
 /**
  * Normalizes ticker symbols.
@@ -78,8 +79,11 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
     if (!preferredSource) preferredSource = borsa.isIsin(symbol) ? 'BORSA_ITALIANA' : 'YAHOO';
   }
 
-  // Handle DELISTED or MANUAL source: do not scrape external APIs, preserve current price and history
-  if (preferredSource === 'DELISTED' || preferredSource === 'MANUAL') {
+  // Handle DELISTED, MANUAL or manual asset types (Deposito Vincolato, Buono Postale, TFR, Fondo Pensione):
+  // do not scrape external APIs, preserve current price and history
+  const isManualType = isManualAssetType(assetRow?.type, symbol);
+  if (preferredSource === 'DELISTED' || preferredSource === 'MANUAL' || isManualType) {
+    const s = preferredSource === 'DELISTED' ? 'DELISTED' : 'MANUAL';
     return {
       ticker: symbol,
       name: assetRow?.name || symbol,
@@ -87,11 +91,11 @@ async function fetchUnifiedQuote(ticker, exchange, forcedSource = null) {
       exchange: assetRow?.exchange || '',
       currency: assetRow?.currency || 'EUR',
       currentPrice: assetRow?.currentPrice || 0,
-      changePercent: preferredSource === 'DELISTED' ? 0 : (assetRow?.changePercent || 0),
-      changeValue: preferredSource === 'DELISTED' ? 0 : (assetRow?.changeValue || 0),
-      source: preferredSource,
-      isDelisted: preferredSource === 'DELISTED',
-      isManual: preferredSource === 'MANUAL',
+      changePercent: s === 'DELISTED' ? 0 : (assetRow?.changePercent || 0),
+      changeValue: s === 'DELISTED' ? 0 : (assetRow?.changeValue || 0),
+      source: s,
+      isDelisted: s === 'DELISTED',
+      isManual: true,
       quoteDate: assetRow?.quoteDate || getTradingDateStr()
     };
   }
@@ -277,8 +281,12 @@ async function fetchUnifiedHistorical(ticker, period = '5Y', forcedSource = null
       preferredSource = 'BORSA_ITALIANA';
     } else {
       try {
-        const asset = db.prepare('SELECT dataSource FROM assets WHERE ticker = ?').get(symbol);
-        preferredSource = asset?.dataSource || (borsa.isIsin(symbol) ? 'BORSA_ITALIANA' : 'YAHOO');
+        const asset = db.prepare('SELECT dataSource, type FROM assets WHERE ticker = ?').get(symbol);
+        if (asset && isManualAssetType(asset.type, symbol)) {
+          preferredSource = 'MANUAL';
+        } else {
+          preferredSource = asset?.dataSource || (borsa.isIsin(symbol) ? 'BORSA_ITALIANA' : 'YAHOO');
+        }
       } catch {
         preferredSource = borsa.isIsin(symbol) ? 'BORSA_ITALIANA' : 'YAHOO';
       }
@@ -424,8 +432,8 @@ async function ensureHistoricalQuotesIfMissing(ticker) {
   if (!symbol) return false;
 
   try {
-    const asset = db.prepare('SELECT ticker, dataSource FROM assets WHERE ticker = ?').get(symbol);
-    if (!asset || asset.dataSource === 'MANUAL' || asset.dataSource === 'DELISTED') return false;
+    const asset = db.prepare('SELECT ticker, dataSource, type FROM assets WHERE ticker = ?').get(symbol);
+    if (!asset || asset.dataSource === 'MANUAL' || asset.dataSource === 'DELISTED' || isManualAssetType(asset.type, symbol)) return false;
 
     const countRow = db.prepare('SELECT COUNT(*) as c FROM asset_quotes WHERE ticker = ?').get(symbol);
     if (!countRow || countRow.c === 0) {
@@ -471,10 +479,10 @@ async function updateAllAssetPrices(options = {}) {
 
   for (const ticker of tickers) {
     try {
-      const asset = db.prepare('SELECT ticker, dataSource, currentPrice FROM assets WHERE ticker = ?').get(ticker);
-      if (asset?.dataSource === 'DELISTED' || asset?.dataSource === 'MANUAL') {
+      const asset = db.prepare('SELECT ticker, dataSource, type, currentPrice FROM assets WHERE ticker = ?').get(ticker);
+      if (asset?.dataSource === 'DELISTED' || asset?.dataSource === 'MANUAL' || isManualAssetType(asset?.type, ticker)) {
         updatedCount++;
-        results.push({ ticker, status: asset.dataSource, price: asset.currentPrice || 0, source: asset.dataSource });
+        results.push({ ticker, status: asset?.dataSource || 'MANUAL', price: asset?.currentPrice || 0, source: 'MANUAL' });
         continue;
       }
 
@@ -548,10 +556,10 @@ async function syncAllAssetsHistorical(delayMs = 200) {
 
   for (const ticker of tickers) {
     try {
-      const asset = db.prepare('SELECT ticker, dataSource FROM assets WHERE ticker = ?').get(ticker);
-      if (asset?.dataSource === 'DELISTED' || asset?.dataSource === 'MANUAL') {
+      const asset = db.prepare('SELECT ticker, dataSource, type FROM assets WHERE ticker = ?').get(ticker);
+      if (asset?.dataSource === 'DELISTED' || asset?.dataSource === 'MANUAL' || isManualAssetType(asset?.type, ticker)) {
         succeeded++;
-        results.push({ ticker, count: 0, status: asset.dataSource });
+        results.push({ ticker, count: 0, status: asset?.dataSource || 'MANUAL' });
         continue;
       }
 

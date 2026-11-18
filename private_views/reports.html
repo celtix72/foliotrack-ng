@@ -498,6 +498,48 @@
         const container = document.getElementById('portfoliosContainer');
         container.innerHTML = '';
 
+        if (totals.manualAssetsCount > 0) {
+          const manualSummaryCard = document.createElement('div');
+          manualSummaryCard.className = 'signature-card p-5 bg-gradient-to-r from-indigo-500/[0.05] via-blue-500/[0.03] to-indigo-500/[0.02] border border-indigo-500/25 space-y-3';
+          manualSummaryCard.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-indigo-500/15 pb-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xl shadow-xs shrink-0">
+                  🏛️
+                </div>
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <h3 class="text-sm font-bold text-gray-900 dark:text-white">Prospetto Depositi Vincolati, Buoni Postali, TFR & Fondi Pensione</h3>
+                    <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                      Non Quotati Live
+                    </span>
+                  </div>
+                  <p class="text-[11px] font-mono text-gray-500 dark:text-gray-400 mt-0.5">
+                    Strumenti amministrati e previdenziali a valorizzazione manuale separati dai titoli di mercato continuativo.
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-4 font-mono text-xs">
+                <div class="px-3 py-1 rounded-lg bg-white/70 dark:bg-white/5 border border-indigo-500/20">
+                  <span class="text-gray-400 text-[10px] block">Valore Totale</span>
+                  <strong class="text-gray-900 dark:text-white text-sm">${formatMoney(totals.manualAssetsValue)}</strong>
+                </div>
+                <div class="px-3 py-1 rounded-lg bg-white/70 dark:bg-white/5 border border-indigo-500/20">
+                  <span class="text-gray-400 text-[10px] block">Gain / Rend.</span>
+                  <strong class="text-sm font-bold ${totals.manualAssetsGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600'}">
+                    ${totals.manualAssetsGain >= 0 ? '+' : ''}${formatMoney(totals.manualAssetsGain)}
+                  </strong>
+                </div>
+                <div class="px-3 py-1 rounded-lg bg-white/70 dark:bg-white/5 border border-indigo-500/20">
+                  <span class="text-gray-400 text-[10px] block">Posizioni</span>
+                  <strong class="text-indigo-600 dark:text-indigo-400 text-sm">${totals.manualAssetsCount}</strong>
+                </div>
+              </div>
+            </div>
+          `;
+          container.appendChild(manualSummaryCard);
+        }
+
         if (!data.portfolios || data.portfolios.length === 0) {
           container.innerHTML = `
             <div class="signature-card p-8 text-center text-gray-500 font-mono text-xs">
@@ -505,6 +547,71 @@
             </div>
           `;
         } else {
+          function renderHoldingRowHtml(h, idx) {
+            const hGainColor = h.gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+            const hGainSign = h.gain >= 0 ? '+' : '';
+            const rowBg = idx % 2 === 0 ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.01]';
+            const isBondTax = h.taxRate === 0.125 || h.taxCategory === 'BOND';
+            const taxBadgeClass = isBondTax
+              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+              : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+
+            let typeBadgeHtml = '';
+            const normType = String(h.type || 'EQUITY').toUpperCase().replace(/[\s-]+/g, '_');
+            if (normType === 'DEPOSITO_VINCOLATO') {
+              typeBadgeHtml = '<span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 shrink-0">DEPOSITO VINCOLATO</span>';
+            } else if (normType === 'BUONO_POSTALE') {
+              typeBadgeHtml = '<span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">BUONO POSTALE</span>';
+            } else if (normType === 'TFR') {
+              typeBadgeHtml = '<span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shrink-0">TFR</span>';
+            } else if (normType === 'FONDO_PENSIONE') {
+              typeBadgeHtml = '<span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">FONDO PENSIONE</span>';
+            } else {
+              typeBadgeHtml = `<span class="px-1.5 py-0.2 rounded text-[8px] font-mono uppercase bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 font-semibold border border-gray-200/60 dark:border-white/10 shrink-0">${h.type}</span>`;
+            }
+
+            return `
+              <tr class="${rowBg} hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors border-b border-gray-100/60 dark:border-white/[0.03]">
+                <td class="py-1.5 px-3 min-w-0">
+                  <div class="flex items-center space-x-1.5 leading-tight">
+                    <span class="font-mono font-bold text-gray-900 dark:text-white text-xs">${h.ticker}</span>
+                    ${typeBadgeHtml}
+                    <span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold border ${taxBadgeClass} shrink-0" title="Aliquota: ${h.taxRateFormatted || (isBondTax ? '12,5%' : '26%')}">
+                      ${h.taxRateFormatted || (isBondTax ? '12,5%' : '26%')}
+                    </span>
+                  </div>
+                  <div class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[210px] leading-tight mt-0.5" title="${h.name}">
+                    ${h.name}
+                  </div>
+                </td>
+
+                <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
+                  <div class="font-bold text-gray-900 dark:text-white tabular-nums">${formatNumber(h.quantity)}</div>
+                  <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">PMC:</span> ${formatMoney(h.pmc, h.currency)}</div>
+                </td>
+
+                <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
+                  <div class="font-semibold text-gray-900 dark:text-white tabular-nums">${formatMoney(h.currentPrice, h.currency)}</div>
+                  <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">Costo:</span> ${formatMoney(h.bookValue, h.currency)}</div>
+                </td>
+
+                <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
+                  <div class="font-bold text-gray-900 dark:text-white tabular-nums text-xs">${formatMoney(h.currentValue, h.currency)}</div>
+                  <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">Peso:</span> ${formatNumber(h.weight, 1)}%</div>
+                </td>
+
+                <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
+                  <div class="font-bold tabular-nums ${hGainColor}">${hGainSign}${formatMoney(h.gain, h.currency)}</div>
+                  <div class="text-[10px] font-bold tabular-nums mt-0.5 ${hGainColor}">
+                    ${formatPercent(h.gainPercent)}
+                    <span class="text-gray-400 font-normal">| Netto:</span>
+                    <span class="${h.netGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">${h.netGain >= 0 ? '+' : ''}${formatMoney(h.netGain, h.currency)}</span>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }
+
           data.portfolios.forEach(p => {
             const pCard = document.createElement('section');
             pCard.className = 'signature-card portfolio-report-card p-6 space-y-5';
@@ -512,68 +619,224 @@
             const gainColor = p.totalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
             const gainSign = p.totalGain >= 0 ? '+' : '';
 
-            let holdingsHtml = '';
+            const mHoldings = p.marketHoldings || [];
+            const manHoldings = p.manualHoldings || [];
+            const hasMan = p.hasManualHoldings || manHoldings.length > 0;
+            const hasMkt = p.hasMarketHoldings || mHoldings.length > 0;
+
+            let holdingsSectionsHtml = '';
+
             if (!p.holdings || p.holdings.length === 0) {
-              holdingsHtml = `
-                <tr>
-                  <td colspan="5" class="text-center py-6 text-xs text-gray-400 font-mono">
-                    Nessuna posizione attiva in questo portafoglio (solo liquidità).
-                  </td>
-                </tr>
+              holdingsSectionsHtml = `
+                <div class="text-center py-6 text-xs text-gray-400 font-mono">
+                  Nessuna posizione attiva in questo portafoglio (solo liquidità).
+                </div>
+              `;
+            } else if (hasMan && hasMkt) {
+              // Both market assets and manual assets
+              const mktRows = mHoldings.map((h, i) => renderHoldingRowHtml(h, i)).join('');
+              const manRows = manHoldings.map((h, i) => renderHoldingRowHtml(h, i)).join('');
+
+              holdingsSectionsHtml = `
+                <!-- 1. Strumenti di Mercato Quotati -->
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between text-xs font-bold font-mono text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <span class="flex items-center space-x-1.5">
+                      <span>📈</span>
+                      <span>Strumenti Quotati di Mercato (${mHoldings.length})</span>
+                    </span>
+                    <span class="text-gray-500 font-normal">Subtotale: <strong>${formatMoney(p.marketHoldingsTotalValue, p.currency)}</strong></span>
+                  </div>
+                  <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-white/5">
+                    <table class="w-full text-left table-fixed">
+                      <thead class="text-[10px] font-mono text-gray-400 uppercase border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
+                        <tr>
+                          <th class="py-2 px-3 w-[32%]">Asset / Strumento</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Q.tà / PMC</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Quotaz. / Costo</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Valore Att. / Peso</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Gain / Rend.</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
+                        ${mktRows}
+                      </tbody>
+                      <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
+                        <tr>
+                          <td colspan="3" class="py-1.5 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
+                            Subtotale Mercato Quotato
+                          </td>
+                          <td class="py-1.5 px-3 text-right text-gray-900 dark:text-white">
+                            ${formatMoney(p.marketHoldingsTotalValue, p.currency)}
+                            <span class="text-[10px] block text-gray-400 font-normal">${formatNumber(p.marketHoldingsWeight, 1)}%</span>
+                          </td>
+                          <td class="py-1.5 px-3 text-right ${p.marketHoldingsTotalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600'}">
+                            ${p.marketHoldingsTotalGain >= 0 ? '+' : ''}${formatMoney(p.marketHoldingsTotalGain, p.currency)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 2. Sezione Speciale: Depositi Vincolati, Buoni Postali, TFR & Fondi Pensione -->
+                <div class="mt-4 pt-4 border-t-2 border-indigo-500/25 space-y-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-xs font-bold font-mono text-indigo-700 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
+                        <span>🏛️</span>
+                        <span>Sezione Speciale: Depositi Vincolati, Buoni Postali, TFR & Fondi Pensione</span>
+                      </span>
+                      <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                        Aggiornamento Manuale
+                      </span>
+                    </div>
+                    <div class="text-xs font-mono text-gray-500">
+                      Subtotale Sezione: <strong class="text-gray-900 dark:text-white">${formatMoney(p.manualHoldingsTotalValue, p.currency)}</strong>
+                      ${p.manualHoldingsWeight > 0 ? `<span class="text-gray-400 ml-1">(${formatNumber(p.manualHoldingsWeight, 1)}%)</span>` : ''}
+                    </div>
+                  </div>
+
+                  <div class="overflow-x-auto rounded-lg border border-indigo-500/25 bg-indigo-500/[0.02]">
+                    <table class="w-full text-left table-fixed">
+                      <thead class="bg-indigo-500/[0.06] text-[10px] font-mono text-indigo-900 dark:text-indigo-300 uppercase">
+                        <tr>
+                          <th class="py-2 px-3 w-[32%]">Strumento / Tipologia</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Q.tà / Versato (PMC)</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Valore Unitario / Costo</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Valore Att. / Peso</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Gain / Rend.</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
+                        ${manRows}
+                      </tbody>
+                      <tfoot class="bg-indigo-500/[0.05] font-mono font-bold text-xs border-t border-indigo-500/20">
+                        <tr>
+                          <td colspan="3" class="py-1.5 px-3 text-indigo-800 dark:text-indigo-300 text-[10px] uppercase">
+                            Subtotale Depositi / Buoni / TFR / Previdenza
+                          </td>
+                          <td class="py-1.5 px-3 text-right text-gray-900 dark:text-white">
+                            ${formatMoney(p.manualHoldingsTotalValue, p.currency)}
+                            <span class="text-[10px] block text-gray-400 font-normal">${formatNumber(p.manualHoldingsWeight, 1)}%</span>
+                          </td>
+                          <td class="py-1.5 px-3 text-right font-bold ${p.manualHoldingsTotalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600'}">
+                            ${p.manualHoldingsTotalGain >= 0 ? '+' : ''}${formatMoney(p.manualHoldingsTotalGain, p.currency)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Barra Totale Portafoglio -->
+                <div class="p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 flex items-center justify-between font-mono text-xs">
+                  <div>
+                    <span class="text-gray-500 uppercase tracking-wider text-[10px] font-bold">Totale Complessivo ${p.name}</span>
+                  </div>
+                  <div class="flex items-center space-x-6 text-right">
+                    <div>
+                      <span class="text-gray-400 text-[9px] block">Valore</span>
+                      <strong class="text-gray-900 dark:text-white">${formatMoney(p.totalValue, p.currency)}</strong>
+                    </div>
+                    <div>
+                      <span class="text-gray-400 text-[9px] block">Gain Totale</span>
+                      <strong class="${gainColor}">${gainSign}${formatMoney(p.totalGain, p.currency)} (${formatPercent(p.gainPercent)})</strong>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else if (hasMan) {
+              // Only manual assets in this portfolio
+              const manRows = manHoldings.map((h, i) => renderHoldingRowHtml(h, i)).join('');
+
+              holdingsSectionsHtml = `
+                <div class="space-y-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-xs font-bold font-mono text-indigo-700 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
+                        <span>🏛️</span>
+                        <span>Sezione Speciale: Depositi Vincolati, Buoni Postali, TFR & Fondi Pensione</span>
+                      </span>
+                      <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                        Aggiornamento Manuale
+                      </span>
+                    </div>
+                    <div class="text-xs font-mono text-gray-500">
+                      Valore: <strong class="text-gray-900 dark:text-white">${formatMoney(p.totalValue, p.currency)}</strong>
+                    </div>
+                  </div>
+
+                  <div class="overflow-x-auto rounded-lg border border-indigo-500/25 bg-indigo-500/[0.02]">
+                    <table class="w-full text-left table-fixed">
+                      <thead class="bg-indigo-500/[0.06] text-[10px] font-mono text-indigo-900 dark:text-indigo-300 uppercase">
+                        <tr>
+                          <th class="py-2 px-3 w-[32%]">Strumento / Tipologia</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Q.tà / Versato (PMC)</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Valore Unitario / Costo</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Valore Att. / Peso</th>
+                          <th class="py-2 px-3 text-right w-[17%]">Gain / Rend.</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
+                        ${manRows}
+                      </tbody>
+                      <tfoot class="bg-indigo-500/[0.05] font-mono font-bold text-xs border-t border-indigo-500/20">
+                        <tr>
+                          <td colspan="3" class="py-2 px-3 text-indigo-800 dark:text-indigo-300 text-[10px] uppercase">
+                            Totale Portafoglio ${p.name}
+                          </td>
+                          <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-bold">
+                            ${formatMoney(p.totalValue, p.currency)}
+                            <span class="text-[10px] block text-gray-400 font-normal">100%</span>
+                          </td>
+                          <td class="py-2 px-3 text-right ${gainColor} font-bold">
+                            ${gainSign}${formatMoney(p.totalGain, p.currency)}
+                            <span class="text-[10px] block font-bold">${formatPercent(p.gainPercent)}</span>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
               `;
             } else {
-              p.holdings.forEach((h, idx) => {
-                const hGainColor = h.gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
-                const hGainSign = h.gain >= 0 ? '+' : '';
-                const rowBg = idx % 2 === 0 ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.01]';
-                const isBondTax = h.taxRate === 0.125 || h.taxCategory === 'BOND';
-                const taxBadgeClass = isBondTax
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+              // Standard market positions only
+              const standardRows = p.holdings.map((h, i) => renderHoldingRowHtml(h, i)).join('');
 
-                holdingsHtml += `
-                  <tr class="${rowBg} hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors border-b border-gray-100/60 dark:border-white/[0.03]">
-                    <td class="py-1.5 px-3 min-w-0">
-                      <div class="flex items-center space-x-1.5 leading-tight">
-                        <span class="font-mono font-bold text-gray-900 dark:text-white text-xs">${h.ticker}</span>
-                        <span class="px-1.5 py-0.2 rounded text-[8px] font-mono uppercase bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 font-semibold border border-gray-200/60 dark:border-white/10 shrink-0">
-                          ${h.type}
-                        </span>
-                        <span class="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold border ${taxBadgeClass} shrink-0" title="Aliquota capital gain: ${h.taxRateFormatted || (isBondTax ? '12,5%' : '26%')}">
-                          ${h.taxRateFormatted || (isBondTax ? '12,5%' : '26%')}
-                        </span>
-                      </div>
-                      <div class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[210px] leading-tight mt-0.5" title="${h.name}">
-                        ${h.name}
-                      </div>
-                    </td>
-
-                    <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
-                      <div class="font-bold text-gray-900 dark:text-white tabular-nums">${formatNumber(h.quantity)}</div>
-                      <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">PMC:</span> ${formatMoney(h.pmc, h.currency)}</div>
-                    </td>
-
-                    <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
-                      <div class="font-semibold text-gray-900 dark:text-white tabular-nums">${formatMoney(h.currentPrice, h.currency)}</div>
-                      <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">Costo:</span> ${formatMoney(h.bookValue, h.currency)}</div>
-                    </td>
-
-                    <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
-                      <div class="font-bold text-gray-900 dark:text-white tabular-nums text-xs">${formatMoney(h.currentValue, h.currency)}</div>
-                      <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">Peso:</span> ${formatNumber(h.weight, 1)}%</div>
-                    </td>
-
-                    <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
-                      <div class="font-bold tabular-nums ${hGainColor}">${hGainSign}${formatMoney(h.gain, h.currency)}</div>
-                      <div class="text-[10px] font-bold tabular-nums mt-0.5 ${hGainColor}">
-                        ${formatPercent(h.gainPercent)}
-                        <span class="text-gray-400 font-normal">| Netto:</span>
-                        <span class="${h.netGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">${h.netGain >= 0 ? '+' : ''}${formatMoney(h.netGain, h.currency)}</span>
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              });
+              holdingsSectionsHtml = `
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left table-fixed">
+                    <thead class="text-[10px] font-mono text-gray-400 uppercase border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
+                      <tr>
+                        <th class="py-2 px-3 w-[32%]">Asset / Strumento</th>
+                        <th class="py-2 px-3 text-right w-[17%]">Q.tà / PMC</th>
+                        <th class="py-2 px-3 text-right w-[17%]">Quotaz. / Costo</th>
+                        <th class="py-2 px-3 text-right w-[17%]">Valore Att. / Peso</th>
+                        <th class="py-2 px-3 text-right w-[17%]">Gain / Rend.</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
+                      ${standardRows}
+                    </tbody>
+                    <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
+                      <tr>
+                        <td colspan="3" class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
+                          Totale Portafoglio ${p.name}
+                        </td>
+                        <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-bold">
+                          ${formatMoney(p.totalValue, p.currency)}
+                          <span class="text-[10px] block text-gray-400 font-normal">100%</span>
+                        </td>
+                        <td class="py-2 px-3 text-right ${gainColor} font-bold">
+                          ${gainSign}${formatMoney(p.totalGain, p.currency)}
+                          <span class="text-[10px] block font-bold">${formatPercent(p.gainPercent)}</span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              `;
             }
 
             const m = p.minusvalenze || { totalResidual: 0, items: [] };
@@ -708,37 +971,9 @@
                 </div>
               </div>
 
-              <!-- Holdings Table (Compattato a 5 colonne su 2 righe per asset) -->
-              <div class="overflow-x-auto">
-                <table class="w-full text-left table-fixed">
-                  <thead class="text-[10px] font-mono text-gray-400 uppercase border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <tr>
-                      <th class="py-2 px-3 w-[32%]">Asset / Strumento</th>
-                      <th class="py-2 px-3 text-right w-[17%]">Q.tà / PMC</th>
-                      <th class="py-2 px-3 text-right w-[17%]">Quotaz. / Costo</th>
-                      <th class="py-2 px-3 text-right w-[17%]">Valore Att. / Peso</th>
-                      <th class="py-2 px-3 text-right w-[17%]">Gain / Rend.</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100/60 dark:divide-white/[0.03]">
-                    ${holdingsHtml}
-                  </tbody>
-                  <tfoot class="bg-gray-50/70 dark:bg-white/[0.02] font-mono font-bold text-xs border-t border-gray-200 dark:border-white/10">
-                    <tr>
-                      <td colspan="3" class="py-2 px-3 text-gray-500 uppercase tracking-wider text-[10px]">
-                        Totale Portafoglio ${p.name}
-                      </td>
-                      <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-bold">
-                        ${formatMoney(p.totalValue, p.currency)}
-                        <span class="text-[10px] block text-gray-400 font-normal">100%</span>
-                      </td>
-                      <td class="py-2 px-3 text-right ${gainColor} font-bold">
-                        ${gainSign}${formatMoney(p.totalGain, p.currency)}
-                        <span class="text-[10px] block font-bold">${formatPercent(p.gainPercent)}</span>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+              <!-- Holdings Sections (Mercato e Sezione Speciale Depositi / Buoni / TFR / Fondi Pensione) -->
+              <div class="space-y-4">
+                ${holdingsSectionsHtml}
               </div>
 
               ${minusvalenzeSectionHtml}
