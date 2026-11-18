@@ -262,7 +262,7 @@ describe('Manual Assets (Depositi Vincolati, Buoni Postali, TFR, Fondi Pensione)
     });
   });
 
-  test('6. GET /api/reports/portfolio-data partitions holdings into marketHoldings and manualHoldings', async () => {
+  test('6. GET /api/reports/portfolio-data partitions holdings into marketHoldings and manualHoldings with dedicated categories and gross/tax/net detail', async () => {
     const res = await fetch(`${baseUrl}/api/reports/portfolio-data?portfolioId=${testPortfolioId}`, {
       headers: { Authorization: `Bearer ${authToken}` }
     });
@@ -294,11 +294,55 @@ describe('Manual Assets (Depositi Vincolati, Buoni Postali, TFR, Fondi Pensione)
     assert.strictEqual(bfp.taxCategory, 'BOND'); // 12.5% taxation
     assert.strictEqual(bfp.taxRate, 0.125);
     assert.strictEqual(bfp.gain, 200.00);
+    assert.strictEqual(bfp.estimatedTax, 25.00); // 200 * 0.125
+    assert.strictEqual(bfp.netGain, 175.00);
+    assert.strictEqual(bfp.netValue, 5175.00); // 5200 - 25
 
     const tfr = port.manualHoldings.find(h => h.ticker === 'TFR-AZIENDALE');
     assert.strictEqual(tfr.isManualType, true);
     assert.strictEqual(tfr.manualCategory, 'TFR');
     assert.strictEqual(tfr.gain, 1500.00);
+    assert.strictEqual(tfr.taxRate, 0.17);
+    assert.strictEqual(tfr.estimatedTax, 255.00); // 1500 * 0.17
+    assert.strictEqual(tfr.netGain, 1245.00);
+    assert.strictEqual(tfr.netValue, 26245.00); // 26500 - 255
+
+    // Verify manualCategories on portfolio object
+    assert.ok(port.manualCategories, 'manualCategories object must exist');
+    assert.strictEqual(port.hasContiDeposito, true);
+    assert.strictEqual(port.hasBuoniPostali, true);
+    assert.strictEqual(port.hasTfr, true);
+    assert.strictEqual(port.hasFondiPensione, false);
+
+    // Conti Deposito details
+    assert.strictEqual(port.manualCategories.contiDeposito.count, 1);
+    assert.strictEqual(port.manualCategories.contiDeposito.grossValue, 10000.00);
+    assert.strictEqual(port.manualCategories.contiDeposito.taxRate, 0.26);
+    assert.strictEqual(port.manualCategories.contiDeposito.taxRateFormatted, '26%');
+    assert.strictEqual(port.manualCategories.contiDeposito.estimatedTax, 0.00);
+    assert.strictEqual(port.manualCategories.contiDeposito.netValue, 10000.00);
+
+    // Buoni Postali details
+    assert.strictEqual(port.manualCategories.buoniPostali.count, 1);
+    assert.strictEqual(port.manualCategories.buoniPostali.grossValue, 5200.00);
+    assert.strictEqual(port.manualCategories.buoniPostali.investedCapital, 5000.00);
+    assert.strictEqual(port.manualCategories.buoniPostali.grossGain, 200.00);
+    assert.strictEqual(port.manualCategories.buoniPostali.taxRate, 0.125);
+    assert.strictEqual(port.manualCategories.buoniPostali.taxRateFormatted, '12,5%');
+    assert.strictEqual(port.manualCategories.buoniPostali.estimatedTax, 25.00);
+    assert.strictEqual(port.manualCategories.buoniPostali.netGain, 175.00);
+    assert.strictEqual(port.manualCategories.buoniPostali.netValue, 5175.00);
+
+    // TFR details
+    assert.strictEqual(port.manualCategories.tfr.count, 1);
+    assert.strictEqual(port.manualCategories.tfr.grossValue, 26500.00);
+    assert.strictEqual(port.manualCategories.tfr.investedCapital, 25000.00);
+    assert.strictEqual(port.manualCategories.tfr.grossGain, 1500.00);
+    assert.strictEqual(port.manualCategories.tfr.taxRate, 0.17);
+    assert.strictEqual(port.manualCategories.tfr.taxRateFormatted, '17%');
+    assert.strictEqual(port.manualCategories.tfr.estimatedTax, 255.00);
+    assert.strictEqual(port.manualCategories.tfr.netGain, 1245.00);
+    assert.strictEqual(port.manualCategories.tfr.netValue, 26245.00);
 
     // Verify portfolio-level manual totals
     assert.strictEqual(port.manualHoldingsTotalValue, 10000 + 5200 + 26500); // 41700
@@ -308,23 +352,40 @@ describe('Manual Assets (Depositi Vincolati, Buoni Postali, TFR, Fondi Pensione)
     assert.strictEqual(data.totals.manualAssetsCount, 3);
     assert.strictEqual(data.totals.manualAssetsValue, 41700);
     assert.strictEqual(data.totals.manualAssetsGain, 1700);
+    assert.strictEqual(data.totals.manualAssetsEstimatedTax, 280); // 25 + 255
+    assert.strictEqual(data.totals.manualAssetsNetGain, 1420); // 175 + 1245
+    assert.strictEqual(data.totals.manualAssetsNetValue, 41420); // 41700 - 280
+    assert.ok(data.totals.manualCategories);
+    assert.strictEqual(data.totals.manualCategories.contiDeposito.count, 1);
+    assert.strictEqual(data.totals.manualCategories.buoniPostali.count, 1);
+    assert.strictEqual(data.totals.manualCategories.tfr.count, 1);
+    assert.strictEqual(data.totals.manualCategories.fondiPensione.count, 0);
+
     assert.strictEqual(data.totals.marketAssetsCount, 1);
     assert.strictEqual(data.totals.marketAssetsValue, 1000); // 10 * 100
   });
 
-  test('7. Desktop Reports view (/reports) includes dedicated PDF sections and modal select options', async () => {
+  test('7. Desktop Reports view (/reports) includes dedicated PDF sections for each manual category with LORDO, Tassazione and NETTO', async () => {
     const res = await fetch(`${baseUrl}/reports`, {
       headers: { Cookie: `token=${authToken}` }
     });
     assert.strictEqual(res.status, 200);
     const html = await res.text();
-    assert.ok(html.includes('Sezione Speciale: Depositi Vincolati, Buoni Postali, TFR & Fondi Pensione'));
     assert.ok(html.includes('Prospetto Depositi Vincolati, Buoni Postali, TFR & Fondi Pensione'));
     assert.ok(html.includes('Non Quotati Live'));
     assert.ok(html.includes('Aggiornamento Manuale'));
+    assert.ok(html.includes('Conti Deposito Vincolati'));
+    assert.ok(html.includes('Buoni Fruttiferi Postali'));
+    assert.ok(html.includes('Trattamento Fine Rapporto (TFR)'));
+    assert.ok(html.includes('Fondi Pensione & Previdenza'));
+    assert.ok(html.includes('Capitale Versato'));
+    assert.ok(html.includes('Valore LORDO'));
+    assert.ok(html.includes('Rendimento LORDO'));
+    assert.ok(html.includes('TASSAZIONE Prevista'));
+    assert.ok(html.includes('NETTO Previsto'));
   });
 
-  test('8. Mobile Reports view (/reports?view=mobile) includes dedicated mobile section', async () => {
+  test('8. Mobile Reports view (/reports?view=mobile) includes dedicated mobile section with LORDO, Tassazione and NETTO', async () => {
     const res = await fetch(`${baseUrl}/reports?view=mobile`, {
       headers: { Cookie: `token=${authToken}` }
     });
@@ -333,6 +394,9 @@ describe('Manual Assets (Depositi Vincolati, Buoni Postali, TFR, Fondi Pensione)
     assert.ok(html.includes('Depositi, Buoni, TFR & Pensione'));
     assert.ok(html.includes('DEP. VINCOLATO'));
     assert.ok(html.includes('BUONO POSTALE'));
+    assert.ok(html.includes('TFR'));
+    assert.ok(html.includes('Valore NETTO:'));
+    assert.ok(html.includes('Tassazione:'));
   });
 
   test('9. Settings desktop and mobile views include select options for manual asset types', async () => {
@@ -416,5 +480,54 @@ describe('Manual Assets (Depositi Vincolati, Buoni Postali, TFR, Fondi Pensione)
     assert.ok(catDep, 'DEPOSITI VINCOLATI category must be present');
     assert.strictEqual(catDep.holdings.length, 1);
     assert.strictEqual(catDep.holdings[0].ticker, 'CD_IFIS');
+  });
+
+  test('12. Fondo Pensione position is partitioned into fondiPensione with 20% taxRate and gross/tax/net detail', async () => {
+    // Buy Fondo Pensione units (100 units at 150 = 15000, currentPrice = 160 -> value = 16000, gain = +1000)
+    await fetch(`${baseUrl}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: testPortfolioId,
+        type: 'BUY',
+        assetTicker: 'FONDO-COMETA-CRESCITA',
+        date: '2026-03-01',
+        quantity: 100,
+        price: 150.00
+      })
+    });
+
+    // Update current price of Fondo Pensione to 160
+    await fetch(`${baseUrl}/api/assets/FONDO-COMETA-CRESCITA`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({ currentPrice: 160.00 })
+    });
+
+    const res = await fetch(`${baseUrl}/api/reports/portfolio-data?portfolioId=${testPortfolioId}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const data = await res.json();
+    assert.strictEqual(res.status, 200);
+
+    const port = data.portfolios[0];
+    assert.strictEqual(port.hasFondiPensione, true);
+    assert.ok(port.manualCategories.fondiPensione);
+    const fp = port.manualCategories.fondiPensione;
+    assert.strictEqual(fp.count, 1);
+    assert.strictEqual(fp.investedCapital, 15000.00);
+    assert.strictEqual(fp.grossValue, 16000.00);
+    assert.strictEqual(fp.grossGain, 1000.00);
+    assert.strictEqual(fp.taxRate, 0.20);
+    assert.strictEqual(fp.taxRateFormatted, '20%');
+    assert.strictEqual(fp.estimatedTax, 200.00); // 1000 * 0.20
+    assert.strictEqual(fp.netGain, 800.00); // 1000 - 200
+    assert.strictEqual(fp.netValue, 15800.00); // 16000 - 200
+
+    // All 4 categories are now active in the report
+    assert.strictEqual(port.hasContiDeposito, true);
+    assert.strictEqual(port.hasBuoniPostali, true);
+    assert.strictEqual(port.hasTfr, true);
+    assert.strictEqual(port.hasFondiPensione, true);
   });
 });

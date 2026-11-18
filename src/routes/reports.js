@@ -18,6 +18,69 @@ const router = express.Router();
 router.use(requireAuth);
 
 /**
+ * Summarizes an array of manual asset holdings into a categorized financial structure
+ * with gross value, estimated taxation, and net expected value.
+ */
+function summarizeManualCategory(items = [], options = {}) {
+  const {
+    key = '',
+    type = '',
+    title = '',
+    shortTitle = '',
+    icon = '🏛️',
+    taxRate = 0.26,
+    taxRateFormatted = '26%',
+    taxDescription = '',
+    portfolioTotalVal = 0.0,
+    currency = 'EUR'
+  } = options;
+
+  const count = items.length;
+  const hasItems = count > 0;
+  const grossValue = Math.round(items.reduce((sum, h) => sum + (Number(h.currentValue) || 0.0), 0.0) * 100) / 100;
+  const investedCapital = Math.round(items.reduce((sum, h) => sum + (Number(h.bookValue) || 0.0), 0.0) * 100) / 100;
+  const grossGain = Math.round(items.reduce((sum, h) => sum + (Number(h.gain) || 0.0), 0.0) * 100) / 100;
+  const estimatedTax = Math.round(items.reduce((sum, h) => sum + (Number(h.estimatedTax) || 0.0), 0.0) * 100) / 100;
+  const netGain = Math.round(items.reduce((sum, h) => sum + (Number(h.netGain) || 0.0), 0.0) * 100) / 100;
+  const netValue = Math.round(items.reduce((sum, h) => {
+    if (h.netValue !== undefined && !isNaN(Number(h.netValue))) {
+      return sum + Number(h.netValue);
+    }
+    const val = Number(h.currentValue) || 0.0;
+    const tax = Number(h.estimatedTax) || 0.0;
+    return sum + (val - tax);
+  }, 0.0) * 100) / 100;
+
+  const gainPercent = investedCapital > 0 ? (grossGain / investedCapital) * 100.0 : 0.0;
+  const netGainPercent = investedCapital > 0 ? (netGain / investedCapital) * 100.0 : 0.0;
+  const weight = portfolioTotalVal > 0 ? (grossValue / portfolioTotalVal) * 100.0 : 0.0;
+
+  return {
+    key,
+    type,
+    title,
+    shortTitle,
+    icon,
+    count,
+    hasItems,
+    items,
+    grossValue,
+    investedCapital,
+    grossGain,
+    gainPercent,
+    estimatedTax,
+    taxRate,
+    taxRateFormatted,
+    taxDescription,
+    netGain,
+    netGainPercent,
+    netValue,
+    weight,
+    currency
+  };
+}
+
+/**
  * GET /api/reports/portfolio-data
  * Retrieves comprehensive report data for one or all portfolios:
  * - Portfolio list with total value, invested capital, current cash, gain, gain %, and minusvalenze.
@@ -167,8 +230,9 @@ router.get('/portfolio-data', (req, res) => {
         portfolioLatentLosses += Math.abs(pnl);
       }
 
-      const estTax = pnl > 0 ? (pnl * taxInfo.taxRate) : 0.0;
-      const netHoldingGain = pnl - estTax;
+      const estTax = pnl > 0 ? Math.round((pnl * taxInfo.taxRate) * 100) / 100 : 0.0;
+      const netHoldingGain = Math.round((pnl - estTax) * 100) / 100;
+      const netHoldingValue = Math.round(Math.max(0.0, val - estTax) * 100) / 100;
 
       return {
         ticker: h.ticker,
@@ -191,6 +255,7 @@ router.get('/portfolio-data', (req, res) => {
         gainPercent: pnlPct,
         estimatedTax: estTax,
         netGain: netHoldingGain,
+        netValue: netHoldingValue,
         weight: weight
       };
     });
@@ -259,6 +324,74 @@ router.get('/portfolio-data', (req, res) => {
       portfolioEstimatedTax = Number(portfolioTax.totalEstimatedTax) || 0.0;
     }
 
+    // Split manual holdings into 4 dedicated administered categories:
+    // 1. Conti Deposito (DEPOSITO_VINCOLATO - 26%)
+    // 2. Buoni Postali (BUONO_POSTALE - 12.5%)
+    // 3. TFR (TFR - 17%)
+    // 4. Fondi Pensione (FONDO_PENSIONE - 20% or portfolio taxRate)
+    const portContiDeposito = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker) === 'DEPOSITO_VINCOLATO'), {
+      key: 'contiDeposito',
+      type: 'DEPOSITO_VINCOLATO',
+      title: 'Conti Deposito Vincolati',
+      shortTitle: 'Conti Deposito',
+      icon: '🏦',
+      taxRate: 0.26,
+      taxRateFormatted: '26%',
+      taxDescription: "Ritenuta a titolo d'imposta 26% sugli interessi attivi (DPR 600/73 art. 26)",
+      portfolioTotalVal: totalVal,
+      currency: p.currency || 'EUR'
+    });
+
+    const portBuoniPostali = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker) === 'BUONO_POSTALE'), {
+      key: 'buoniPostali',
+      type: 'BUONO_POSTALE',
+      title: 'Buoni Fruttiferi Postali',
+      shortTitle: 'Buoni Postali',
+      icon: '📮',
+      taxRate: 0.125,
+      taxRateFormatted: '12,5%',
+      taxDescription: 'Imposta agevolata 12,5% equiparata ai Titoli di Stato ed emessi da CDP (D.Lgs. 239/1996)',
+      portfolioTotalVal: totalVal,
+      currency: p.currency || 'EUR'
+    });
+
+    const portTfr = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker) === 'TFR'), {
+      key: 'tfr',
+      type: 'TFR',
+      title: 'Trattamento Fine Rapporto (TFR)',
+      shortTitle: 'TFR',
+      icon: '📑',
+      taxRate: 0.17,
+      taxRateFormatted: '17%',
+      taxDescription: 'Imposta sostitutiva 17% sulle rivalutazioni annue maturate (D.Lgs. 47/2000)',
+      portfolioTotalVal: totalVal,
+      currency: p.currency || 'EUR'
+    });
+
+    const pensionRateFraction = p.taxRate !== undefined && p.taxRate !== null && !isNaN(Number(p.taxRate))
+      ? (Number(p.taxRate) > 1.0 ? Number(p.taxRate) / 100.0 : Number(p.taxRate))
+      : 0.20;
+    const pensionRatePercent = pensionRateFraction * 100.0;
+    const portFondiPensione = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker) === 'FONDO_PENSIONE'), {
+      key: 'fondiPensione',
+      type: 'FONDO_PENSIONE',
+      title: 'Fondi Pensione & Previdenza',
+      shortTitle: 'Fondi Pensione',
+      icon: '🛡️',
+      taxRate: pensionRateFraction,
+      taxRateFormatted: `${pensionRatePercent.toLocaleString('it-IT', { maximumFractionDigits: 2 })}%`,
+      taxDescription: 'Imposta sostitutiva sui rendimenti della previdenza complementare (D.Lgs. 252/2005)',
+      portfolioTotalVal: totalVal,
+      currency: p.currency || 'EUR'
+    });
+
+    const portManualCategories = {
+      contiDeposito: portContiDeposito,
+      buoniPostali: portBuoniPostali,
+      tfr: portTfr,
+      fondiPensione: portFondiPensione
+    };
+
     const portfolioReport = {
       id: p.id,
       name: p.name,
@@ -288,6 +421,11 @@ router.get('/portfolio-data', (req, res) => {
       marketHoldingsTotalValue: marketHoldingsTotalVal,
       marketHoldingsTotalGain: marketHoldingsTotalGain,
       marketHoldingsWeight,
+      manualCategories: portManualCategories,
+      hasContiDeposito: portContiDeposito.hasItems,
+      hasBuoniPostali: portBuoniPostali.hasItems,
+      hasTfr: portTfr.hasItems,
+      hasFondiPensione: portFondiPensione.hasItems,
       taxation: portfolioTax,
       estimatedTax: portfolioEstimatedTax,
       netGain: totalGain - portfolioEstimatedTax,
@@ -354,6 +492,70 @@ router.get('/portfolio-data', (req, res) => {
     minute: '2-digit'
   });
 
+  // Consolidated grand manual category summaries across all included portfolios
+  const grandContiDeposito = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker) === 'DEPOSITO_VINCOLATO'), {
+    key: 'contiDeposito',
+    type: 'DEPOSITO_VINCOLATO',
+    title: 'Conti Deposito Vincolati',
+    shortTitle: 'Conti Deposito',
+    icon: '🏦',
+    taxRate: 0.26,
+    taxRateFormatted: '26%',
+    taxDescription: "Ritenuta a titolo d'imposta 26% sugli interessi attivi (DPR 600/73 art. 26)",
+    portfolioTotalVal: grandTotalValue,
+    currency: 'EUR'
+  });
+
+  const grandBuoniPostali = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker) === 'BUONO_POSTALE'), {
+    key: 'buoniPostali',
+    type: 'BUONO_POSTALE',
+    title: 'Buoni Fruttiferi Postali',
+    shortTitle: 'Buoni Postali',
+    icon: '📮',
+    taxRate: 0.125,
+    taxRateFormatted: '12,5%',
+    taxDescription: 'Imposta agevolata 12,5% equiparata ai Titoli di Stato ed emessi da CDP (D.Lgs. 239/1996)',
+    portfolioTotalVal: grandTotalValue,
+    currency: 'EUR'
+  });
+
+  const grandTfr = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker) === 'TFR'), {
+    key: 'tfr',
+    type: 'TFR',
+    title: 'Trattamento Fine Rapporto (TFR)',
+    shortTitle: 'TFR',
+    icon: '📑',
+    taxRate: 0.17,
+    taxRateFormatted: '17%',
+    taxDescription: 'Imposta sostitutiva 17% sulle rivalutazioni annue maturate (D.Lgs. 47/2000)',
+    portfolioTotalVal: grandTotalValue,
+    currency: 'EUR'
+  });
+
+  const grandFondiPensione = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker) === 'FONDO_PENSIONE'), {
+    key: 'fondiPensione',
+    type: 'FONDO_PENSIONE',
+    title: 'Fondi Pensione & Previdenza',
+    shortTitle: 'Fondi Pensione',
+    icon: '🛡️',
+    taxRate: 0.20,
+    taxRateFormatted: '20%',
+    taxDescription: 'Imposta sostitutiva sui rendimenti della previdenza complementare (D.Lgs. 252/2005)',
+    portfolioTotalVal: grandTotalValue,
+    currency: 'EUR'
+  });
+
+  const grandManualCategories = {
+    contiDeposito: grandContiDeposito,
+    buoniPostali: grandBuoniPostali,
+    tfr: grandTfr,
+    fondiPensione: grandFondiPensione
+  };
+
+  const grandManualEstimatedTax = Math.round((grandContiDeposito.estimatedTax + grandBuoniPostali.estimatedTax + grandTfr.estimatedTax + grandFondiPensione.estimatedTax) * 100) / 100;
+  const grandManualNetGain = Math.round((grandContiDeposito.netGain + grandBuoniPostali.netGain + grandTfr.netGain + grandFondiPensione.netGain) * 100) / 100;
+  const grandManualNetValue = Math.round((grandContiDeposito.netValue + grandBuoniPostali.netValue + grandTfr.netValue + grandFondiPensione.netValue) * 100) / 100;
+
   return res.json({
     success: true,
     generatedAt: today.toISOString(),
@@ -377,6 +579,14 @@ router.get('/portfolio-data', (req, res) => {
       manualAssetsValue: grandManualValue,
       manualAssetsGain: grandManualGain,
       manualAssetsCount: grandManualCount,
+      manualAssetsEstimatedTax: grandManualEstimatedTax,
+      manualAssetsNetGain: grandManualNetGain,
+      manualAssetsNetValue: grandManualNetValue,
+      manualCategories: grandManualCategories,
+      hasContiDeposito: grandContiDeposito.hasItems,
+      hasBuoniPostali: grandBuoniPostali.hasItems,
+      hasTfr: grandTfr.hasItems,
+      hasFondiPensione: grandFondiPensione.hasItems,
       marketAssetsValue: grandMarketValue,
       marketAssetsCount: grandMarketCount,
       taxation: {
@@ -391,6 +601,30 @@ router.get('/portfolio-data', (req, res) => {
           taxDue: grandBondTax,
           taxRate: 0.125,
           taxRateFormatted: '12,5%'
+        },
+        contiDeposito: {
+          taxableGain: grandContiDeposito.grossGain,
+          taxDue: grandContiDeposito.estimatedTax,
+          taxRate: 0.26,
+          taxRateFormatted: '26%'
+        },
+        buoniPostali: {
+          taxableGain: grandBuoniPostali.grossGain,
+          taxDue: grandBuoniPostali.estimatedTax,
+          taxRate: 0.125,
+          taxRateFormatted: '12,5%'
+        },
+        tfr: {
+          taxableGain: grandTfr.grossGain,
+          taxDue: grandTfr.estimatedTax,
+          taxRate: 0.17,
+          taxRateFormatted: '17%'
+        },
+        fondiPensione: {
+          taxableGain: grandFondiPensione.grossGain,
+          taxDue: grandFondiPensione.estimatedTax,
+          taxRate: 0.20,
+          taxRateFormatted: '20%'
         },
         totalTaxDue: grandTotalEstimatedTax,
         netGain: grandTotalGain - grandTotalEstimatedTax

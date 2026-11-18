@@ -304,6 +304,56 @@
         const container = document.getElementById('mobilePortfoliosContainer');
         container.innerHTML = '';
 
+        if (totals.manualAssetsCount > 0) {
+          const mSummaryCard = document.createElement('div');
+          mSummaryCard.className = 'signature-card p-3.5 bg-gradient-to-r from-indigo-500/[0.06] to-blue-500/[0.04] border border-indigo-500/25 space-y-2.5';
+
+          const cats = totals.manualCategories || {};
+          const catList = [
+            cats.contiDeposito || { key: 'contiDeposito', type: 'DEPOSITO_VINCOLATO', title: 'Conti Deposito', shortTitle: 'Conti Deposito', icon: '🏦', taxRateFormatted: '26%', count: 0, grossValue: 0, estimatedTax: 0, netValue: 0, grossGain: 0, netGain: 0 },
+            cats.buoniPostali || { key: 'buoniPostali', type: 'BUONO_POSTALE', title: 'Buoni Postali', shortTitle: 'Buoni Postali', icon: '📮', taxRateFormatted: '12,5%', count: 0, grossValue: 0, estimatedTax: 0, netValue: 0, grossGain: 0, netGain: 0 },
+            cats.tfr || { key: 'tfr', type: 'TFR', title: 'TFR', shortTitle: 'TFR', icon: '📑', taxRateFormatted: '17%', count: 0, grossValue: 0, estimatedTax: 0, netValue: 0, grossGain: 0, netGain: 0 },
+            cats.fondiPensione || { key: 'fondiPensione', type: 'FONDO_PENSIONE', title: 'Fondi Pensione', shortTitle: 'Fondi Pensione', icon: '🛡️', taxRateFormatted: '20%', count: 0, grossValue: 0, estimatedTax: 0, netValue: 0, grossGain: 0, netGain: 0 }
+          ];
+
+          const catPills = catList.filter(c => (c.count || 0) > 0).map(cat => `
+            <div class="p-2 rounded-lg bg-white/80 dark:bg-white/[0.03] border border-indigo-500/20 text-xs font-mono">
+              <div class="flex items-center justify-between text-[11px] font-bold">
+                <span class="flex items-center space-x-1">
+                  <span>${cat.icon}</span>
+                  <span>${cat.shortTitle}</span>
+                </span>
+                <span class="px-1 rounded text-[8px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold">Aliq. ${cat.taxRateFormatted}</span>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-gray-500 mt-1">
+                <span>Lordo: <strong>${formatMoney(cat.grossValue || 0)}</strong></span>
+                <span>Tasse: <strong class="text-amber-600">-${formatMoney(cat.estimatedTax || 0)}</strong></span>
+                <span>Netto: <strong class="text-indigo-600 dark:text-indigo-400">${formatMoney(cat.netValue || 0)}</strong></span>
+              </div>
+            </div>
+          `).join('');
+
+          mSummaryCard.innerHTML = `
+            <div class="flex items-center justify-between border-b border-indigo-500/15 pb-2 font-mono">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-base">🏛️</span>
+                <div>
+                  <h4 class="text-xs font-bold text-gray-900 dark:text-white">Depositi, Buoni, TFR & Pensione</h4>
+                  <span class="text-[9px] text-gray-400">Dettaglio Fiscale Separato (${totals.manualAssetsCount} posizioni)</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs font-bold text-gray-900 dark:text-white">${formatMoney(totals.manualAssetsValue)}</div>
+                <div class="text-[9px] text-indigo-600 dark:text-indigo-400 font-bold">Netto: ${formatMoney(totals.manualAssetsNetValue || (totals.manualAssetsValue - (totals.manualAssetsEstimatedTax || 0)))}</div>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              ${catPills}
+            </div>
+          `;
+          container.appendChild(mSummaryCard);
+        }
+
         (data.portfolios || []).forEach(p => {
           const card = document.createElement('div');
           card.className = 'signature-card space-y-2.5';
@@ -314,8 +364,7 @@
 
           const mHoldings = p.marketHoldings || [];
           const manHoldings = p.manualHoldings || [];
-          const hasMan = p.hasManualHoldings || manHoldings.length > 0;
-          const hasMkt = p.hasMarketHoldings || mHoldings.length > 0;
+          const hasMkt = mHoldings.length > 0;
 
           function renderMobileHoldingRow(h) {
             const hGainPos = h.gain >= 0;
@@ -360,43 +409,119 @@
             `;
           }
 
+          function renderMobileManualCategory(cat, currency) {
+            if (!cat || !cat.hasItems || !cat.items || cat.items.length === 0) return '';
+
+            const themeMap = {
+              DEPOSITO_VINCOLATO: {
+                border: 'border-cyan-500/25',
+                bg: 'bg-cyan-500/[0.03]',
+                titleColor: 'text-cyan-600 dark:text-cyan-400',
+                badge: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20'
+              },
+              BUONO_POSTALE: {
+                border: 'border-amber-500/25',
+                bg: 'bg-amber-500/[0.03]',
+                titleColor: 'text-amber-600 dark:text-amber-400',
+                badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              },
+              TFR: {
+                border: 'border-purple-500/25',
+                bg: 'bg-purple-500/[0.03]',
+                titleColor: 'text-purple-600 dark:text-purple-400',
+                badge: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+              },
+              FONDO_PENSIONE: {
+                border: 'border-emerald-500/25',
+                bg: 'bg-emerald-500/[0.03]',
+                titleColor: 'text-emerald-600 dark:text-emerald-400',
+                badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+              }
+            };
+
+            const style = themeMap[cat.type] || themeMap.DEPOSITO_VINCOLATO;
+
+            const rowsHtml = cat.items.map(h => {
+              const hGainPos = h.gain >= 0;
+              const hGainClass = hGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+              const hGainSign = hGainPos ? '+' : '';
+              const netVal = h.netValue !== undefined ? Number(h.netValue) : (Number(h.currentValue || 0) - Number(h.estimatedTax || 0));
+              const netGain = h.netGain !== undefined ? Number(h.netGain) : (Number(h.gain || 0) - Number(h.estimatedTax || 0));
+
+              return `
+                <div class="py-1.5 border-b border-gray-100/60 dark:border-white/[0.03] text-xs font-mono">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-1.5 truncate">
+                      <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
+                      <span class="text-[8px] px-1 rounded font-bold ${style.badge}">Aliq. ${h.taxRateFormatted || cat.taxRateFormatted}</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-bold text-gray-900 dark:text-white">${formatMoney(h.currentValue, h.currency)}</span>
+                      <span class="text-[10px] block font-semibold ${hGainClass}">${hGainSign}${formatMoney(h.gain, h.currency)}</span>
+                    </div>
+                  </div>
+                  <div class="text-[10px] text-gray-400 flex items-center justify-between mt-0.5">
+                    <span>Versato: ${formatMoney(h.bookValue, h.currency)}</span>
+                    <span>Tassazione: <strong class="text-amber-600">-${formatMoney(h.estimatedTax || 0, h.currency)}</strong></span>
+                  </div>
+                  <div class="text-[10px] flex items-center justify-between mt-0.5 pt-0.5 border-t border-gray-100/40 dark:border-white/[0.02]">
+                    <span class="text-gray-500">Valore NETTO:</span>
+                    <strong class="text-indigo-600 dark:text-indigo-400">${formatMoney(netVal, h.currency)} <span class="${netGain >= 0 ? 'text-emerald-600' : 'text-red-600'}">(${netGain >= 0 ? '+' : ''}${formatMoney(netGain, h.currency)})</span></strong>
+                  </div>
+                </div>
+              `;
+            }).join('');
+
+            return `
+              <div class="mt-2.5 p-2 rounded-lg border ${style.border} ${style.bg} space-y-1">
+                <div class="text-[10px] font-mono font-bold ${style.titleColor} uppercase tracking-wider flex items-center justify-between border-b ${style.border} pb-1">
+                  <span class="flex items-center space-x-1">
+                    <span>${cat.icon}</span>
+                    <span>${cat.title} (${cat.count})</span>
+                  </span>
+                  <span>LORDO: ${formatMoney(cat.grossValue, currency)}</span>
+                </div>
+                ${rowsHtml}
+                <div class="pt-1 flex items-center justify-between font-mono text-[10px] text-gray-500">
+                  <span>Tassazione: <strong class="text-amber-600">-${formatMoney(cat.estimatedTax, currency)}</strong> (${cat.taxRateFormatted})</span>
+                  <span>NETTO: <strong class="text-indigo-600 dark:text-indigo-400">${formatMoney(cat.netValue, currency)}</strong></span>
+                </div>
+              </div>
+            `;
+          }
+
           let holdingsRows = '';
           if (!p.holdings || p.holdings.length === 0) {
             holdingsRows = '<div class="text-[10px] text-gray-400 font-mono py-2 text-center">Nessun asset (solo liquidità).</div>';
-          } else if (hasMan && hasMkt) {
-            const mktRows = mHoldings.map(renderMobileHoldingRow).join('');
-            const manRows = manHoldings.map(renderMobileHoldingRow).join('');
-
-            holdingsRows = `
-              <div class="space-y-1">
-                <div class="text-[10px] font-mono font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>📈 Mercato Quotato (${mHoldings.length})</span>
-                  <span>${formatMoney(p.marketHoldingsTotalValue, p.currency)}</span>
-                </div>
-                ${mktRows}
-              </div>
-
-              <div class="mt-2.5 pt-2 border-t border-indigo-500/20 bg-indigo-500/[0.03] p-2 rounded-lg space-y-1">
-                <div class="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>🏛️ Depositi, Buoni, TFR & Pensione (${manHoldings.length})</span>
-                  <span>${formatMoney(p.manualHoldingsTotalValue, p.currency)}</span>
-                </div>
-                ${manRows}
-              </div>
-            `;
-          } else if (hasMan) {
-            const manRows = manHoldings.map(renderMobileHoldingRow).join('');
-            holdingsRows = `
-              <div class="bg-indigo-500/[0.03] p-2 rounded-lg space-y-1 border border-indigo-500/20">
-                <div class="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>🏛️ Depositi, Buoni, TFR & Pensione (${manHoldings.length})</span>
-                  <span>${formatMoney(p.totalValue, p.currency)}</span>
-                </div>
-                ${manRows}
-              </div>
-            `;
           } else {
-            holdingsRows = p.holdings.map(renderMobileHoldingRow).join('');
+            const rowParts = [];
+
+            if (hasMkt) {
+              const mktRows = mHoldings.map(renderMobileHoldingRow).join('');
+              rowParts.push(`
+                <div class="space-y-1">
+                  <div class="text-[10px] font-mono font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
+                    <span>📈 Mercato Quotato (${mHoldings.length})</span>
+                    <span>${formatMoney(p.marketHoldingsTotalValue, p.currency)}</span>
+                  </div>
+                  ${mktRows}
+                </div>
+              `);
+            }
+
+            const cats = p.manualCategories || {};
+            const activeCats = [
+              cats.contiDeposito,
+              cats.buoniPostali,
+              cats.tfr,
+              cats.fondiPensione
+            ].filter(c => c && c.hasItems);
+
+            activeCats.forEach(cat => {
+              rowParts.push(renderMobileManualCategory(cat, p.currency));
+            });
+
+            holdingsRows = rowParts.join('\n');
           }
 
           const m = p.minusvalenze || { totalResidual: 0, items: [] };
