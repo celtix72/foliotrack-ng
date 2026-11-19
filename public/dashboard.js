@@ -328,6 +328,13 @@
     return `${sign}${num.toFixed(2).replace('.', ',')}%`;
   }
 
+  function renderTooltip(text, title = '') {
+    const cleanText = String(text || '').replace(/"/g, '&quot;');
+    const cleanTitle = String(title || '').replace(/"/g, '&quot;');
+    const titleHtml = cleanTitle ? `<strong class="block font-semibold text-emerald-400 dark:text-emerald-300 mb-0.5 text-[11px] leading-tight">${cleanTitle}</strong>` : '';
+    return `<span class="ft-tooltip-wrapper inline-flex items-center ml-1 align-middle"><span class="ft-tooltip-btn inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] font-bold font-mono text-gray-400 hover:text-emerald-500 bg-gray-100 hover:bg-emerald-50 dark:bg-white/5 dark:hover:bg-emerald-950/40 border border-gray-200 dark:border-white/10 transition-colors cursor-help shrink-0" title="${cleanText}" aria-label="Info" tabindex="0">i</span><span class="ft-tooltip-popup">${titleHtml}<span class="block">${cleanText}</span></span></span>`;
+  }
+
   let activeMoversMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_movers_mode') : null) || 'pct';
   let activeCompactSort = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_compact_sort') : null) || 'day_desc';
   let activeCategoryQuotesFilter = (typeof localStorage !== 'undefined' ? localStorage.getItem('foliotrack_catquotes_filter') : null) || 'ALL';
@@ -1701,6 +1708,7 @@
           <div class="flex items-center justify-between gap-1.5 pb-2 border-b border-gray-100 dark:border-white/5 shrink-0">
             <div class="flex items-center space-x-2 min-w-0">
               <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 shrink-0">Performance</span>
+              ${renderTooltip("Grafico interattivo del portafoglio: visualizza patrimonio netto totale (NAV), rendimento percentuale cumulato o volatilità rolling a 20 giorni annualizzata, confrontabile con indici di mercato.", "Grafico Performance")}
               <span class="badge-profit text-[9px] sm:text-[10px] uppercase font-mono shrink-0">${isAgg ? 'Aggr.' : 'Conto'}</span>
               <span class="text-[10px] font-mono text-gray-400 truncate hidden xs:inline" title="${subtitle}">${subtitle}</span>
             </div>
@@ -1709,11 +1717,14 @@
             <div class="flex items-center space-x-1.5 shrink-0">
               <!-- Metric Toggle -->
               <div class="inline-flex rounded-lg bg-gray-100 dark:bg-white/5 p-0.5 text-xs font-mono">
-                <button type="button" data-perf-metric="NAV" class="perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${activeHistoryMetric === 'NAV' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}">
+                <button type="button" data-perf-metric="NAV" class="perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${activeHistoryMetric === 'NAV' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}" title="Mostra valore totale del patrimonio in Euro nel tempo">
                   Valore
                 </button>
-                <button type="button" data-perf-metric="RETURN" class="perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${activeHistoryMetric === 'RETURN' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}">
+                <button type="button" data-perf-metric="RETURN" class="perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${activeHistoryMetric === 'RETURN' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}" title="Mostra rendimento percentuale cumulato nel tempo">
                   Rendimento
+                </button>
+                <button type="button" data-perf-metric="VOLATILITY" class="perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${activeHistoryMetric === 'VOLATILITY' ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}" title="Mostra curva di volatilità rolling a 20 giorni annualizzata confrontabile con benchmark">
+                  Volatilità
                 </button>
               </div>
 
@@ -1730,7 +1741,9 @@
           <!-- Comparison Bar: Benchmark Index & Asset Scope -->
           <div class="flex flex-wrap items-center justify-between gap-1 py-1 px-1.5 my-0.5 rounded-lg bg-gray-50/80 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 text-[10px] sm:text-[11px] font-mono shrink-0">
             <div class="flex items-center space-x-1.5 min-w-0">
-              <span class="text-gray-400 font-semibold uppercase text-[9px] sm:text-[10px] shrink-0">Vs Indice:</span>
+              <span class="text-gray-400 font-semibold uppercase text-[9px] sm:text-[10px] shrink-0 flex items-center">
+                Vs Indice:${renderTooltip("Seleziona un indice di mercato di riferimento (S&P 500, FTSE MIB, NASDAQ, ecc.) per confrontare rendimento, volatilità, Beta e correlazione.", "Benchmark di Mercato")}
+              </span>
               <select id="perf-benchmark-select" class="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono outline-hidden cursor-pointer truncate max-w-[150px] sm:max-w-none">
                 <option value="" ${!activePerfBenchmark ? 'selected' : ''}>Nessun confronto</option>
                 <option value="^GSPC" ${activePerfBenchmark === '^GSPC' ? 'selected' : ''}>S&P 500 (^GSPC)</option>
@@ -1745,13 +1758,18 @@
             </div>
 
             <div id="perf-scope-container" class="flex items-center space-x-1.5 ${!activePerfBenchmark ? 'opacity-40 pointer-events-none' : ''}">
-              <span class="text-gray-400 font-semibold uppercase text-[9px] sm:text-[10px] shrink-0">Asset:</span>
+              <span class="text-gray-400 font-semibold uppercase text-[9px] sm:text-[10px] shrink-0 flex items-center">
+                Asset:${renderTooltip("Ambito del portafoglio da confrontare: 'Solo Azionario' (azioni + ETF azionari) oppure 'Intero Portafoglio' (tutti i titoli escludendo la sola liquidità liquida).", "Ambito di Confronto")}
+              </span>
               <select id="perf-scope-select" class="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono outline-hidden cursor-pointer" ${!activePerfBenchmark ? 'disabled' : ''}>
                 <option value="equity_only" ${activePerfScope === 'equity_only' ? 'selected' : ''}>Solo Azionario (Azioni + ETF)</option>
                 <option value="all_no_liquidity" ${activePerfScope === 'all_no_liquidity' ? 'selected' : ''}>Intero Portafoglio (escl. Liq.)</option>
               </select>
             </div>
           </div>
+
+          <!-- Dynamic Volatility & Risk Comparison Box (Populated when benchmark is selected or in Volatility mode) -->
+          <div id="perf-volatility-box" class="hidden"></div>
 
           <!-- Middle Row: Timeframe Pills & Range Info -->
           <div class="flex items-center justify-between gap-1 py-1.5 shrink-0 overflow-hidden">
@@ -1769,7 +1787,10 @@
               <span id="perf-display-val" class="text-xl sm:text-2xl font-bold font-mono text-gray-900 dark:text-white tabular-nums tracking-tight">--</span>
               <span id="perf-display-badge" class="badge-profit text-[10px] sm:text-xs font-mono font-semibold truncate">--</span>
             </div>
-            <span id="perf-display-dd" class="text-[10px] sm:text-[11px] font-mono text-gray-400 shrink-0">Max DD: --</span>
+            <div class="flex items-center space-x-2 shrink-0">
+              <span id="perf-display-vol" class="text-[10px] sm:text-[11px] font-mono text-gray-400 shrink-0 hidden">Vol: --</span>
+              <span id="perf-display-dd" class="text-[10px] sm:text-[11px] font-mono text-gray-400 shrink-0">Max DD: --</span>
+            </div>
           </div>
 
           <!-- Chart Area: Fills all remaining vertical space cleanly -->
@@ -2858,6 +2879,7 @@
             <div class="flex items-center justify-between gap-1 mb-1">
               <div class="flex items-center space-x-1.5 min-w-0">
                 <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">Gain Categorie</span>
+                ${renderTooltip("Ripartizione dettagliata dei guadagni e perdite cumulati per categoria di investimento, sia per le posizioni aperte che per quelle chiuse.", "Gain Categorie")}
                 <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">${scopeItemsCount} Titoli</span>
               </div>
 
@@ -3346,7 +3368,10 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Movers All-Time</span>
+            <div class="flex items-center space-x-1 min-w-0">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Movers All-Time</span>
+              ${renderTooltip("Classifica dei migliori (Gainers) e peggiori (Losers) titoli in portafoglio in base alla plusvalenza/minusvalenza percentuale complessiva (P&L All-Time).", "Movers All-Time")}
+            </div>
             <span class="text-[10px] font-mono text-gray-400">Storico</span>
           </div>
           <div class="grid grid-cols-2 gap-4 flex-1">
@@ -3544,7 +3569,10 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between gap-1">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">TWRR</span>
+            <div class="flex items-center space-x-1 min-w-0">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">TWRR</span>
+              ${renderTooltip("TWRR (Time-Weighted Rate of Return): misura il rendimento percentuale puro generato dalla gestione degli investimenti, neutralizzando l'effetto distorsivo dei flussi di cassa in entrata e uscita. È lo standard istituzionale CFA/GIPS per valutare la reale efficacia della strategia.", "TWRR (Time-Weighted Return)")}
+            </div>
             <div class="flex items-center space-x-1">
               ${pillsHtml}
             </div>
@@ -3571,7 +3599,10 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">MWRR</span>
+            <div class="flex items-center space-x-1 min-w-0">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">MWRR</span>
+              ${renderTooltip("MWRR / XIRR (Money-Weighted Rate of Return / Tasso Interno di Rendimento): calcola il rendimento annuo ponderato sull'esatto timing e importo dei conferimenti e prelievi di capitale. Riflette l'effettivo rendimento finanziario sperimentato dall'investitore.", "MWRR / XIRR (TIR)")}
+            </div>
             <span class="badge-profit text-[10px] uppercase font-mono">XIRR</span>
           </div>
           <div class="my-1.5">
@@ -3580,7 +3611,7 @@
             </div>
           </div>
           <div class="flex items-center justify-between text-[11px] font-mono text-gray-400">
-            <span>ROI: <strong class="${roiVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${formatPct(roiVal)}</strong></span>
+            <span class="flex items-center">ROI: <strong class="ml-1 ${roiVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${formatPct(roiVal)}</strong>${renderTooltip("ROI (Return on Investment): rendimento complessivo cumulato sul capitale totale netto versato.", "ROI")}</span>
             <span class="text-[10px] uppercase text-gray-400 tracking-wider" title="Money-Weighted Rate of Return (TIR / XIRR)">MWRR</span>
           </div>
         </div>
@@ -3597,7 +3628,10 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">DD</span>
+            <div class="flex items-center space-x-1 min-w-0">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">DD</span>
+              ${renderTooltip("Drawdown: flessione percentuale dal massimo valore storico assoluto (ATH). Il 'Max DD' rappresenta la caduta massima registrata nella storia del portafoglio, fondamentale per valutare il rischio di perdita temporanea.", "Drawdown & Max DD")}
+            </div>
             <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${curDd > 5 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'}">Max -${maxDd.toFixed(2)}%</span>
           </div>
           <div class="my-1.5 flex items-baseline justify-between">
@@ -3608,7 +3642,7 @@
           </div>
           <div>
             <div class="flex items-center justify-between text-[11px] font-mono text-gray-400 mb-1">
-              <span>ATH: ${formatEur(peak)}</span>
+              <span class="flex items-center">ATH: ${formatEur(peak)}${renderTooltip("All-Time High: massimo valore patrimoniale assoluto mai raggiunto dal portafoglio nel tempo.", "ATH (Picco Storico)")}</span>
               <span>Data: ${m.maxDrawdownDate ? m.maxDrawdownDate.slice(0, 10) : '-'}</span>
             </div>
             <div class="w-full bg-gray-200 dark:bg-white/10 h-1.5 rounded-full overflow-hidden" title="Livello attuale rispetto al massimo storico ATH">
@@ -3628,16 +3662,25 @@
       return `
         <div class="h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rischio & Sharpe</span>
+            <div class="flex items-center space-x-1 min-w-0">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rischio & Sharpe</span>
+              ${renderTooltip("Indicatori di rischio ed efficienza del portafoglio: quantificano la volatilità annualizzata e la remunerazione del rischio assunto rispetto al tasso privo di rischio.", "Rischio & Efficienza")}
+            </div>
             <span class="badge-profit text-[10px] uppercase font-mono">Rischio</span>
           </div>
           <div class="my-1.5 grid grid-cols-2 gap-2">
             <div class="bg-gray-50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
-              <div class="text-[10px] uppercase font-mono text-gray-400">Vol. Ann.</div>
+              <div class="text-[10px] uppercase font-mono text-gray-400 flex items-center justify-between">
+                <span>Vol. Ann.</span>
+                ${renderTooltip("Deviazione standard dei rendimenti giornalieri annualizzata su 252 giorni di borsa. Misura l'ampiezza tipica delle oscillazioni di valore del portafoglio.", "Volatilità Annualizzata")}
+              </div>
               <div class="text-sm sm:text-base font-bold font-mono text-gray-900 dark:text-white tabular-nums">${vol.toFixed(2)}%</div>
             </div>
             <div class="bg-gray-50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
-              <div class="text-[10px] uppercase font-mono text-gray-400">Sharpe</div>
+              <div class="text-[10px] uppercase font-mono text-gray-400 flex items-center justify-between">
+                <span>Sharpe</span>
+                ${renderTooltip("Indice di Sharpe: rapporto tra extra-rendimento (rispetto al tasso risk-free del 2,5%) e la volatilità. Più è alto (> 1,0), maggiore è il rendimento ottenuto per ciascuna unità di rischio.", "Indice di Sharpe")}
+              </div>
               <div class="text-sm sm:text-base font-bold font-mono tabular-nums ${sharpe >= 1 ? 'text-emerald-600 dark:text-emerald-400' : (sharpe < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}">${sharpe >= 0 ? '+' : ''}${sharpe.toFixed(2)}</div>
             </div>
           </div>
@@ -3789,6 +3832,7 @@
             <div class="flex items-center justify-between gap-1 mb-1">
               <div class="flex items-center space-x-1.5 min-w-0">
                 <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">Matrice Rendimenti</span>
+                ${renderTooltip("Tabella comparativa dei rendimenti TWRR su orizzonti standardizzati (1M, 3M, 6M, 1A, 3A, 5A, Da Inizio). Per periodi superiori a 1 anno mostra anche il CAGR (tasso annuo composto equivalente).", "Matrice Rendimenti Multi-Periodo")}
                 <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">TWRR</span>
               </div>
 
@@ -3981,6 +4025,7 @@
       const series = data.series || [];
       const hasBenchmark = Boolean(data.benchmark && Array.isArray(data.benchmark.series) && data.benchmark.series.length > 0);
       const isMetricNav = metric === 'NAV' && !hasBenchmark;
+      const isMetricVol = metric === 'VOLATILITY';
 
       // Synchronize benchmark and scope DOM select elements if rendered
       const benchSelect = document.getElementById('perf-benchmark-select');
@@ -4002,10 +4047,58 @@
         }
       }
 
+      // Render or update volatility comparison banner
+      const volBox = document.getElementById('perf-volatility-box');
+      if (volBox) {
+        if (hasBenchmark && data.benchmark && data.benchmark.volatilityComparison) {
+          const vc = data.benchmark.volatilityComparison;
+          const isLess = vc.isLessVolatile;
+          const badgeClass = isLess
+            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/20'
+            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-500/20';
+          const badgeText = isLess
+            ? `🛡️ -${Math.abs(vc.diff)}% Più Stabile`
+            : `⚡ +${vc.diff}% Più Volatile`;
+          volBox.className = 'flex flex-wrap items-center justify-between gap-1.5 py-1 px-2 my-0.5 rounded-lg bg-gray-50/90 dark:bg-white/[0.03] border border-gray-200/60 dark:border-white/10 text-[10px] sm:text-[11px] font-mono shrink-0 transition-all';
+          volBox.innerHTML = `
+            <div class="flex items-center space-x-1.5 min-w-0 flex-wrap">
+              <span class="text-gray-400 font-semibold uppercase text-[9px] sm:text-[10px] shrink-0">Volatilità:</span>
+              <span class="font-bold text-gray-900 dark:text-white shrink-0">Portafoglio ${(vc.portfolioVolatility || 0).toFixed(1)}%</span>
+              <span class="text-gray-400 shrink-0">vs</span>
+              <span class="font-bold text-purple-600 dark:text-purple-400 shrink-0">${data.benchmark.name} ${(vc.benchmarkVolatility || 0).toFixed(1)}%</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${badgeClass} shrink-0">
+                ${badgeText}
+              </span>
+            </div>
+            <div class="flex items-center space-x-2 text-gray-500 dark:text-gray-400 text-[10px] shrink-0">
+              <span title="Beta: sensibilità alle oscillazioni del mercato (< 1 = difensivo, > 1 = reattivo)">Beta: <strong class="text-gray-800 dark:text-gray-200">${vc.beta}</strong></span>
+              <span title="Correlazione di Pearson (-1 a +1)">Corr: <strong class="text-gray-800 dark:text-gray-200">${vc.correlation}</strong></span>
+            </div>
+          `;
+          volBox.classList.remove('hidden');
+        } else if (isMetricVol) {
+          volBox.className = 'flex items-center justify-between gap-1.5 py-1 px-2 my-0.5 rounded-lg bg-gray-50/90 dark:bg-white/[0.03] border border-gray-200/60 dark:border-white/10 text-[10px] sm:text-[11px] font-mono shrink-0 transition-all';
+          volBox.innerHTML = `
+            <div class="flex items-center space-x-1.5">
+              <span class="text-gray-400 font-semibold uppercase text-[9px] sm:text-[10px]">Volatilità Portafoglio (${range}):</span>
+              <span class="font-bold text-gray-900 dark:text-white">${(data.portfolioVolatility || 0).toFixed(2)}% annualizzata</span>
+            </div>
+            <div class="text-[10px] text-gray-400">
+              Curva rolling 20 giorni (252 gg borsa)
+            </div>
+          `;
+          volBox.classList.remove('hidden');
+        } else {
+          volBox.classList.add('hidden');
+          volBox.innerHTML = '';
+        }
+      }
+
       // Update widget header dynamic badges
       const valEl = document.getElementById('perf-display-val');
       const badgeEl = document.getElementById('perf-display-badge');
       const ddEl = document.getElementById('perf-display-dd');
+      const volEl = document.getElementById('perf-display-vol');
       const rangeLblEl = document.getElementById('perf-display-range-lbl');
 
       if (series.length > 0) {
@@ -4022,12 +4115,34 @@
           : (last.periodReturnPercent !== undefined ? last.periodReturnPercent : (first.totalValue > 0 ? (periodGain / first.totalValue) * 100 : 0));
 
         const isPos = isMetricNav ? (periodGain >= 0) : (periodPct >= 0);
+        const portVol = data.portfolioVolatility || 0;
+
+        if (volEl) {
+          volEl.textContent = `Vol: ${portVol.toFixed(1)}%`;
+          volEl.classList.remove('hidden');
+        }
 
         if (valEl) {
-          valEl.textContent = isMetricNav ? formatEur(last.totalValue) : formatPct(periodPct);
+          if (isMetricVol) {
+            valEl.textContent = `${portVol.toFixed(2)}%`;
+          } else if (isMetricNav) {
+            valEl.textContent = formatEur(last.totalValue);
+          } else {
+            valEl.textContent = formatPct(periodPct);
+          }
         }
         if (badgeEl) {
-          if (hasBenchmark && data.benchmark) {
+          if (isMetricVol) {
+            if (hasBenchmark && data.benchmark) {
+              const bVol = data.benchmark.annualizedVolatility || 0;
+              const diff = portVol - bVol;
+              badgeEl.className = diff <= 0 ? 'badge-profit text-xs font-mono font-semibold' : 'badge-loss text-xs font-mono font-semibold';
+              badgeEl.textContent = `vs ${data.benchmark.name}: ${bVol.toFixed(1)}% (${diff <= 0 ? '' : '+'}${diff.toFixed(2)}%)`;
+            } else {
+              badgeEl.className = 'badge-profit text-xs font-mono font-semibold';
+              badgeEl.textContent = `Vol. Annualizzata (${range})`;
+            }
+          } else if (hasBenchmark && data.benchmark) {
             const bPct = data.benchmark.periodReturnPercent || 0;
             const alpha = periodPct - bPct;
             const alphaSign = alpha >= 0 ? '+' : '';
@@ -4055,6 +4170,7 @@
         }
         if (rangeLblEl) rangeLblEl.textContent = range;
         if (ddEl) ddEl.textContent = 'Max DD: 0.00%';
+        if (volEl) volEl.textContent = 'Vol: 0.0%';
       }
 
       if (activeCharts['chart-performance']) {
@@ -4076,15 +4192,20 @@
       });
 
       const values = series.map(s => {
+        if (isMetricVol) {
+          return s.rollingVolatility !== undefined ? s.rollingVolatility : (data.portfolioVolatility || 0);
+        }
         if (isMetricNav) return s.totalValue;
         return s.periodReturnPercent !== undefined ? s.periodReturnPercent : s.returnPercent;
       });
       const periodPct = data.periodReturnPercent !== undefined ? data.periodReturnPercent : 0;
-      const isPositiveOverall = isMetricNav
-        ? (values.length > 0 && values[values.length - 1] >= values[0])
-        : (periodPct >= 0);
-      const primaryColor = isPositiveOverall ? '#10b981' : '#f43f5e';
-      const fillGradientColor = isPositiveOverall ? 'rgba(16, 185, 129, 0.22)' : 'rgba(244, 63, 94, 0.22)';
+      const isPositiveOverall = isMetricVol
+        ? true
+        : (isMetricNav
+          ? (values.length > 0 && values[values.length - 1] >= values[0])
+          : (periodPct >= 0));
+      const primaryColor = isMetricVol ? '#06b6d4' : (isPositiveOverall ? '#10b981' : '#f43f5e');
+      const fillGradientColor = isMetricVol ? 'rgba(6, 182, 212, 0.20)' : (isPositiveOverall ? 'rgba(16, 185, 129, 0.22)' : 'rgba(244, 63, 94, 0.22)');
 
       const ctx = canvas.getContext('2d');
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.clientHeight || 200);
@@ -4092,9 +4213,16 @@
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
 
       const scopeTag = activePerfScope === 'equity_only' ? 'Azionario' : 'escl. Liquidità';
-      const mainDatasetLabel = hasBenchmark
-        ? `Portafoglio (${scopeTag})`
-        : (isMetricNav ? 'Patrimonio (€)' : `Rendimento ${range} (%)`);
+      let mainDatasetLabel = '';
+      if (isMetricVol) {
+        mainDatasetLabel = `Volatilità Portafoglio (${scopeTag})`;
+      } else if (hasBenchmark) {
+        mainDatasetLabel = `Portafoglio (${scopeTag})`;
+      } else if (isMetricNav) {
+        mainDatasetLabel = 'Patrimonio (€)';
+      } else {
+        mainDatasetLabel = `Rendimento ${range} (%)`;
+      }
 
       const datasets = [{
         label: mainDatasetLabel,
@@ -4111,10 +4239,11 @@
         pointBorderWidth: 1.5
       }];
 
+      let bValues = [];
       if (hasBenchmark && data.benchmark) {
-        const bValues = data.benchmark.series.map(b => b.returnPercent);
+        bValues = data.benchmark.series.map(b => isMetricVol ? (b.rollingVolatility !== undefined ? b.rollingVolatility : (data.benchmark.annualizedVolatility || 0)) : b.returnPercent);
         datasets.push({
-          label: `Benchmark: ${data.benchmark.name}`,
+          label: isMetricVol ? `Volatilità ${data.benchmark.name}` : `Benchmark: ${data.benchmark.name}`,
           data: bValues,
           borderColor: '#a855f7',
           borderWidth: 2,
@@ -4172,11 +4301,19 @@
                 label: (ctx) => {
                   const idx = ctx.dataIndex;
                   if (ctx.datasetIndex === 1 && hasBenchmark && data.benchmark) {
+                    if (isMetricVol) {
+                      const bVol = bValues[idx] !== undefined ? bValues[idx] : (data.benchmark.annualizedVolatility || 0);
+                      return ` ${data.benchmark.name}: ${Number(bVol).toFixed(2)}% vol. rolling`;
+                    }
                     const bVal = data.benchmark.series[idx]?.returnPercent || 0;
                     return ` ${data.benchmark.name}: ${formatPct(bVal)}`;
                   }
                   const item = series[idx];
                   if (!item) return '';
+                  if (isMetricVol) {
+                    const pVol = values[idx] !== undefined ? values[idx] : (data.portfolioVolatility || 0);
+                    return ` Portafoglio (${scopeTag}): ${Number(pVol).toFixed(2)}% vol. rolling`;
+                  }
                   const itemPeriodPct = item.periodReturnPercent !== undefined ? item.periodReturnPercent : item.returnPercent;
                   return isMetricNav && !hasBenchmark
                     ? ` Patrimonio: ${formatEur(item.totalValue)}`
@@ -4188,12 +4325,30 @@
                   const item = series[idx];
                   if (!item) return [];
                   const itemPeriodPct = item.periodReturnPercent !== undefined ? item.periodReturnPercent : item.returnPercent;
+                  const rVol = item.rollingVolatility !== undefined ? item.rollingVolatility : (data.portfolioVolatility || 0);
+
+                  if (isMetricVol) {
+                    const out = [];
+                    if (hasBenchmark && bValues && bValues[idx] !== undefined) {
+                      const diff = (values[idx] || 0) - (bValues[idx] || 0);
+                      const diffSign = diff >= 0 ? '+' : '';
+                      out.push(` Diff. Volatilità: ${diffSign}${diff.toFixed(2)}%`);
+                    }
+                    out.push(` Vol. Media Periodo: ${(data.portfolioVolatility || 0).toFixed(2)}%`);
+                    out.push(` Rendimento: ${formatPct(itemPeriodPct)}`);
+                    out.push(` Drawdown: -${(item.drawdownPercent || 0).toFixed(2)}%`);
+                    return out;
+                  }
+
                   if (hasBenchmark && data.benchmark && data.benchmark.series[idx]) {
                     const bVal = data.benchmark.series[idx].returnPercent || 0;
+                    const bVol = data.benchmark.series[idx].rollingVolatility !== undefined ? data.benchmark.series[idx].rollingVolatility : (data.benchmark.annualizedVolatility || 0);
                     const diff = itemPeriodPct - bVal;
                     const diffSign = diff >= 0 ? '+' : '';
                     return [
                       ` Differenziale (Alpha): ${diffSign}${diff.toFixed(2)}%`,
+                      ` Volatilità Portafoglio: ${Number(rVol).toFixed(2)}%`,
+                      ` Volatilità ${data.benchmark.name}: ${Number(bVol).toFixed(2)}%`,
                       ` Drawdown: -${(item.drawdownPercent || 0).toFixed(2)}%`
                     ];
                   }
@@ -4201,7 +4356,7 @@
                     ` Titoli: ${formatEur(item.assetValue)}`,
                     ` Liquidità: ${formatEur(item.cashValue)}`,
                     ` Rendimento periodo: ${formatPct(itemPeriodPct)}`,
-                    ` Rendimento totale: ${formatPct(item.returnPercent)}`,
+                    ` Volatilità rolling: ${Number(rVol).toFixed(2)}%`,
                     ` Drawdown: -${(item.drawdownPercent || 0).toFixed(2)}%`
                   ];
                 }
@@ -4233,7 +4388,7 @@
                 color: textColor,
                 font: { family: 'JetBrains Mono', size: isMobileDashboard() ? 8 : 9 },
                 maxTicksLimit: 5,
-                callback: (val) => isMetricNav ? formatEur(val) : formatPct(val)
+                callback: (val) => isMetricNav ? formatEur(val) : (isMetricVol ? `${Number(val).toFixed(1)}%` : formatPct(val))
               }
             }
           }
@@ -5542,7 +5697,26 @@
 
     // Delegated click listeners
     document.addEventListener('click', (e) => {
-      // 1. Metric toggle on Performance Chart (Valore € vs Rendimento %)
+      // 0. Tooltip interactive toggle on click / tap
+      const tooltipBtn = e.target.closest('.ft-tooltip-btn');
+      if (tooltipBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const wrapper = tooltipBtn.closest('.ft-tooltip-wrapper');
+        if (wrapper) {
+          const wasActive = wrapper.classList.contains('active');
+          document.querySelectorAll('.ft-tooltip-wrapper.active').forEach(w => w.classList.remove('active'));
+          if (!wasActive) {
+            wrapper.classList.add('active');
+          }
+        }
+        return;
+      }
+      if (!e.target.closest('.ft-tooltip-popup')) {
+        document.querySelectorAll('.ft-tooltip-wrapper.active').forEach(w => w.classList.remove('active'));
+      }
+
+      // 1. Metric toggle on Performance Chart (Valore € vs Rendimento % vs Volatilità %)
       const metricBtn = e.target.closest('[data-perf-metric]');
       if (metricBtn) {
         const m = metricBtn.getAttribute('data-perf-metric');
@@ -5563,7 +5737,7 @@
           }
           document.querySelectorAll('[data-perf-metric]').forEach(btn => {
             const isTarget = btn.getAttribute('data-perf-metric') === m;
-            btn.className = `perf-metric-btn px-2.5 py-1 rounded-md transition text-[11px] ${isTarget ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`;
+            btn.className = `perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${isTarget ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`;
           });
           renderPerformanceChart(selectedPortfolioId, activeHistoryRange, activeHistoryMetric);
         }
@@ -5743,12 +5917,12 @@
           }
         }
 
-        if (activePerfBenchmark && activeHistoryMetric !== 'RETURN') {
+        if (activePerfBenchmark && activeHistoryMetric !== 'RETURN' && activeHistoryMetric !== 'VOLATILITY') {
           activeHistoryMetric = 'RETURN';
           localStorage.setItem('foliotrack_perf_metric', 'RETURN');
           document.querySelectorAll('[data-perf-metric]').forEach(btn => {
             const isTarget = btn.getAttribute('data-perf-metric') === 'RETURN';
-            btn.className = `perf-metric-btn px-2.5 py-1 rounded-md transition text-[11px] ${isTarget ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`;
+            btn.className = `perf-metric-btn px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition text-[10px] sm:text-[11px] ${isTarget ? 'bg-white dark:bg-[#1f1f22] text-gray-900 dark:text-white font-bold shadow-xs' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`;
           });
         }
 

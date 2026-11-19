@@ -214,4 +214,48 @@ describe('Performance Chart Benchmark Index Comparison & Asset Scope Filtering',
     assert.ok(js.includes('equity_only'), 'Must support equity_only scope');
     assert.ok(js.includes('all_no_liquidity'), 'Must support all_no_liquidity scope');
   });
+
+  test('GET /api/history/performance returns portfolio annualized volatility and rolling volatility per date', async () => {
+    const res = await fetch(`${baseUrl}/api/history/performance?range=1M&portfolioId=${investmentPortfolioId}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.ok(typeof data.portfolioVolatility === 'number', 'Response must include portfolioVolatility');
+    assert.ok(data.series.length > 0);
+    assert.ok(typeof data.series[0].rollingVolatility === 'number', 'Every point must include rollingVolatility');
+  });
+
+  test('GET /api/history/performance with benchmark returns comparative volatility, Beta and Correlation', async () => {
+    const res = await fetch(`${baseUrl}/api/history/performance?range=1M&benchmark=^GSPC&portfolioId=${investmentPortfolioId}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.ok(data.benchmark, 'Benchmark must be present');
+    assert.ok(typeof data.benchmark.annualizedVolatility === 'number', 'Benchmark must include annualizedVolatility');
+    assert.ok(data.benchmark.volatilityComparison, 'Benchmark must include volatilityComparison');
+    
+    const vc = data.benchmark.volatilityComparison;
+    assert.ok(typeof vc.portfolioVolatility === 'number', 'volatilityComparison must have portfolioVolatility');
+    assert.ok(typeof vc.benchmarkVolatility === 'number', 'volatilityComparison must have benchmarkVolatility');
+    assert.ok(typeof vc.diff === 'number', 'volatilityComparison must have diff');
+    assert.ok(typeof vc.ratio === 'number', 'volatilityComparison must have ratio');
+    assert.ok(typeof vc.beta === 'number', 'volatilityComparison must have beta');
+    assert.ok(typeof vc.correlation === 'number', 'volatilityComparison must have correlation');
+    assert.ok(typeof vc.isLessVolatile === 'boolean', 'volatilityComparison must have isLessVolatile');
+    assert.ok(typeof vc.summary === 'string' && vc.summary.length > 0, 'volatilityComparison must have summary');
+  });
+
+  test('Frontend dashboard.js defines indicator tooltips and volatility chart modes', () => {
+    const js = fs.readFileSync(path.join(__dirname, '../public/dashboard.js'), 'utf8');
+    assert.ok(js.includes('function renderTooltip'), 'Must define renderTooltip helper');
+    assert.ok(js.includes('ft-tooltip-wrapper'), 'Must use ft-tooltip-wrapper class');
+    assert.ok(js.includes('ft-tooltip-popup'), 'Must use ft-tooltip-popup class');
+    assert.ok(js.includes('data-perf-metric="VOLATILITY"'), 'Must have VOLATILITY metric toggle button');
+    assert.ok(js.includes('id="perf-volatility-box"'), 'Must have perf-volatility-box element');
+    assert.ok(js.includes('id="perf-display-vol"'), 'Must have perf-display-vol element');
+  });
 });

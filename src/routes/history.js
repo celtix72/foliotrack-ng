@@ -311,6 +311,43 @@ router.get('/performance', async (req, res) => {
     periodReturnPercent = Number(((cumFactor - 1.0) * 100.0).toFixed(2));
   }
 
+  // Calculate portfolio annualized volatility & rolling volatility series for the period
+  const pDailyReturns = [];
+  for (let i = 1; i < series.length; i++) {
+    const prev = series[i - 1];
+    const curr = series[i];
+    const prevVal = Number(prev.totalValue) || 0.0;
+    const currVal = Number(curr.totalValue) || 0.0;
+    const flow = (Number(curr.netDeposits) || 0.0) - (Number(prev.netDeposits) || 0.0);
+    const rDay = prevVal > 0 ? (currVal - flow - prevVal) / prevVal : 0.0;
+    pDailyReturns.push({ date: curr.date, r: rDay });
+  }
+
+  let portfolioVolatility = 0.0;
+  if (pDailyReturns.length >= 2) {
+    const pMean = pDailyReturns.reduce((sum, d) => sum + d.r, 0) / pDailyReturns.length;
+    const pVar = pDailyReturns.reduce((sum, d) => sum + Math.pow(d.r - pMean, 2), 0) / (pDailyReturns.length - 1);
+    portfolioVolatility = Number((Math.sqrt(Math.max(0, pVar)) * Math.sqrt(252) * 100.0).toFixed(2));
+  }
+
+  // Populate rolling 20-day annualized volatility on each series item
+  const ROLLING_WINDOW = 20;
+  for (let i = 0; i < series.length; i++) {
+    if (i === 0) {
+      series[i].rollingVolatility = portfolioVolatility;
+      continue;
+    }
+    const startIdx = Math.max(0, i - ROLLING_WINDOW);
+    const windowSlice = pDailyReturns.slice(startIdx, i).map(d => d.r);
+    if (windowSlice.length >= 2) {
+      const wMean = windowSlice.reduce((a, b) => a + b, 0) / windowSlice.length;
+      const wVar = windowSlice.reduce((s, r) => s + Math.pow(r - wMean, 2), 0) / (windowSlice.length - 1);
+      series[i].rollingVolatility = Number((Math.sqrt(Math.max(0, wVar)) * Math.sqrt(252) * 100.0).toFixed(2));
+    } else {
+      series[i].rollingVolatility = portfolioVolatility;
+    }
+  }
+
   // Benchmark index comparison processing
   let benchmarkData = null;
   if (benchmark && benchmark.trim()) {
@@ -357,6 +394,77 @@ router.get('/performance', async (req, res) => {
             });
           }
 
+          // Benchmark daily returns and annualized volatility
+          const bDailyReturns = [];
+          for (let i = 1; i < bSeries.length; i++) {
+            const prevClose = Number(bSeries[i - 1].close) || 0.0;
+            const currClose = Number(bSeries[i].close) || 0.0;
+            const rB = prevClose > 0 ? (currClose - prevClose) / prevClose : 0.0;
+            bDailyReturns.push({ date: bSeries[i].date, r: rB });
+          }
+
+          let benchmarkVolatility = 0.0;
+          if (bDailyReturns.length >= 2) {
+            const bMean = bDailyReturns.reduce((s, d) => s + d.r, 0) / bDailyReturns.length;
+            const bVar = bDailyReturns.reduce((s, d) => s + Math.pow(d.r - bMean, 2), 0) / (bDailyReturns.length - 1);
+            benchmarkVolatility = Number((Math.sqrt(Math.max(0, bVar)) * Math.sqrt(252) * 100.0).toFixed(2));
+          }
+
+          // Rolling 20-day volatility for benchmark series
+          for (let i = 0; i < bSeries.length; i++) {
+            if (i === 0) {
+              bSeries[i].rollingVolatility = benchmarkVolatility;
+              continue;
+            }
+            const startIdx = Math.max(0, i - ROLLING_WINDOW);
+            const windowSliceB = bDailyReturns.slice(startIdx, i).map(d => d.r);
+            if (windowSliceB.length >= 2) {
+              const wMeanB = windowSliceB.reduce((a, b) => a + b, 0) / windowSliceB.length;
+              const wVarB = windowSliceB.reduce((s, r) => s + Math.pow(r - wMeanB, 2), 0) / (windowSliceB.length - 1);
+              bSeries[i].rollingVolatility = Number((Math.sqrt(Math.max(0, wVarB)) * Math.sqrt(252) * 100.0).toFixed(2));
+            } else {
+              bSeries[i].rollingVolatility = benchmarkVolatility;
+            }
+          }
+
+          // Calculate Beta and Correlation between Portfolio and Benchmark
+          let beta = 1.0;
+          let correlation = 1.0;
+          const minLen = Math.min(pDailyReturns.length, bDailyReturns.length);
+          if (minLen >= 5 && benchmarkVolatility > 0 && portfolioVolatility > 0) {
+            const pR = pDailyReturns.slice(0, minLen).map(d => d.r);
+            const bR = bDailyReturns.slice(0, minLen).map(d => d.r);
+            const pM = pR.reduce((a, b) => a + b, 0) / minLen;
+            const bM = bR.reduce((a, b) => a + b, 0) / minLen;
+
+            let cov = 0.0;
+            let bVarTotal = 0.0;
+            let pVarTotal = 0.0;
+            for (let k = 0; k < minLen; k++) {
+              const pDiff = pR[k] - pM;
+              const bDiff = bR[k] - bM;
+              cov += pDiff * bDiff;
+              bVarTotal += bDiff * bDiff;
+              pVarTotal += pDiff * pDiff;
+            }
+            cov /= (minLen - 1);
+            bVarTotal /= (minLen - 1);
+            pVarTotal /= (minLen - 1);
+
+            if (bVarTotal > 0) {
+              beta = Number((cov / bVarTotal).toFixed(2));
+            }
+            const pSd = Math.sqrt(pVarTotal);
+            const bSd = Math.sqrt(bVarTotal);
+            if (pSd * bSd > 0) {
+              correlation = Number((cov / (pSd * bSd)).toFixed(2));
+            }
+          }
+
+          const volDiff = Number((portfolioVolatility - benchmarkVolatility).toFixed(2));
+          const volRatio = benchmarkVolatility > 0 ? Number((portfolioVolatility / benchmarkVolatility).toFixed(2)) : 1.0;
+          const isLessVolatile = portfolioVolatility < benchmarkVolatility;
+
           const finalBReturn = bSeries.length > 0 ? bSeries[bSeries.length - 1].returnPercent : 0.0;
           const preset = (PRESET_INDICES || []).find(i => i.symbol.toUpperCase() === bTicker);
           const bName = preset ? preset.name : bTicker;
@@ -366,6 +474,20 @@ router.get('/performance', async (req, res) => {
             name: bName,
             basePrice,
             periodReturnPercent: finalBReturn,
+            annualizedVolatility: benchmarkVolatility,
+            volatilityComparison: {
+              portfolioVolatility,
+              benchmarkVolatility,
+              diff: volDiff,
+              diffFormatted: `${volDiff >= 0 ? '+' : ''}${volDiff}%`,
+              ratio: volRatio,
+              beta,
+              correlation,
+              isLessVolatile,
+              summary: isLessVolatile
+                ? `Portafoglio più difensivo: volatilità inferiore di ${Math.abs(volDiff)}% rispetto a ${bName}`
+                : `Portafoglio più reattivo: volatilità superiore di +${volDiff}% rispetto a ${bName}`
+            },
             series: bSeries
           };
         }
@@ -384,6 +506,7 @@ router.get('/performance', async (req, res) => {
     maxDrawdown,
     currentPeak: peak,
     pointCount: series.length,
+    portfolioVolatility,
     series,
     benchmark: benchmarkData
   });

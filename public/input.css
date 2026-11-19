@@ -267,4 +267,71 @@
   animation: fadeIn 0.2s ease-out forwards;
 }
 
+/* FolioTrack Interactive Quantitative Indicator Tooltips */
+.ft-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ft-tooltip-btn {
+  user-select: none;
+}
+
+.ft-tooltip-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: 260px;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: 8px 12px;
+  border-radius: 12px;
+  background-color: rgba(17, 24, 39, 0.96);
+  color: #f3f4f6;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
+  font-family: var(--ft-widget-font-family, 'Inter', sans-serif);
+  text-align: left;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 60;
+  word-break: normal;
+}
+
+.dark .ft-tooltip-popup {
+  background-color: rgba(15, 15, 18, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+}
+
+.ft-tooltip-popup::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(17, 24, 39, 0.96) transparent transparent transparent;
+}
+
+.dark .ft-tooltip-popup::after {
+  border-color: rgba(15, 15, 18, 0.96) transparent transparent transparent;
+}
+
+.ft-tooltip-wrapper:hover .ft-tooltip-popup,
+.ft-tooltip-wrapper:focus-within .ft-tooltip-popup,
+.ft-tooltip-wrapper.active .ft-tooltip-popup {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+
 
