@@ -347,17 +347,18 @@ describe('Portfolio Full CRUD & Multi-Portfolio Selector Verification', () => {
     const txData = await txRes.json();
     assert.equal(txData.success, true);
 
-    // 6. Verify Reports API consolidated totals exclude P1
+    // 6. Verify Reports API includes all portfolios regardless of include_in_totals switch
     const reportRes = await fetch(`${baseUrl}/api/reports/portfolio-data`, {
       headers: { Authorization: `Bearer ${authToken}` }
     });
     const reportData = await reportRes.json();
     assert.equal(reportData.success, true);
     const repP1 = reportData.portfolios.find(p => p.id === p1Id);
-    // P1 was excluded from the consolidated report
-    assert.equal(repP1, undefined);
+    // P1 is included in the consolidated report
+    assert.ok(repP1, 'Reports API must include all portfolios regardless of include_in_totals switch');
+    assert.equal(repP1.id, p1Id);
 
-    // But querying P1 specifically returns its report
+    // And querying P1 specifically returns its report
     const singleRepRes = await fetch(`${baseUrl}/api/reports/portfolio-data?portfolioId=${p1Id}`, {
       headers: { Authorization: `Bearer ${authToken}` }
     });

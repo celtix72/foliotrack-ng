@@ -530,4 +530,74 @@ describe('Manual Assets (Depositi Vincolati, Buoni Postali, TFR, Fondi Pensione)
     assert.strictEqual(port.hasTfr, true);
     assert.strictEqual(port.hasFondiPensione, true);
   });
+
+  test('13. Reports API and PDF export value all portfolios and manual categories regardless of include_in_totals switch', async () => {
+    // 1. Create a dedicated portfolio for Buoni Postali with include_in_totals = 0
+    const pRes = await fetch(`${baseUrl}/api/portfolios`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        name: 'Portafoglio Buoni Postali Dedicato',
+        type: 'Investimento',
+        currency: 'EUR',
+        initialCash: 20000,
+        include_in_totals: 0
+      })
+    });
+    const pData = await pRes.json();
+    assert.strictEqual(pData.success, true);
+    const dedicatedPId = pData.portfolio.id;
+    assert.strictEqual(pData.portfolio.include_in_totals, 0);
+
+    // 2. Add a Buono Postale in this dedicated portfolio
+    await fetch(`${baseUrl}/api/assets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        ticker: 'BFP-RINNOVO-2026',
+        name: 'Buono Fruttifero Postale Rinnovo',
+        type: 'BUONO_POSTALE',
+        currency: 'EUR',
+        currentPrice: 15000.00
+      })
+    });
+
+    await fetch(`${baseUrl}/api/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        portfolioId: dedicatedPId,
+        type: 'BUY',
+        assetTicker: 'BFP-RINNOVO-2026',
+        date: '2026-01-15',
+        quantity: 1,
+        price: 15000.00
+      })
+    });
+
+    // 3. Query consolidated GET /api/reports/portfolio-data (portfolioId=all)
+    const repRes = await fetch(`${baseUrl}/api/reports/portfolio-data`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const repData = await repRes.json();
+    assert.strictEqual(repRes.status, 200);
+    assert.strictEqual(repData.success, true);
+
+    // Verify dedicated portfolio with include_in_totals = 0 IS included in reports
+    const foundDedicated = repData.portfolios.find(p => p.id === dedicatedPId);
+    assert.ok(foundDedicated, 'Dedicated portfolio with include_in_totals = 0 must be included in reports');
+    assert.strictEqual(foundDedicated.includeInTotals, false);
+    assert.strictEqual(foundDedicated.hasBuoniPostali, true);
+
+    // Verify consolidated totals.manualCategories.buoniPostali includes the asset
+    assert.ok(repData.totals.manualCategories.buoniPostali);
+    assert.ok(repData.totals.manualCategories.buoniPostali.count >= 2, 'Must include buoni postali across all portfolios');
+    assert.ok(repData.totals.manualCategories.buoniPostali.grossValue >= 20000, 'Must include value from all portfolios');
+
+    // Verify grand totals include this portfolio
+    assert.ok(repData.totals.totalValue >= 20000, 'Consolidated report total value must include portfolios with include_in_totals=0');
+  });
 });

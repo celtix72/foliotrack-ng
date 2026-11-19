@@ -115,9 +115,6 @@ router.get('/portfolio-data', (req, res) => {
       }
       portfolios = portfolios.filter(p => p.id === pId);
     }
-  } else {
-    // When aggregating across all portfolios, exclude portfolios with include_in_totals = 0
-    portfolios = portfolios.filter(p => Boolean(p.include_in_totals));
   }
 
   const assetsMap = getAssetsMap();
@@ -440,47 +437,42 @@ router.get('/portfolio-data', (req, res) => {
 
     enrichedPortfolios.push(portfolioReport);
 
-    // Sum consolidated grand totals (only for included portfolios, or if single portfolio requested)
-    const isSinglePortfolio = Boolean(portfolioId && portfolioId !== 'all');
-    if (full.include_in_totals || isSinglePortfolio) {
-      grandTotalValue += totalVal;
-      grandInvestedCapital += invCap;
-      grandTotalCash += cash;
-      grandUnrealizedPnl += unPnl;
-      grandRealizedPnl += relPnl;
-      grandTotalGain += totalGain;
-      grandMinusvalenze += pResidualLosses;
-      grandMinusvalenzeExpiringThisYear += pExpiringThisYear;
-      grandLatentLosses += portfolioLatentLosses;
-      grandManualValue += manualHoldingsTotalVal;
-      grandManualGain += manualHoldingsTotalGain;
-      grandManualCount += manualHoldings.length;
-      grandMarketValue += marketHoldingsTotalVal;
-      grandMarketCount += marketHoldings.length;
+    // Sum consolidated grand totals across all portfolios (reports include and value all portfolios)
+    grandTotalValue += totalVal;
+    grandInvestedCapital += invCap;
+    grandTotalCash += cash;
+    grandUnrealizedPnl += unPnl;
+    grandRealizedPnl += relPnl;
+    grandTotalGain += totalGain;
+    grandMinusvalenze += pResidualLosses;
+    grandMinusvalenzeExpiringThisYear += pExpiringThisYear;
+    grandLatentLosses += portfolioLatentLosses;
+    grandManualValue += manualHoldingsTotalVal;
+    grandManualGain += manualHoldingsTotalGain;
+    grandManualCount += manualHoldings.length;
+    grandMarketValue += marketHoldingsTotalVal;
+    grandMarketCount += marketHoldings.length;
 
-      manualHoldings.forEach(mh => {
-        allManualHoldingsSummary.push({
-          portfolioId: p.id,
-          portfolioName: p.name,
-          portfolioType: p.type || 'Investimento',
-          ...mh
-        });
+    manualHoldings.forEach(mh => {
+      allManualHoldingsSummary.push({
+        portfolioId: p.id,
+        portfolioName: p.name,
+        portfolioType: p.type || 'Investimento',
+        ...mh
       });
-    }
+    });
   }
 
   const grandCostBasis = grandTotalValue - grandUnrealizedPnl - grandTotalCash;
   const grandGainPercent = grandCostBasis > 0 ? (grandUnrealizedPnl / grandCostBasis) * 100.0 : (grandInvestedCapital > 0 ? (grandTotalGain / grandInvestedCapital) * 100.0 : 0.0);
 
-  // Consolidated grand taxation summary (only included portfolios, or if single portfolio requested)
-  const isSinglePortfolio = Boolean(portfolioId && portfolioId !== 'all');
-  const portfoliosForGrandTotals = enrichedPortfolios.filter(p => p.includeInTotals || isSinglePortfolio);
-  const grandTotalEstimatedTax = portfoliosForGrandTotals.reduce((sum, p) => sum + (p.estimatedTax || 0.0), 0.0);
-  const grandPotentialTaxSaving = portfoliosForGrandTotals.reduce((sum, p) => sum + (p.minusvalenze?.potentialTaxSaving || 0.0), 0.0);
-  const grandEquityTaxable = portfoliosForGrandTotals.reduce((sum, p) => sum + (p.taxation?.equity?.taxableGain || 0.0), 0.0);
-  const grandEquityTax = portfoliosForGrandTotals.reduce((sum, p) => sum + (p.taxation?.equity?.taxDue || 0.0), 0.0);
-  const grandBondTaxable = portfoliosForGrandTotals.reduce((sum, p) => sum + (p.taxation?.bond?.taxableGain || 0.0), 0.0);
-  const grandBondTax = portfoliosForGrandTotals.reduce((sum, p) => sum + (p.taxation?.bond?.taxDue || 0.0), 0.0);
+  // Consolidated grand taxation summary across all portfolios
+  const grandTotalEstimatedTax = enrichedPortfolios.reduce((sum, p) => sum + (p.estimatedTax || 0.0), 0.0);
+  const grandPotentialTaxSaving = enrichedPortfolios.reduce((sum, p) => sum + (p.minusvalenze?.potentialTaxSaving || 0.0), 0.0);
+  const grandEquityTaxable = enrichedPortfolios.reduce((sum, p) => sum + (p.taxation?.equity?.taxableGain || 0.0), 0.0);
+  const grandEquityTax = enrichedPortfolios.reduce((sum, p) => sum + (p.taxation?.equity?.taxDue || 0.0), 0.0);
+  const grandBondTaxable = enrichedPortfolios.reduce((sum, p) => sum + (p.taxation?.bond?.taxableGain || 0.0), 0.0);
+  const grandBondTax = enrichedPortfolios.reduce((sum, p) => sum + (p.taxation?.bond?.taxDue || 0.0), 0.0);
 
   const formattedDate = today.toLocaleDateString('it-IT', {
     day: '2-digit',
@@ -669,9 +661,6 @@ router.get('/closed-positions', (req, res) => {
       }
       portfolios = portfolios.filter(p => p.id === pId);
     }
-  } else {
-    // When aggregating across all portfolios, exclude portfolios with include_in_totals = 0
-    portfolios = portfolios.filter(p => Boolean(p.include_in_totals));
   }
 
   const assetsMap = getAssetsMap();
