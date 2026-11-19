@@ -396,22 +396,31 @@
       let cachedPortfoliosData = null;
       let cachedClosedData = null;
 
-      // Currency formatter helper
+      // Currency formatter helper: all monetary values rounded to 0 decimals
       function formatMoney(amount, currency = 'EUR') {
-        const num = Number(amount) || 0.0;
+        const num = Math.round(Number(amount) || 0.0);
         const symbol = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : currency);
-        return num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + symbol;
+        return num.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ' + symbol;
       }
 
+      // Percentage formatter helper: rounded to 1 decimal
       function formatPercent(pct) {
         const num = Number(pct) || 0.0;
         const sign = num > 0 ? '+' : '';
-        return sign + num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+        return sign + num.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+      }
+
+      // Quote & PMC price formatter helper: rounded to 1 decimal
+      function formatPrice(price, currency = 'EUR') {
+        const num = Number(price) || 0.0;
+        const symbol = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : currency);
+        return num.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' ' + symbol;
       }
 
       function formatNumber(num, maxDec = 4) {
         const val = Number(num) || 0.0;
-        return val.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: maxDec });
+        const minDec = maxDec === 1 ? 1 : 0;
+        return val.toLocaleString('it-IT', { minimumFractionDigits: minDec, maximumFractionDigits: maxDec });
       }
 
       function formatDate(dStr) {
@@ -643,11 +652,11 @@
 
                 <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                   <div class="font-bold text-gray-900 dark:text-white tabular-nums">${formatNumber(h.quantity)}</div>
-                  <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">PMC:</span> ${formatMoney(h.pmc, h.currency)}</div>
+                  <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">PMC:</span> ${formatPrice(h.pmc, h.currency)}</div>
                 </td>
 
                 <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
-                  <div class="font-semibold text-gray-900 dark:text-white tabular-nums">${formatMoney(h.currentPrice, h.currency)}</div>
+                  <div class="font-semibold text-gray-900 dark:text-white tabular-nums">${formatPrice(h.currentPrice, h.currency)}</div>
                   <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5"><span class="text-gray-400 font-sans text-[9px]">Costo:</span> ${formatMoney(h.bookValue, h.currency)}</div>
                 </td>
 
@@ -1030,7 +1039,7 @@
                 <div class="mt-4 pt-3 border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs font-mono text-gray-500 gap-2">
                   <div class="flex items-center space-x-2">
                     <span class="text-emerald-500">✓</span>
-                    <span>Zainetto Fiscale: <strong>0,00 €</strong> (Nessuna minusvalenza pregressa registrata)</span>
+                    <span>Zainetto Fiscale: <strong>0 €</strong> (Nessuna minusvalenza pregressa registrata)</span>
                   </div>
                   ${m.latentLosses > 0 ? `<div class="text-amber-600 dark:text-amber-400">Minusvalenze latenti su asset in perdita: <strong>-${formatMoney(m.latentLosses, p.currency)}</strong></div>` : ''}
                 </div>
@@ -1232,7 +1241,7 @@
                 } else if (op.compensatedLoss > 0.001) {
                   taxDetailHtml = `<span class="text-amber-600 dark:text-amber-400 font-semibold">Compensata 100% (${formatMoney(op.compensatedLoss, op.currency)})</span>`;
                 } else {
-                  taxDetailHtml = `<span class="text-gray-400">Imposta 0,00 €</span>`;
+                  taxDetailHtml = `<span class="text-gray-400">Imposta 0 €</span>`;
                 }
               } else {
                 taxDetailHtml = `<span class="text-gray-400 text-[9px]">Minusvalenza generata</span>`;
@@ -1262,7 +1271,7 @@
                   <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                     <div class="font-bold text-gray-900 dark:text-white tabular-nums">${formatNumber(op.quantity)}</div>
                     <div class="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums mt-0.5">
-                      <span class="text-gray-400 font-sans text-[9px]">PMC:</span> ${formatMoney(op.pmc, op.currency)} → <span class="text-gray-400 font-sans text-[9px]">Vend:</span> <strong class="text-gray-900 dark:text-white">${formatMoney(op.sellPrice, op.currency)}</strong>
+                      <span class="text-gray-400 font-sans text-[9px]">PMC:</span> ${formatPrice(op.pmc, op.currency)} → <span class="text-gray-400 font-sans text-[9px]">Vend:</span> <strong class="text-gray-900 dark:text-white">${formatPrice(op.sellPrice, op.currency)}</strong>
                     </div>
                   </td>
 
@@ -1277,7 +1286,7 @@
                   <!-- Col 4: Gain Lordo Realizzato -->
                   <td class="py-1.5 px-3 text-right font-mono text-xs leading-tight">
                     <div class="font-bold tabular-nums ${opGainClass}">${opGainSign}${formatMoney(op.realizedPnl, op.currency)}</div>
-                    <div class="text-[10px] font-bold tabular-nums mt-0.5 ${opGainClass}">${opGainSign}${formatPercent(op.realizedPnlPercent)}</div>
+                    <div class="text-[10px] font-bold tabular-nums mt-0.5 ${opGainClass}">${formatPercent(op.realizedPnlPercent)}</div>
                   </td>
 
                   <!-- Col 5: Gain Netto Effettivo & Imposta -->

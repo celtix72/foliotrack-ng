@@ -532,5 +532,33 @@ describe('Reports & PDF Section under Strumenti (/reports & /api/reports)', () =
     assert.strictEqual(zData.summary.byCategory.bond.residualAmount, 50.00);
     assert.strictEqual(zData.summary.byCategory.bond.taxSavingsPotential, 50.00 * 0.125);
   });
+
+  test('13. Report and PDF precision: monetary values 0 decimals, percentages 1 decimal, quotes & PMC 1 decimal', async () => {
+    // Desktop reports view
+    const resDesk = await fetch(`${baseUrl}/reports`, {
+      headers: { Cookie: `foliotrack_token=${authToken}` }
+    });
+    const htmlDesk = await resDesk.text();
+    assert.ok(htmlDesk.includes('function formatMoney'), 'Desktop must define formatMoney');
+    assert.ok(htmlDesk.includes('function formatPercent'), 'Desktop must define formatPercent');
+    assert.ok(htmlDesk.includes('function formatPrice'), 'Desktop must define formatPrice');
+    assert.ok(htmlDesk.includes('formatPrice(h.pmc'), 'Desktop holdings table must use formatPrice for PMC');
+    assert.ok(htmlDesk.includes('formatPrice(h.currentPrice'), 'Desktop holdings table must use formatPrice for currentPrice');
+    assert.ok(htmlDesk.includes('formatPrice(op.pmc'), 'Desktop closed positions table must use formatPrice for PMC');
+    assert.ok(htmlDesk.includes('formatPrice(op.sellPrice'), 'Desktop closed positions table must use formatPrice for sellPrice');
+
+    // Mobile reports view
+    const resMob = await fetch(`${baseUrl}/reports?view=mobile`, {
+      headers: { Cookie: `foliotrack_token=${authToken}` }
+    });
+    const htmlMob = await resMob.text();
+    assert.ok(htmlMob.includes('function formatMoney'), 'Mobile must define formatMoney');
+    assert.ok(htmlMob.includes('function formatPercent'), 'Mobile must define formatPercent');
+    assert.ok(htmlMob.includes('function formatPrice'), 'Mobile must define formatPrice');
+    assert.ok(htmlMob.includes('formatPrice(h.pmc'), 'Mobile holdings row must use formatPrice for PMC');
+    assert.ok(htmlMob.includes('formatPrice(h.currentPrice'), 'Mobile holdings row must use formatPrice for currentPrice');
+    assert.ok(htmlMob.includes('formatPrice(op.pmc'), 'Mobile closed row must use formatPrice for PMC');
+    assert.ok(htmlMob.includes('formatPrice(op.sellPrice'), 'Mobile closed row must use formatPrice for sellPrice');
+  });
 });
 

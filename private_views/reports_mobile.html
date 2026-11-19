@@ -231,20 +231,31 @@
     (function () {
       let mActiveTab = 'portfolios';
 
+      // Currency formatter helper: all monetary values rounded to 0 decimals
       function formatMoney(amount, currency = 'EUR') {
-        const num = Number(amount) || 0.0;
+        const num = Math.round(Number(amount) || 0.0);
         const symbol = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : currency);
-        return num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + symbol;
+        return num.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ' + symbol;
       }
 
+      // Percentage formatter helper: rounded to 1 decimal
       function formatPercent(pct) {
         const num = Number(pct) || 0.0;
         const sign = num > 0 ? '+' : '';
-        return sign + num.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+        return sign + num.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
       }
 
-      function formatNumber(num) {
-        return (Number(num) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      // Quote & PMC price formatter helper: rounded to 1 decimal
+      function formatPrice(price, currency = 'EUR') {
+        const num = Number(price) || 0.0;
+        const symbol = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : currency);
+        return num.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' ' + symbol;
+      }
+
+      function formatNumber(num, maxDec = 2) {
+        const val = Number(num) || 0.0;
+        const minDec = maxDec === 1 ? 1 : 0;
+        return val.toLocaleString('it-IT', { minimumFractionDigits: minDec, maximumFractionDigits: maxDec });
       }
 
       function formatDate(dStr) {
@@ -398,7 +409,7 @@
                     <span class="text-[8px] px-1 rounded font-bold ${taxBadgeClass}">${h.taxRateFormatted || (isBond ? '12,5%' : '26%')}</span>
                   </div>
                   <div class="text-[10px] text-gray-400 truncate mt-0.5">
-                    Qta: <strong>${formatNumber(h.quantity)}</strong> • PMC: ${formatMoney(h.pmc, h.currency)} • Att: ${formatMoney(h.currentPrice, h.currency)}
+                    Qta: <strong>${formatNumber(h.quantity)}</strong> • PMC: ${formatPrice(h.pmc, h.currency)} • Att: ${formatPrice(h.currentPrice, h.currency)}
                   </div>
                 </div>
                 <div class="text-right shrink-0">
@@ -537,7 +548,7 @@
             minusHtml = `
               <div class="text-[10px] font-mono text-gray-400 flex items-center space-x-1">
                 <span class="text-emerald-500">✓</span>
-                <span>Zainetto Fiscale: 0,00 € (nessuna minusvalenza)</span>
+                <span>Zainetto Fiscale: 0 € (nessuna minusvalenza)</span>
               </div>
             `;
           }
@@ -682,7 +693,7 @@
                       <span class="text-[9px] text-gray-400 truncate">[${op.portfolioName}]</span>
                     </div>
                     <div class="text-[10px] text-gray-400 truncate mt-0.5">
-                      ${formatDate(op.date)} • Qta: <strong>${formatNumber(op.quantity)}</strong> • PMC: ${formatMoney(op.pmc, op.currency)} → Vend: ${formatMoney(op.sellPrice, op.currency)}
+                      ${formatDate(op.date)} • Qta: <strong>${formatNumber(op.quantity)}</strong> • PMC: ${formatPrice(op.pmc, op.currency)} → Vend: ${formatPrice(op.sellPrice, op.currency)}
                     </div>
                   </div>
                   <div class="text-right shrink-0">
