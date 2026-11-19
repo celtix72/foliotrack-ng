@@ -18,6 +18,33 @@ const router = express.Router();
 router.use(requireAuth);
 
 /**
+ * Detects if a portfolio itself represents an administered or pension category
+ * (e.g. Buoni Postali from Poste Italiane, TFR, Fondi Pensione, or Conti Deposito).
+ *
+ * @param {object} portfolio
+ * @returns {'FONDO_PENSIONE'|'TFR'|'BUONO_POSTALE'|'DEPOSITO_VINCOLATO'|null}
+ */
+function detectPortfolioManualCategory(portfolio) {
+  if (!portfolio) return null;
+  const pName = String(portfolio.name || '').trim();
+  const pType = String(portfolio.type || '').trim();
+
+  if (pType === 'Pensione' || /(pensione|previdenza|fondo[\s_-]*pens|cometa|fonte|fondoposte|secondapensione|pip)/i.test(pName)) {
+    return 'FONDO_PENSIONE';
+  }
+  if (/(^|[^a-z0-9])tfr([^a-z0-9]|$)|fine[\s_-]*rapporto|liquidazione/i.test(pName)) {
+    return 'TFR';
+  }
+  if (/(poste|buon[oi]|bfp|fruttifer)/i.test(pName)) {
+    return 'BUONO_POSTALE';
+  }
+  if (/(ifis|rendimax|deposito[\s_-]*vincolato|conto[\s_-]*deposito|illimity.*dep|cherry.*bank|santander)/i.test(pName)) {
+    return 'DEPOSITO_VINCOLATO';
+  }
+  return null;
+}
+
+/**
  * Summarizes an array of manual asset holdings into a categorized financial structure
  * with gross value, estimated taxation, and net expected value.
  */
@@ -220,8 +247,9 @@ router.get('/portfolio-data', (req, res) => {
       const weight = totalVal > 0 ? (val / totalVal) * 100.0 : 0.0;
 
       const taxInfo = resolveAssetTaxInfo(h);
-      const isManual = isManualAssetType(h.type);
-      const manualCatLabel = isManual ? getAssetTypeLabel(h.type) : null;
+      const isManual = isManualAssetType(h.type, h.ticker, h.name);
+      const normType = isManual ? normalizeAssetType(h.type, h.ticker, h.name) : (h.type || 'EQUITY');
+      const manualCatLabel = isManual ? getAssetTypeLabel(normType) : null;
 
       if (pnl < 0) {
         portfolioLatentLosses += Math.abs(pnl);
@@ -234,7 +262,7 @@ router.get('/portfolio-data', (req, res) => {
       return {
         ticker: h.ticker,
         name: h.name || h.ticker,
-        type: h.type || 'EQUITY',
+        type: normType,
         isManualType: isManual,
         manualCategory: manualCatLabel,
         taxCategory: taxInfo.taxCategory,
@@ -261,15 +289,15 @@ router.get('/portfolio-data', (req, res) => {
     formattedHoldings.sort((a, b) => b.currentValue - a.currentValue);
 
     // Split holdings into market instruments and manual/administered instruments
-    const marketHoldings = formattedHoldings.filter(h => !isManualAssetType(h.type));
-    const manualHoldings = formattedHoldings.filter(h => isManualAssetType(h.type));
-    const manualHoldingsTotalVal = manualHoldings.reduce((sum, h) => sum + h.currentValue, 0.0);
-    const manualHoldingsTotalGain = manualHoldings.reduce((sum, h) => sum + h.gain, 0.0);
-    const manualHoldingsWeight = totalVal > 0 ? (manualHoldingsTotalVal / totalVal) * 100.0 : 0.0;
+    const marketHoldings = formattedHoldings.filter(h => !isManualAssetType(h.type, h.ticker, h.name));
+    const manualHoldings = formattedHoldings.filter(h => isManualAssetType(h.type, h.ticker, h.name));
+    let manualHoldingsTotalVal = manualHoldings.reduce((sum, h) => sum + h.currentValue, 0.0);
+    let manualHoldingsTotalGain = manualHoldings.reduce((sum, h) => sum + h.gain, 0.0);
+    let manualHoldingsWeight = totalVal > 0 ? (manualHoldingsTotalVal / totalVal) * 100.0 : 0.0;
 
-    const marketHoldingsTotalVal = marketHoldings.reduce((sum, h) => sum + h.currentValue, 0.0);
-    const marketHoldingsTotalGain = marketHoldings.reduce((sum, h) => sum + h.gain, 0.0);
-    const marketHoldingsWeight = totalVal > 0 ? (marketHoldingsTotalVal / totalVal) * 100.0 : 0.0;
+    let marketHoldingsTotalVal = marketHoldings.reduce((sum, h) => sum + h.currentValue, 0.0);
+    let marketHoldingsTotalGain = marketHoldings.reduce((sum, h) => sum + h.gain, 0.0);
+    let marketHoldingsWeight = totalVal > 0 ? (marketHoldingsTotalVal / totalVal) * 100.0 : 0.0;
 
     // Calculate portfolio taxation:
     // If portfolio is Pensione, tax is applied directly to NAV based on p.taxRate (default 15%)
@@ -321,12 +349,74 @@ router.get('/portfolio-data', (req, res) => {
       portfolioEstimatedTax = Number(portfolioTax.totalEstimatedTax) || 0.0;
     }
 
+    // Detect if portfolio itself represents an administered/pension category (e.g. POSTE_Emy, Poste_SN, Poste_Mauro, TFR, Pensione, IFIS)
+    const portCat = detectPortfolioManualCategory(p);
+    if (portCat) {
+      const existingCatItems = manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === portCat);
+      if (existingCatItems.length === 0 && (marketHoldings.length === 0 || p.type === 'Pensione') && totalVal > 0) {
+        const catLabel = getAssetTypeLabel(portCat);
+        const synthRate = portCat === 'DEPOSITO_VINCOLATO'
+          ? 0.26
+          : (portCat === 'BUONO_POSTALE'
+            ? 0.125
+            : (portCat === 'TFR'
+              ? 0.17
+              : (p.taxRate ? (Number(p.taxRate) > 1 ? Number(p.taxRate) / 100 : Number(p.taxRate)) : 0.20)));
+
+        const synthRateFormatted = portCat === 'DEPOSITO_VINCOLATO'
+          ? '26%'
+          : (portCat === 'BUONO_POSTALE'
+            ? '12,5%'
+            : (portCat === 'TFR'
+              ? '17%'
+              : `${(synthRate * 100).toLocaleString('it-IT', { maximumFractionDigits: 1 })}%`));
+
+        const synthTax = (p.type === 'Pensione' || portCat === 'FONDO_PENSIONE')
+          ? portfolioEstimatedTax
+          : (totalGain > 0 ? Math.round(totalGain * synthRate * 100) / 100 : 0.0);
+        const synthNetGain = Math.round((totalGain - synthTax) * 100) / 100;
+        const synthNetVal = Math.round(Math.max(0.0, totalVal - synthTax) * 100) / 100;
+
+        const synthHolding = {
+          ticker: p.name,
+          name: p.name,
+          type: portCat,
+          isManualType: true,
+          manualCategory: catLabel,
+          taxCategory: portCat === 'BUONO_POSTALE' ? 'BOND' : 'EQUITY',
+          taxCategoryLabel: catLabel,
+          taxRate: synthRate,
+          taxRatePercent: synthRate * 100,
+          taxRateFormatted: synthRateFormatted,
+          currency: p.currency || 'EUR',
+          quantity: 1,
+          pmc: invCap > 0 ? invCap : totalVal,
+          currentPrice: totalVal,
+          currentValue: totalVal,
+          bookValue: invCap > 0 ? invCap : totalVal,
+          gain: totalGain,
+          gainPercent: gainPct,
+          estimatedTax: synthTax,
+          netGain: synthNetGain,
+          netValue: synthNetVal,
+          weight: 100.0
+        };
+
+        manualHoldings.push(synthHolding);
+        formattedHoldings.push(synthHolding);
+
+        manualHoldingsTotalVal = manualHoldings.reduce((sum, h) => sum + h.currentValue, 0.0);
+        manualHoldingsTotalGain = manualHoldings.reduce((sum, h) => sum + h.gain, 0.0);
+        manualHoldingsWeight = totalVal > 0 ? (manualHoldingsTotalVal / totalVal) * 100.0 : 0.0;
+      }
+    }
+
     // Split manual holdings into 4 dedicated administered categories:
     // 1. Conti Deposito (DEPOSITO_VINCOLATO - 26%)
     // 2. Buoni Postali (BUONO_POSTALE - 12.5%)
     // 3. TFR (TFR - 17%)
     // 4. Fondi Pensione (FONDO_PENSIONE - 20% or portfolio taxRate)
-    const portContiDeposito = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker) === 'DEPOSITO_VINCOLATO'), {
+    const portContiDeposito = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === 'DEPOSITO_VINCOLATO'), {
       key: 'contiDeposito',
       type: 'DEPOSITO_VINCOLATO',
       title: 'Conti Deposito Vincolati',
@@ -339,7 +429,7 @@ router.get('/portfolio-data', (req, res) => {
       currency: p.currency || 'EUR'
     });
 
-    const portBuoniPostali = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker) === 'BUONO_POSTALE'), {
+    const portBuoniPostali = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === 'BUONO_POSTALE'), {
       key: 'buoniPostali',
       type: 'BUONO_POSTALE',
       title: 'Buoni Fruttiferi Postali',
@@ -352,7 +442,7 @@ router.get('/portfolio-data', (req, res) => {
       currency: p.currency || 'EUR'
     });
 
-    const portTfr = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker) === 'TFR'), {
+    const portTfr = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === 'TFR'), {
       key: 'tfr',
       type: 'TFR',
       title: 'Trattamento Fine Rapporto (TFR)',
@@ -369,7 +459,7 @@ router.get('/portfolio-data', (req, res) => {
       ? (Number(p.taxRate) > 1.0 ? Number(p.taxRate) / 100.0 : Number(p.taxRate))
       : 0.20;
     const pensionRatePercent = pensionRateFraction * 100.0;
-    const portFondiPensione = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker) === 'FONDO_PENSIONE'), {
+    const portFondiPensione = summarizeManualCategory(manualHoldings.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === 'FONDO_PENSIONE'), {
       key: 'fondiPensione',
       type: 'FONDO_PENSIONE',
       title: 'Fondi Pensione & Previdenza',
@@ -485,7 +575,7 @@ router.get('/portfolio-data', (req, res) => {
   });
 
   // Consolidated grand manual category summaries across all included portfolios
-  const grandContiDeposito = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker) === 'DEPOSITO_VINCOLATO'), {
+  const grandContiDeposito = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === 'DEPOSITO_VINCOLATO'), {
     key: 'contiDeposito',
     type: 'DEPOSITO_VINCOLATO',
     title: 'Conti Deposito Vincolati',
@@ -498,7 +588,7 @@ router.get('/portfolio-data', (req, res) => {
     currency: 'EUR'
   });
 
-  const grandBuoniPostali = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker) === 'BUONO_POSTALE'), {
+  const grandBuoniPostali = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === 'BUONO_POSTALE'), {
     key: 'buoniPostali',
     type: 'BUONO_POSTALE',
     title: 'Buoni Fruttiferi Postali',
@@ -511,7 +601,7 @@ router.get('/portfolio-data', (req, res) => {
     currency: 'EUR'
   });
 
-  const grandTfr = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker) === 'TFR'), {
+  const grandTfr = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === 'TFR'), {
     key: 'tfr',
     type: 'TFR',
     title: 'Trattamento Fine Rapporto (TFR)',
@@ -524,7 +614,7 @@ router.get('/portfolio-data', (req, res) => {
     currency: 'EUR'
   });
 
-  const grandFondiPensione = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker) === 'FONDO_PENSIONE'), {
+  const grandFondiPensione = summarizeManualCategory(allManualHoldingsSummary.filter(h => normalizeAssetType(h.type, h.ticker, h.name) === 'FONDO_PENSIONE'), {
     key: 'fondiPensione',
     type: 'FONDO_PENSIONE',
     title: 'Fondi Pensione & Previdenza',
@@ -892,6 +982,9 @@ router.get('/closed-positions', (req, res) => {
     operations: allOperations
   });
 });
+
+router.detectPortfolioManualCategory = detectPortfolioManualCategory;
+router.summarizeManualCategory = summarizeManualCategory;
 
 module.exports = router;
 

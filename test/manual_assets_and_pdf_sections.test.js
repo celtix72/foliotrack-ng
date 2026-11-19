@@ -600,4 +600,88 @@ describe('Manual Assets (Depositi Vincolati, Buoni Postali, TFR, Fondi Pensione)
     // Verify grand totals include this portfolio
     assert.ok(repData.totals.totalValue >= 20000, 'Consolidated report total value must include portfolios with include_in_totals=0');
   });
+
+  test('14. Dedicated portfolios with only initial deposit (Poste, TFR, Pensione, IFIS) are automatically classified and valued into manual categories', async () => {
+    // 1. Create a Poste portfolio with initial cash 12000 and NO buy transactions
+    const pPoste = await (await fetch(`${baseUrl}/api/portfolios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        name: 'POSTE_Emy',
+        type: 'Investimento',
+        currency: 'EUR',
+        initialCash: 12000,
+        include_in_totals: 1
+      })
+    })).json();
+    assert.strictEqual(pPoste.success, true);
+    const posteId = pPoste.portfolio.id;
+
+    // 2. Create a TFR portfolio with initial cash 35000 and NO buy transactions
+    const pTfr = await (await fetch(`${baseUrl}/api/portfolios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        name: 'TFR Maturato Azienda',
+        type: 'Investimento',
+        currency: 'EUR',
+        initialCash: 35000,
+        include_in_totals: 0
+      })
+    })).json();
+    assert.strictEqual(pTfr.success, true);
+    const tfrId = pTfr.portfolio.id;
+
+    // 3. Create a Pensione portfolio with initial cash 25000 and taxRate 15%
+    const pPens = await (await fetch(`${baseUrl}/api/portfolios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        name: 'Fondo Pensione Integrativo',
+        type: 'Pensione',
+        taxRate: 15.0,
+        currency: 'EUR',
+        initialCash: 25000,
+        include_in_totals: 1
+      })
+    })).json();
+    assert.strictEqual(pPens.success, true);
+    const pensId = pPens.portfolio.id;
+
+    // 4. Query /api/reports/portfolio-data
+    const repRes = await fetch(`${baseUrl}/api/reports/portfolio-data`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const repData = await repRes.json();
+    assert.strictEqual(repRes.status, 200);
+    assert.strictEqual(repData.success, true);
+
+    // Verify POSTE_Emy is categorized as buoniPostali
+    const posteReport = repData.portfolios.find(p => p.id === posteId);
+    assert.ok(posteReport);
+    assert.strictEqual(posteReport.hasBuoniPostali, true);
+    assert.strictEqual(posteReport.manualCategories.buoniPostali.grossValue, 12000);
+    assert.strictEqual(posteReport.manualCategories.buoniPostali.count, 1);
+
+    // Verify TFR Maturato Azienda is categorized as tfr
+    const tfrReport = repData.portfolios.find(p => p.id === tfrId);
+    assert.ok(tfrReport);
+    assert.strictEqual(tfrReport.hasTfr, true);
+    assert.strictEqual(tfrReport.manualCategories.tfr.grossValue, 35000);
+    assert.strictEqual(tfrReport.manualCategories.tfr.count, 1);
+
+    // Verify Fondo Pensione Integrativo is categorized as fondiPensione
+    const pensReport = repData.portfolios.find(p => p.id === pensId);
+    assert.ok(pensReport);
+    assert.strictEqual(pensReport.hasFondiPensione, true);
+    assert.strictEqual(pensReport.manualCategories.fondiPensione.grossValue, 25000);
+    assert.strictEqual(pensReport.manualCategories.fondiPensione.count, 1);
+
+    // Verify grand totals in totals.manualCategories have all categories valued > 0!
+    const mc = repData.totals.manualCategories;
+    assert.ok(mc.buoniPostali.grossValue >= 12000, 'Buoni postali must be valued');
+    assert.ok(mc.tfr.grossValue >= 35000, 'TFR must be valued');
+    assert.ok(mc.fondiPensione.grossValue >= 25000, 'Fondi pensione must be valued');
+    assert.ok(mc.contiDeposito.grossValue > 0, 'Conti deposito must be valued');
+  });
 });

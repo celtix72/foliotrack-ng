@@ -35,24 +35,39 @@ const ASSET_TYPES = [
 ];
 
 /**
- * Normalizes an asset type string (handles space/underscore variants and ticker heuristics).
+ * Normalizes an asset type string (handles space/underscore variants, ticker heuristics, and name heuristics).
  *
  * @param {string} [type]
  * @param {string} [ticker]
+ * @param {string} [name]
  * @returns {string}
  */
-function normalizeAssetType(type, ticker = '') {
+function normalizeAssetType(type, ticker = '', name = '') {
   const tick = String(ticker || '').trim().toUpperCase();
-  if (tick.startsWith('CD_') || tick.startsWith('CD-') || tick.includes('IFIS')) {
+  const nam = String(name || '').trim().toUpperCase();
+
+  if (
+    tick.startsWith('CD_') || tick.startsWith('CD-') || tick.includes('IFIS') || tick.includes('RENDIMAX') || tick.includes('DEPOSIT') ||
+    nam.includes('CONTO DEPOSITO') || nam.includes('DEPOSITO VINCOLATO') || nam.includes('IFIS') || nam.includes('RENDIMAX')
+  ) {
     return 'DEPOSITO_VINCOLATO';
   }
-  if (tick.startsWith('BFP') || tick.includes('BUONO_POST')) {
+  if (
+    tick.startsWith('BFP') || tick.includes('BUONO') || tick.includes('POSTAL') || tick.includes('POSTE') ||
+    nam.includes('BUONO') || nam.includes('BFP') || nam.includes('POSTAL') || nam.includes('POSTE') || nam.includes('FRUTTIFER')
+  ) {
     return 'BUONO_POSTALE';
   }
-  if (tick === 'TFR') {
+  if (
+    tick === 'TFR' || tick.startsWith('TFR') || tick.includes('TFR') ||
+    nam.includes('TFR') || nam.includes('TRATTAMENTO FINE RAPPORTO') || nam.includes('LIQUIDAZIONE')
+  ) {
     return 'TFR';
   }
-  if (tick.includes('PENSIONE') || tick.includes('FONDO_PENS')) {
+  if (
+    tick.includes('PENSIONE') || tick.includes('FONDO_PENS') || tick.includes('PREVIDENZA') || tick.includes('COMETA') || tick.includes('FONTE') || tick.includes('FONDPOSTE') ||
+    nam.includes('PENSIONE') || nam.includes('PREVIDENZA') || nam.includes('FONDO PENSIONE') || nam.includes('COMETA') || nam.includes('FONTE')
+  ) {
     return 'FONDO_PENSIONE';
   }
 
@@ -74,15 +89,16 @@ function normalizeAssetType(type, ticker = '') {
 }
 
 /**
- * Checks whether an asset type (or ticker) is a manual, non-realtime monitored type
+ * Checks whether an asset type (or ticker/name) is a manual, non-realtime monitored type
  * (Deposito Vincolato, Buono Postale, TFR, Fondo Pensione).
  *
  * @param {string} [type]
  * @param {string} [ticker]
+ * @param {string} [name]
  * @returns {boolean}
  */
-function isManualAssetType(type, ticker = '') {
-  const norm = normalizeAssetType(type, ticker);
+function isManualAssetType(type, ticker = '', name = '') {
+  const norm = normalizeAssetType(type, ticker, name);
   return MANUAL_ASSET_TYPES.includes(norm);
 }
 
