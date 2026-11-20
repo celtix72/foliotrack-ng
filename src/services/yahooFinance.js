@@ -558,11 +558,269 @@ async function fetchFinvizPeg(symbol) {
   }
 }
 
+/**
+ * Normalizes sector name to standard GICS sectors.
+ */
+function normalizeGicsSector(rawSector, rawIndustry) {
+  const s = String(rawSector || '').trim().toUpperCase();
+  const ind = String(rawIndustry || '').trim().toUpperCase();
+
+  const GICS_SECTORS_MAP = {
+    'TECHNOLOGY': 'Information Technology',
+    'INFORMATION TECHNOLOGY': 'Information Technology',
+    'SEMICONDUCTORS': 'Information Technology',
+    'SOFTWARE': 'Information Technology',
+    'HARDWARE': 'Information Technology',
+    'ELECTRONICS': 'Information Technology',
+    'FINANCIAL': 'Financials',
+    'FINANCIALS': 'Financials',
+    'FINANCIAL SERVICES': 'Financials',
+    'BANKING': 'Financials',
+    'BANKS': 'Financials',
+    'INSURANCE': 'Financials',
+    'HEALTHCARE': 'Health Care',
+    'HEALTH CARE': 'Health Care',
+    'PHARMACEUTICALS': 'Health Care',
+    'BIOTECHNOLOGY': 'Health Care',
+    'CONSUMER CYCLICAL': 'Consumer Discretionary',
+    'CONSUMER DISCRETIONARY': 'Consumer Discretionary',
+    'AUTOMOTIVE': 'Consumer Discretionary',
+    'RETAIL': 'Consumer Discretionary',
+    'CONSUMER DEFENSIVE': 'Consumer Staples',
+    'CONSUMER STAPLES': 'Consumer Staples',
+    'FOOD & BEVERAGES': 'Consumer Staples',
+    'COMMUNICATION SERVICES': 'Communication Services',
+    'COMMUNICATION': 'Communication Services',
+    'TELECOMMUNICATION': 'Communication Services',
+    'MEDIA': 'Communication Services',
+    'INDUSTRIALS': 'Industrials',
+    'INDUSTRIAL': 'Industrials',
+    'AEROSPACE': 'Industrials',
+    'MACHINERY': 'Industrials',
+    'ENERGY': 'Energy',
+    'OIL & GAS': 'Energy',
+    'UTILITIES': 'Utilities',
+    'REAL ESTATE': 'Real Estate',
+    'REIT': 'Real Estate',
+    'BASIC MATERIALS': 'Materials',
+    'MATERIALS': 'Materials',
+    'CHEMICALS': 'Materials',
+    'BROAD MARKET': 'Broad Market',
+    'GOVERNMENT': 'Government'
+  };
+
+  if (GICS_SECTORS_MAP[s]) return GICS_SECTORS_MAP[s];
+
+  for (const [key, val] of Object.entries(GICS_SECTORS_MAP)) {
+    if (s.includes(key) || ind.includes(key)) return val;
+  }
+
+  return rawSector || 'Information Technology';
+}
+
+/**
+ * Normalizes country name to standard Italian country name and geographical macro-region.
+ */
+function normalizeCountryAndRegion(rawCountry, symbol = '') {
+  const c = String(rawCountry || '').trim().toUpperCase();
+  const sym = String(symbol || '').trim().toUpperCase();
+
+  const COUNTRY_MAP = {
+    'UNITED STATES': { country: 'Stati Uniti', region: 'Americas' },
+    'USA': { country: 'Stati Uniti', region: 'Americas' },
+    'STATI UNITI': { country: 'Stati Uniti', region: 'Americas' },
+    'US': { country: 'Stati Uniti', region: 'Americas' },
+    'CANADA': { country: 'Canada', region: 'Americas' },
+    'ITALY': { country: 'Italia', region: 'Europe' },
+    'ITALIA': { country: 'Italia', region: 'Europe' },
+    'GERMANY': { country: 'Germania', region: 'Europe' },
+    'GERMANIA': { country: 'Germania', region: 'Europe' },
+    'FRANCE': { country: 'Francia', region: 'Europe' },
+    'FRANCIA': { country: 'Francia', region: 'Europe' },
+    'NETHERLANDS': { country: 'Paesi Bassi', region: 'Europe' },
+    'PAESI BASSI': { country: 'Paesi Bassi', region: 'Europe' },
+    'HOLLAND': { country: 'Paesi Bassi', region: 'Europe' },
+    'UNITED KINGDOM': { country: 'Regno Unito', region: 'Europe' },
+    'REGNO UNITO': { country: 'Regno Unito', region: 'Europe' },
+    'UK': { country: 'Regno Unito', region: 'Europe' },
+    'SWITZERLAND': { country: 'Svizzera', region: 'Europe' },
+    'SVIZZERA': { country: 'Svizzera', region: 'Europe' },
+    'DENMARK': { country: 'Danimarca', region: 'Europe' },
+    'DANIMARCA': { country: 'Danimarca', region: 'Europe' },
+    'SPAIN': { country: 'Spagna', region: 'Europe' },
+    'SPAGNA': { country: 'Spagna', region: 'Europe' },
+    'IRELAND': { country: 'Irlanda', region: 'Europe' },
+    'IRLANDA': { country: 'Irlanda', region: 'Europe' },
+    'SWEDEN': { country: 'Svezia', region: 'Europe' },
+    'SVEZIA': { country: 'Svezia', region: 'Europe' },
+    'NORWAY': { country: 'Norvegia', region: 'Europe' },
+    'NORVEGIA': { country: 'Norvegia', region: 'Europe' },
+    'FINLAND': { country: 'Finlandia', region: 'Europe' },
+    'FINLANDIA': { country: 'Finlandia', region: 'Europe' },
+    'BELGIUM': { country: 'Belgio', region: 'Europe' },
+    'BELGIO': { country: 'Belgio', region: 'Europe' },
+    'AUSTRIA': { country: 'Austria', region: 'Europe' },
+    'PORTUGAL': { country: 'Portogallo', region: 'Europe' },
+    'PORTOGALLO': { country: 'Portogallo', region: 'Europe' },
+    'ROMANIA': { country: 'Romania', region: 'Europe' },
+    'EUROZONE': { country: 'Eurozona', region: 'Europe' },
+    'EUROPE': { country: 'Europa', region: 'Europe' },
+    'EUROPA': { country: 'Europa', region: 'Europe' },
+    'CHINA': { country: 'Cina', region: 'Emerging Markets' },
+    'CINA': { country: 'Cina', region: 'Emerging Markets' },
+    'TAIWAN': { country: 'Taiwan', region: 'Emerging Markets' },
+    'INDIA': { country: 'India', region: 'Emerging Markets' },
+    'BRAZIL': { country: 'Brasile', region: 'Emerging Markets' },
+    'BRASILE': { country: 'Brasile', region: 'Emerging Markets' },
+    'KAZAKHSTAN': { country: 'Kazakistan', region: 'Emerging Markets' },
+    'KAZAKISTAN': { country: 'Kazakistan', region: 'Emerging Markets' },
+    'SOUTH AFRICA': { country: 'Sudafrica', region: 'Emerging Markets' },
+    'SUDAFRICA': { country: 'Sudafrica', region: 'Emerging Markets' },
+    'MEXICO': { country: 'Messico', region: 'Emerging Markets' },
+    'MESSICO': { country: 'Messico', region: 'Emerging Markets' },
+    'JAPAN': { country: 'Giappone', region: 'Asia' },
+    'GIAPPONE': { country: 'Giappone', region: 'Asia' },
+    'SINGAPORE': { country: 'Singapore', region: 'Asia' },
+    'AUSTRALIA': { country: 'Australia', region: 'Asia' },
+    'HONG KONG': { country: 'Hong Kong', region: 'Asia' },
+    'SOUTH KOREA': { country: 'Corea del Sud', region: 'Asia' },
+    'COREA DEL SUD': { country: 'Corea del Sud', region: 'Asia' },
+    'GLOBAL': { country: 'Globale', region: 'Global' },
+    'GLOBALE': { country: 'Globale', region: 'Global' },
+    'PAESI SVILUPPATI': { country: 'Paesi Sviluppati', region: 'Global' },
+    'WORLD': { country: 'Globale', region: 'Global' }
+  };
+
+  if (COUNTRY_MAP[c]) return COUNTRY_MAP[c];
+
+  for (const [key, val] of Object.entries(COUNTRY_MAP)) {
+    if (c.includes(key)) return val;
+  }
+
+  // Symbol suffix heuristics if country is missing
+  if (sym.endsWith('.MI')) return { country: 'Italia', region: 'Europe' };
+  if (sym.endsWith('.DE')) return { country: 'Germania', region: 'Europe' };
+  if (sym.endsWith('.AS')) return { country: 'Paesi Bassi', region: 'Europe' };
+  if (sym.endsWith('.PA')) return { country: 'Francia', region: 'Europe' };
+  if (sym.endsWith('.L')) return { country: 'Regno Unito', region: 'Europe' };
+
+  return { country: rawCountry || 'Stati Uniti', region: 'Americas' };
+}
+
+/**
+ * Searches online (Yahoo Finance / heuristics) for the sector and geographical area of an equity ticker.
+ * Updates SQLite database if db instance is available.
+ *
+ * @param {string} symbol
+ * @param {object} [existingAsset]
+ * @param {object} [dbInstance]
+ * @returns {Promise<object>}
+ */
+async function enrichEquityClassification(symbol, existingAsset = null, dbInstance = null) {
+  if (!symbol) return null;
+  const cleanSymbol = symbol.trim().toUpperCase();
+
+  // Known ETF mappings
+  const KNOWN_ETFS = {
+    'VWCE.DE': { sector: 'Broad Market', region: 'Global', country: 'Globale' },
+    'SWDA.MI': { sector: 'Broad Market', region: 'Global', country: 'Paesi Sviluppati' },
+    'VERE.DE': { sector: 'Broad Market', region: 'Europe', country: 'Europa' },
+    'XCHA.DE': { sector: 'Broad Market', region: 'Emerging Markets', country: 'Cina' },
+    'TDIV.AS': { sector: 'Broad Market', region: 'Global', country: 'Paesi Sviluppati' },
+    '3NLV.MI': { sector: 'Information Technology', region: 'Americas', country: 'Stati Uniti' },
+    '3GOO.MI': { sector: 'Communication Services', region: 'Americas', country: 'Stati Uniti' },
+    'X25E.MI': { sector: 'Government', region: 'Europe', country: 'Eurozona' },
+    'XEON.DE': { sector: 'Financials', region: 'Europe', country: 'Eurozona' },
+    'NGAS.MI': { sector: 'Energy', region: 'Global', country: 'Globale' },
+    'AHLA.DE': { sector: 'Consumer Discretionary', region: 'Emerging Markets', country: 'Cina' },
+    'MSF.DE': { sector: 'Information Technology', region: 'Americas', country: 'Stati Uniti' },
+    'AMD.DE': { sector: 'Information Technology', region: 'Americas', country: 'Stati Uniti' },
+    'NOV.DE': { sector: 'Health Care', region: 'Europe', country: 'Danimarca' }
+  };
+
+  let sector = existingAsset?.sector;
+  let region = existingAsset?.region;
+  let country = existingAsset?.country;
+
+  if (KNOWN_ETFS[cleanSymbol]) {
+    sector = KNOWN_ETFS[cleanSymbol].sector;
+    region = KNOWN_ETFS[cleanSymbol].region;
+    country = KNOWN_ETFS[cleanSymbol].country;
+  } else {
+    try {
+      let ap = null;
+      try {
+        const summary = await yahooFinance.quoteSummary(cleanSymbol, {
+          modules: ['assetProfile', 'fundProfile', 'summaryProfile']
+        });
+        ap = summary?.assetProfile || summary?.summaryProfile;
+      } catch (err) {
+        // If symbol with exchange failed (e.g. AHLA.DE -> BABA or MU.MI -> MU)
+        if (cleanSymbol.includes('.')) {
+          const baseSym = cleanSymbol.split('.')[0];
+          try {
+            const sum2 = await yahooFinance.quoteSummary(baseSym, {
+              modules: ['assetProfile', 'summaryProfile']
+            });
+            ap = sum2?.assetProfile || sum2?.summaryProfile;
+          } catch {}
+        }
+      }
+
+      if (ap) {
+        if (ap.sector || ap.industry) {
+          sector = normalizeGicsSector(ap.sector, ap.industry);
+        }
+        if (ap.country) {
+          const norm = normalizeCountryAndRegion(ap.country, cleanSymbol);
+          country = norm.country;
+          region = norm.region;
+        }
+      }
+    } catch (e) {
+      console.warn(`[Enrichment Error] Symbol "${cleanSymbol}":`, e.message);
+    }
+  }
+
+  // Fallbacks if still empty
+  if (!sector || sector === 'Unclassified' || sector === 'N/D') {
+    sector = 'Information Technology';
+  }
+  if (!region || region === 'N/D') {
+    const norm = normalizeCountryAndRegion(country, cleanSymbol);
+    country = norm.country;
+    region = norm.region;
+  }
+
+  // Update in database if dbInstance is provided
+  if (dbInstance && (existingAsset?.id || cleanSymbol)) {
+    try {
+      dbInstance.prepare(`
+        UPDATE assets
+        SET sector = ?, region = ?, country = ?, updatedAt = datetime('now')
+        WHERE ticker = ? OR id = ?
+      `).run(sector, region, country, cleanSymbol, existingAsset?.id || -1);
+    } catch (dbErr) {
+      console.warn('[Enrichment DB Update Error]:', dbErr.message);
+    }
+  }
+
+  return {
+    ticker: cleanSymbol,
+    sector,
+    region,
+    country
+  };
+}
+
 module.exports = {
   search,
   getQuote,
   getHistorical,
   getFundamentals,
   fetchFinvizPeg,
-  calculateSanitizedDividendYield
+  calculateSanitizedDividendYield,
+  normalizeGicsSector,
+  normalizeCountryAndRegion,
+  enrichEquityClassification
 };

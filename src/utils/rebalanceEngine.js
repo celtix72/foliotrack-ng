@@ -192,6 +192,253 @@ function normalizeAssetClass(h) {
 }
 
 /**
+ * Classifies any asset into one of 4 macro-categories:
+ * - 'AZIONARIO' (Stocks, Equity ETFs, Risk Assets)
+ * - 'OBBLIGAZIONARIO' (Bonds, Bond ETFs, BTP, BOT, Deposits, Postal Bonds, Pension/TFR)
+ * - 'LIQUIDITA' (Uninvested Cash, Monetary / Overnight ETFs, Currencies)
+ * - 'ORO' (Gold ETCs, Precious Metals, Physical Gold, Commodities)
+ */
+function classifyMacroCategory(h) {
+  if (!h) return 'AZIONARIO';
+  if (typeof h === 'string') {
+    const t = h.toUpperCase().trim();
+    if (t.includes('GOLD') || t.includes('COMMODIT') || t.includes('METAL') || t.includes('ORO') || t.includes('SILVER') || t.includes('OIL') || t.includes('GAS')) return 'ORO';
+    if (t.includes('BOND') || t.includes('BTP') || t.includes('BOT') || t.includes('TREASURY') || t.includes('FIXED') || t.includes('DEPOSITO') || t.includes('BUONO') || t.includes('TFR') || t.includes('PENSIONE')) return 'OBBLIGAZIONARIO';
+    if (t.includes('CASH') || t.includes('LIQUID') || t.includes('CURRENCY') || t.includes('FOREX') || t.includes('MONEY')) return 'LIQUIDITA';
+    return 'AZIONARIO';
+  }
+
+  const ticker = String(h.ticker || '').toUpperCase().trim();
+  const name = String(h.name || '').toUpperCase().trim();
+  const type = String(h.type || 'EQUITY').toUpperCase().trim();
+  const sector = String(h.sector || '').toUpperCase().trim();
+
+  // 1. ORO & Metalli Preziosi / Materie Prime
+  if (
+    type === 'GOLD' || type === 'COMMODITY' ||
+    ticker.startsWith('SGLD') || ticker.startsWith('4GLD') || ticker.startsWith('PHAU') || ticker.startsWith('IGLN') ||
+    ticker.startsWith('XGDU') || ticker.startsWith('EGLN') || ticker === 'GLD' || ticker === 'IAU' || ticker === 'BAR' ||
+    ticker === 'SGOL' || ticker === 'NGAS.MI' || ticker === 'NGAS' ||
+    name.includes('GOLD') || name.includes('ORO') || name.includes('METALL') || name.includes('PRECIOUS') ||
+    name.includes('COMMODIT') || name.includes('NATURAL GAS') || name.includes('OIL') || name.includes('SILVER')
+  ) {
+    return 'ORO';
+  }
+
+  // 2. LIQUIDITA (Cash, Conto Deposito libero, Monetary/Overnight ETFs, Valute)
+  if (
+    type === 'CASH' || type === 'LIQUIDITY' || type === 'CURRENCY' || type === 'FOREX' ||
+    ticker === 'XEON.DE' || ticker === 'XEON' || ticker === 'XEON.MI' || ticker === 'C3M.MI' || ticker === 'SMART.MI' ||
+    ticker.endsWith('=X') ||
+    name.includes('OVERNIGHT') || name.includes('OVER.RATE') || name.includes('MONEY MARKET') ||
+    name.includes('LIQUIDIT')
+  ) {
+    return 'LIQUIDITA';
+  }
+
+  // 3. OBBLIGAZIONARIO (BTP, BOT, Obbligazioni, Conti Deposito Vincolati, Buoni Postali, TFR, Fondi Pensione)
+  if (
+    type.includes('BOND') || type.includes('BTP') || type.includes('BOT') || type === 'FIXED_INCOME' ||
+    type === 'DEPOSITO_VINCOLATO' || type === 'BUONO_POSTALE' || type === 'TFR' || type === 'FONDO_PENSIONE' ||
+    sector === 'GOVERNMENT' || sector.includes('TREASURY') || sector.includes('FIXED INCOME') ||
+    name.includes('BTP') || name.includes('BOT') || name.includes('BOND') || name.includes('GOVT') ||
+    name.includes('TREASURY') || name.includes('OBBLIGAZION') || name.includes('CONTO DEPOSITO') || name.includes('BUONO POSTALE') ||
+    name.includes('FONDO PENSIONE') || name.includes('TFR') ||
+    (type !== 'EQUITY' && type !== 'STOCK' && (ticker.startsWith('IT000') || ticker.startsWith('XS')))
+  ) {
+    return 'OBBLIGAZIONARIO';
+  }
+
+  // 4. AZIONARIO (Azioni, ETF Azionari, Crypto / Risk Assets)
+  return 'AZIONARIO';
+}
+
+/**
+ * Computes portfolio-wide Macro Asset Allocation across 4 buckets:
+ * Azionario, Obbligazionario, Liquidità, Oro.
+ */
+function computeMacroAllocation({ holdings = [], currentCash = 0.0, addedCash = 0.0 }) {
+  const categories = {
+    AZIONARIO: {
+      key: 'AZIONARIO',
+      label: 'Azionario',
+      icon: '📈',
+      color: '#3b82f6',
+      bgClass: 'bg-blue-500',
+      value: 0.0,
+      weight: 0.0,
+      holdingsCount: 0,
+      holdings: []
+    },
+    OBBLIGAZIONARIO: {
+      key: 'OBBLIGAZIONARIO',
+      label: 'Obbligazionario',
+      icon: '🏛️',
+      color: '#10b981',
+      bgClass: 'bg-emerald-500',
+      value: 0.0,
+      weight: 0.0,
+      holdingsCount: 0,
+      holdings: []
+    },
+    LIQUIDITA: {
+      key: 'LIQUIDITA',
+      label: 'Liquidità',
+      icon: '💧',
+      color: '#06b6d4',
+      bgClass: 'bg-cyan-500',
+      value: 0.0,
+      weight: 0.0,
+      holdingsCount: 0,
+      holdings: []
+    },
+    ORO: {
+      key: 'ORO',
+      label: 'Oro & Metalli',
+      icon: '🪙',
+      color: '#f59e0b',
+      bgClass: 'bg-amber-500',
+      value: 0.0,
+      weight: 0.0,
+      holdingsCount: 0,
+      holdings: []
+    }
+  };
+
+  let totalHoldingsVal = 0.0;
+
+  for (const h of holdings) {
+    const val = Number(h.marketValue) || 0.0;
+    totalHoldingsVal += val;
+    const catKey = classifyMacroCategory(h);
+    const cat = categories[catKey] || categories.AZIONARIO;
+    cat.value += val;
+    cat.holdingsCount += 1;
+    cat.holdings.push(h);
+  }
+
+  // Include cash balances in Liquidità
+  const totalCashPool = Math.max(0.0, (Number(currentCash) || 0.0) + (Number(addedCash) || 0.0));
+  categories.LIQUIDITA.value += totalCashPool;
+  if (totalCashPool > 0 && categories.LIQUIDITA.holdingsCount === 0) {
+    categories.LIQUIDITA.holdingsCount = 1; // cash balance
+  }
+
+  const totalValue = totalHoldingsVal + totalCashPool;
+
+  // Compute percentages
+  for (const cat of Object.values(categories)) {
+    cat.weight = totalValue > 0 ? Number(((cat.value / totalValue) * 100.0).toFixed(1)) : 0.0;
+  }
+
+  return {
+    totalValue,
+    totalHoldingsValue: totalHoldingsVal,
+    totalCashPool,
+    categories
+  };
+}
+
+/**
+ * Computes Sector Breakdown for Equity Holdings.
+ */
+function computeSectorAggregation(equityHoldings = [], totalPortfolioValue = 0.0) {
+  const totalEquityValue = equityHoldings.reduce((sum, h) => sum + (Number(h.marketValue) || 0.0), 0.0);
+  const sectorMap = new Map();
+
+  for (const h of equityHoldings) {
+    const rawSector = h.sector || 'Information Technology';
+    const sector = rawSector.trim() || 'Information Technology';
+    const val = Number(h.marketValue) || 0.0;
+
+    if (!sectorMap.has(sector)) {
+      sectorMap.set(sector, {
+        name: sector,
+        label: sector,
+        value: 0.0,
+        weightInEquity: 0.0,
+        weightInPortfolio: 0.0,
+        holdingsCount: 0,
+        assets: []
+      });
+    }
+
+    const item = sectorMap.get(sector);
+    item.value += val;
+    item.holdingsCount += 1;
+    item.assets.push({
+      ticker: h.ticker,
+      name: h.name || h.ticker,
+      marketValue: val,
+      region: h.region || 'Globale',
+      country: h.country || ''
+    });
+  }
+
+  const sectors = Array.from(sectorMap.values()).map(s => {
+    s.weightInEquity = totalEquityValue > 0 ? Number(((s.value / totalEquityValue) * 100.0).toFixed(1)) : 0.0;
+    s.weightInPortfolio = totalPortfolioValue > 0 ? Number(((s.value / totalPortfolioValue) * 100.0).toFixed(1)) : 0.0;
+    // Sort assets in this sector
+    s.assets.sort((a, b) => b.marketValue - a.marketValue);
+    s.assets.forEach(a => {
+      a.weightInSector = s.value > 0 ? Number(((a.marketValue / s.value) * 100.0).toFixed(1)) : 0.0;
+      a.weightInEquity = totalEquityValue > 0 ? Number(((a.marketValue / totalEquityValue) * 100.0).toFixed(1)) : 0.0;
+      a.weightInPortfolio = totalPortfolioValue > 0 ? Number(((a.marketValue / totalPortfolioValue) * 100.0).toFixed(1)) : 0.0;
+    });
+    return s;
+  });
+
+  sectors.sort((a, b) => b.value - a.value);
+
+  return {
+    totalEquityValue,
+    sectors
+  };
+}
+
+/**
+ * Computes Geographical Region Breakdown for Equity Holdings.
+ */
+function computeRegionAggregation(equityHoldings = [], totalPortfolioValue = 0.0) {
+  const totalEquityValue = equityHoldings.reduce((sum, h) => sum + (Number(h.marketValue) || 0.0), 0.0);
+  const regionMap = new Map();
+
+  for (const h of equityHoldings) {
+    const rawRegion = h.region || 'Globale';
+    const region = rawRegion.trim() || 'Globale';
+    const val = Number(h.marketValue) || 0.0;
+
+    if (!regionMap.has(region)) {
+      regionMap.set(region, {
+        name: region,
+        label: region,
+        value: 0.0,
+        weightInEquity: 0.0,
+        weightInPortfolio: 0.0,
+        holdingsCount: 0
+      });
+    }
+
+    const item = regionMap.get(region);
+    item.value += val;
+    item.holdingsCount += 1;
+  }
+
+  const regions = Array.from(regionMap.values()).map(r => {
+    r.weightInEquity = totalEquityValue > 0 ? Number(((r.value / totalEquityValue) * 100.0).toFixed(1)) : 0.0;
+    r.weightInPortfolio = totalPortfolioValue > 0 ? Number(((r.value / totalPortfolioValue) * 100.0).toFixed(1)) : 0.0;
+    return r;
+  });
+
+  regions.sort((a, b) => b.value - a.value);
+
+  return {
+    totalEquityValue,
+    regions
+  };
+}
+
+/**
  * Computes Wealthfolio-aligned Rebalancing Worksheet.
  *
  * @param {object} params
@@ -216,6 +463,7 @@ function calculateRebalanceWorksheet(params) {
     targetAllocations = [],
     targetType = 'ASSET_CLASS',
     strategy = 'CASH_FIRST',
+    scope = 'all',
     options = {}
   } = params;
 
@@ -224,10 +472,28 @@ function calculateRebalanceWorksheet(params) {
   const minTradeSize = Number(options.minTradeSize) >= 0 ? Number(options.minTradeSize) : 25.0;
   const cashBuffer = Number(options.cashBuffer) >= 0 ? Number(options.cashBuffer) : 0.0;
 
-  // Total current market value of assets
-  const totalHoldingsValue = holdings.reduce((sum, h) => sum + (Number(h.marketValue) || 0.0), 0.0);
-  const availableCash = Math.max(0.0, currentCash + addedCash - cashBuffer);
-  const totalPortfolioValue = totalHoldingsValue + currentCash + addedCash;
+  // Global macro allocation and breakdowns (always computed on full holdings)
+  const macroAllocation = computeMacroAllocation({ holdings, currentCash, addedCash });
+  const bySector = computeSectorAggregation(holdings.filter(h => classifyMacroCategory(h) === 'AZIONARIO'), macroAllocation.totalValue);
+  const byRegion = computeRegionAggregation(holdings.filter(h => classifyMacroCategory(h) === 'AZIONARIO'), macroAllocation.totalValue);
+
+  const cleanScope = String(scope || 'all').trim().toLowerCase();
+
+  // Filter holdings if scope is limited to Azionario or Obbligazionario
+  let activeHoldings = holdings;
+  if (cleanScope === 'azionario') {
+    activeHoldings = holdings.filter(h => classifyMacroCategory(h) === 'AZIONARIO');
+  } else if (cleanScope === 'obbligazionario') {
+    activeHoldings = holdings.filter(h => classifyMacroCategory(h) === 'OBBLIGAZIONARIO');
+  }
+
+  // Total current market value of assets in active scope
+  const totalHoldingsValue = activeHoldings.reduce((sum, h) => sum + (Number(h.marketValue) || 0.0), 0.0);
+  const scopeCash = cleanScope === 'all' ? (currentCash + addedCash) : 0.0;
+  const availableCash = Math.max(0.0, scopeCash - cashBuffer);
+  const totalPortfolioValue = cleanScope === 'all'
+    ? (totalHoldingsValue + currentCash + addedCash)
+    : totalHoldingsValue;
 
   // Validate allocations sum
   const sumTargetWeights = targetAllocations.reduce((sum, a) => sum + (Number(a.targetPercent) || 0.0), 0.0);
@@ -242,9 +508,9 @@ function calculateRebalanceWorksheet(params) {
       targetMap.set(String(t.ticker || t.id).toUpperCase().trim(), t);
     }
 
-    // Process all existing holdings
+    // Process all existing active holdings
     const processedTickers = new Set();
-    for (const h of holdings) {
+    for (const h of activeHoldings) {
       const sym = String(h.ticker).toUpperCase().trim();
       processedTickers.add(sym);
       const t = targetMap.get(sym);
@@ -255,16 +521,27 @@ function calculateRebalanceWorksheet(params) {
       const curPrice = Number(h.currentPrice) || Number(h.rawPrice) || 1.0;
       const curQty = Number(h.quantity) || 0.0;
 
+      const macroCat = classifyMacroCategory(h);
+      const classTotalVal = macroAllocation.categories[macroCat]?.value || totalHoldingsValue;
+      const weightInClass = classTotalVal > 0 ? Number(((curVal / classTotalVal) * 100.0).toFixed(1)) : 0.0;
+      const weightInPortfolio = macroAllocation.totalValue > 0 ? Number(((curVal / macroAllocation.totalValue) * 100.0).toFixed(1)) : 0.0;
+
       lines.push({
         id: sym,
         ticker: sym,
         name: h.name || sym,
         type: h.type || 'EQUITY',
+        macroCategory: macroCat,
+        sector: h.sector || 'Information Technology',
+        region: h.region || 'Globale',
+        country: h.country || '',
         currency: h.currency || 'EUR',
         currentPrice: curPrice,
         currentQuantity: curQty,
         currentValue: curVal,
         currentPercent: curWeight,
+        weightInPortfolio,
+        weightInClass,
         targetPercent: targetWeight,
         targetValue: targetVal,
         driftPercent: curWeight - targetWeight,
@@ -285,11 +562,17 @@ function calculateRebalanceWorksheet(params) {
           ticker: sym,
           name: t.label || t.name || sym,
           type: t.type || 'EQUITY',
+          macroCategory: classifyMacroCategory(t),
+          sector: t.sector || 'Information Technology',
+          region: t.region || 'Globale',
+          country: t.country || '',
           currency: t.currency || 'EUR',
           currentPrice: curPrice,
           currentQuantity: 0.0,
           currentValue: 0.0,
           currentPercent: 0.0,
+          weightInPortfolio: 0.0,
+          weightInClass: 0.0,
           targetPercent: targetWeight,
           targetValue: targetVal,
           driftPercent: 0.0 - targetWeight,
@@ -320,7 +603,7 @@ function calculateRebalanceWorksheet(params) {
     }
 
     // Aggregate holdings into categories
-    for (const h of holdings) {
+    for (const h of activeHoldings) {
       const cls = normalizeAssetClass(h);
       let cat = catMap.get(cls);
       if (!cat) {
@@ -337,8 +620,8 @@ function calculateRebalanceWorksheet(params) {
       cat.holdings.push(h);
     }
 
-    // Include Cash if available or targeted
-    if (currentCash > 0 || catMap.has('CASH')) {
+    // Include Cash if available or targeted (only if global scope or cash targeted)
+    if (cleanScope === 'all' && (currentCash > 0 || catMap.has('CASH'))) {
       let cashCat = catMap.get('CASH');
       if (!cashCat) {
         cashCat = {
@@ -373,14 +656,23 @@ function calculateRebalanceWorksheet(params) {
         category: id,
         isAssetClass: true,
         holdingCount: cat.holdings.length,
-        categoryHoldings: cat.holdings.map(h => ({
-          ticker: h.ticker,
-          name: h.name || h.ticker,
-          quantity: Number(h.quantity) || 0,
-          currentPrice: Number(h.currentPrice) || Number(h.rawPrice) || 0,
-          marketValue: Number(h.marketValue) || 0,
-          weight: totalPortfolioValue > 0 ? ((Number(h.marketValue) || 0) / totalPortfolioValue) * 100 : 0
-        })),
+        categoryHoldings: cat.holdings.map(h => {
+          const hVal = Number(h.marketValue) || 0;
+          return {
+            ticker: h.ticker,
+            name: h.name || h.ticker,
+            macroCategory: classifyMacroCategory(h),
+            sector: h.sector || 'Information Technology',
+            region: h.region || 'Globale',
+            country: h.country || '',
+            quantity: Number(h.quantity) || 0,
+            currentPrice: Number(h.currentPrice) || Number(h.rawPrice) || 0,
+            marketValue: hVal,
+            weight: totalPortfolioValue > 0 ? Number(((hVal / totalPortfolioValue) * 100).toFixed(1)) : 0,
+            weightInPortfolio: macroAllocation.totalValue > 0 ? Number(((hVal / macroAllocation.totalValue) * 100).toFixed(1)) : 0,
+            weightInClass: cat.currentValue > 0 ? Number(((hVal / cat.currentValue) * 100).toFixed(1)) : 0
+          };
+        }),
         currency: firstHolding?.currency || 'EUR',
         currentPrice: curPrice,
         currentQuantity: cat.holdings.length,
@@ -590,6 +882,7 @@ function calculateRebalanceWorksheet(params) {
   return {
     strategy,
     targetType,
+    scope: cleanScope,
     toleranceBand,
     allowFractional,
     minTradeSize,
@@ -608,6 +901,9 @@ function calculateRebalanceWorksheet(params) {
     totalCategories: lines.length,
     tradeCount,
     sumTargetWeights,
+    macroAllocation,
+    bySector,
+    byRegion,
     lines
   };
 }
@@ -694,7 +990,12 @@ function generateClipboardOrderText(worksheet, portfolioName = 'Portafoglio') {
 module.exports = {
   PRESET_TARGET_MODELS,
   DYNAMIC_PRESET_MODELS,
+  CATEGORY_FRIENDLY_LABELS,
   normalizeAssetClass,
+  classifyMacroCategory,
+  computeMacroAllocation,
+  computeSectorAggregation,
+  computeRegionAggregation,
   calculateRebalanceWorksheet,
   generateRebalanceCsv,
   generateClipboardOrderText

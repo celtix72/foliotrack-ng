@@ -51,6 +51,112 @@
   <main class="flex-1 px-2.5 py-3 space-y-3">
 
     <!-- ========================================== -->
+    <!-- 0. TOP MACRO ASSET ALLOCATION              -->
+    <!-- ========================================== -->
+    <section class="signature-card p-3 space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+        <div>
+          <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-gray-500">Composizione Macro Portafoglio</h2>
+          <span class="text-[9px] text-gray-400 font-mono">Azionario, Obbligazionario, Liquidità, Oro</span>
+        </div>
+        <span id="macroChartCenterTotal" class="text-xs font-bold font-mono text-gray-900 dark:text-white">€ 0</span>
+      </div>
+
+      <!-- Scope Switcher Pills -->
+      <div>
+        <label class="block text-[9px] font-mono text-gray-400 mb-1">Ambito di Analisi</label>
+        <div class="flex rounded-lg p-0.5 bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-mono">
+          <button type="button" data-scope-btn="all" class="scope-pill-btn flex-1 py-1 text-center rounded-md bg-emerald-600 text-white font-bold shadow-sm">
+            Tutti
+          </button>
+          <button type="button" data-scope-btn="AZIONARIO" class="scope-pill-btn flex-1 py-1 text-center rounded-md text-gray-500 hover:text-gray-800 dark:hover:text-white font-medium">
+            Solo Azionario
+          </button>
+          <button type="button" data-scope-btn="OBBLIGAZIONARIO" class="scope-pill-btn flex-1 py-1 text-center rounded-md text-gray-500 hover:text-gray-800 dark:hover:text-white font-medium">
+            Solo Bond
+          </button>
+        </div>
+      </div>
+
+      <!-- Chart and 2x2 Grid -->
+      <div class="flex flex-col items-center">
+        <div class="relative w-40 h-40 my-1">
+          <canvas id="macroAllocationChart"></canvas>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+        <!-- Azionario -->
+        <div id="cardMacroAzionario" class="p-2.5 rounded-lg border border-blue-200/60 dark:border-blue-900/40 bg-blue-50/30 dark:bg-blue-950/20" data-scope-trigger="AZIONARIO">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-blue-600 dark:text-blue-400 font-bold">📈 Azionario</span>
+            <span id="macroPctAzionario" class="font-bold text-[10px] text-blue-600 dark:text-blue-400">0.0%</span>
+          </div>
+          <div id="macroValAzionario" class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">€ 0</div>
+          <div id="macroCountAzionario" class="text-[9px] text-gray-400 mt-0.5">0 titoli</div>
+        </div>
+
+        <!-- Obbligazionario -->
+        <div id="cardMacroObbligazionario" class="p-2.5 rounded-lg border border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/20" data-scope-trigger="OBBLIGAZIONARIO">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">🏛️ Bond</span>
+            <span id="macroPctObbligazionario" class="font-bold text-[10px] text-emerald-600 dark:text-emerald-400">0.0%</span>
+          </div>
+          <div id="macroValObbligazionario" class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">€ 0</div>
+          <div id="macroCountObbligazionario" class="text-[9px] text-gray-400 mt-0.5">0 titoli</div>
+        </div>
+
+        <!-- Liquidità -->
+        <div class="p-2.5 rounded-lg border border-cyan-200/60 dark:border-cyan-900/40 bg-cyan-50/30 dark:bg-cyan-950/20">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold">💧 Liquidità</span>
+            <span id="macroPctLiquidita" class="font-bold text-[10px] text-cyan-600 dark:text-cyan-400">0.0%</span>
+          </div>
+          <div id="macroValLiquidita" class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">€ 0</div>
+          <div id="macroCountLiquidita" class="text-[9px] text-gray-400 mt-0.5">Cassa</div>
+        </div>
+
+        <!-- Oro -->
+        <div class="p-2.5 rounded-lg border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/20">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold">🪙 Oro</span>
+            <span id="macroPctOro" class="font-bold text-[10px] text-amber-600 dark:text-amber-400">0.0%</span>
+          </div>
+          <div id="macroValOro" class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">€ 0</div>
+          <div id="macroCountOro" class="text-[9px] text-gray-400 mt-0.5">0 ETC</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 0.1 AGGREGAZIONE SETTORIALE (EQUITIES)    -->
+    <!-- ========================================== -->
+    <section id="sectorAggregationSection" class="signature-card p-3 space-y-2.5">
+      <div class="flex items-center justify-between pb-1.5 border-b border-gray-100 dark:border-white/5">
+        <div>
+          <h3 class="text-xs font-bold text-gray-900 dark:text-white">Settori & Aree (Azionario)</h3>
+          <span id="equityHoldingsCountBadge" class="text-[9px] text-gray-400 font-mono">0 Titoli</span>
+        </div>
+        <button type="button" id="btnEnrichEquities" class="px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-semibold border border-indigo-200 dark:border-indigo-800 flex items-center space-x-1">
+          <span id="enrichEquitiesIcon">🔍</span>
+          <span>Arricchisci</span>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Settori GICS</div>
+        <div id="sectorBreakdownContainer" class="space-y-2 max-h-48 overflow-y-auto pr-0.5">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400 pt-1 border-t border-gray-100 dark:border-white/5">Aree Geografiche</div>
+        <div id="regionBreakdownContainer" class="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-0.5">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
     <!-- 1. CONTROLS CARD                           -->
     <!-- ========================================== -->
     <section class="signature-card p-3.5 space-y-3">
@@ -244,6 +350,7 @@
   <!-- Mobile Bottom Tab Bar -->
   <!-- MOBILE_NAV_PARTIAL -->
 
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
   <script src="/rebalance.js"></script>
 </body>
 </html>

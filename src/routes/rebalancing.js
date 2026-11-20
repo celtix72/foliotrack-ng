@@ -9,9 +9,11 @@ const { db } = require('../db');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, checkPortfolioAccess } = require('./portfolios');
 const { recalculateDividendProjections } = require('./dividends');
+const { enrichEquityClassification } = require('../services/yahooFinance');
 const {
   PRESET_TARGET_MODELS,
   DYNAMIC_PRESET_MODELS,
+  classifyMacroCategory,
   calculateRebalanceWorksheet,
   generateRebalanceCsv,
   generateClipboardOrderText
@@ -298,6 +300,7 @@ router.post('/calculate', (req, res) => {
     customAllocations = null,
     targetType = 'ASSET_CLASS',
     strategy = 'CASH_FIRST',
+    scope = 'all',
     addedCash = 0.0,
     toleranceBand = 2.0,
     allowFractional = false,
@@ -312,6 +315,12 @@ router.post('/calculate', (req, res) => {
       userRole
     );
 
+    // Filter relevant holdings for dynamic holding presets if scope is active
+    const cleanScope = String(scope || 'all').trim().toUpperCase();
+    const relevantHoldings = cleanScope === 'AZIONARIO'
+      ? holdings.filter(h => classifyMacroCategory(h) === 'AZIONARIO')
+      : (cleanScope === 'OBBLIGAZIONARIO' ? holdings.filter(h => classifyMacroCategory(h) === 'OBBLIGAZIONARIO') : holdings);
+
     // Resolve target allocations
     let resolvedAllocations = [];
     let effectiveTargetType = targetType;
@@ -321,13 +330,15 @@ router.post('/calculate', (req, res) => {
       resolvedAllocations = customAllocations;
     } else if (presetId === 'all_holdings' || presetId === 'equal_weight_holdings') {
       effectiveTargetType = 'HOLDING';
-      const count = holdings.length;
+      const count = relevantHoldings.length;
       if (count > 0) {
         if (presetId === 'equal_weight_holdings') {
-          targetName = 'Equipesato su Tutti i Titoli (Equal Weight)';
+          targetName = cleanScope === 'AZIONARIO'
+            ? 'Equipesato Titoli Azionari'
+            : (cleanScope === 'OBBLIGAZIONARIO' ? 'Equipesato Titoli Obbligazionari' : 'Equipesato su Tutti i Titoli (Equal Weight)');
           const eqWeight = Number((100.0 / count).toFixed(2));
           let running = 0.0;
-          resolvedAllocations = holdings.map((h, i) => {
+          resolvedAllocations = relevantHoldings.map((h, i) => {
             const w = (i === count - 1) ? Number((100.0 - running).toFixed(2)) : eqWeight;
             running += w;
             return {
@@ -338,10 +349,12 @@ router.post('/calculate', (req, res) => {
             };
           });
         } else {
-          targetName = 'Pesi Attuali Portafoglio (Tutti i Titoli)';
-          const totalHoldingsVal = holdings.reduce((sum, h) => sum + (Number(h.marketValue) || 0), 0);
+          targetName = cleanScope === 'AZIONARIO'
+            ? 'Pesi Attuali Azionario'
+            : (cleanScope === 'OBBLIGAZIONARIO' ? 'Pesi Attuali Obbligazionario' : 'Pesi Attuali Portafoglio (Tutti i Titoli)');
+          const totalHoldingsVal = relevantHoldings.reduce((sum, h) => sum + (Number(h.marketValue) || 0), 0);
           let runningSum = 0.0;
-          resolvedAllocations = holdings.map((h, i) => {
+          resolvedAllocations = relevantHoldings.map((h, i) => {
             const curVal = Number(h.marketValue) || 0;
             const w = totalHoldingsVal > 0 ? Number(((curVal / totalHoldingsVal) * 100).toFixed(2)) : 0;
             if (i === count - 1) {
@@ -395,6 +408,7 @@ router.post('/calculate', (req, res) => {
       targetAllocations: resolvedAllocations,
       targetType: effectiveTargetType,
       strategy: strategy === 'FULL_REBALANCE' ? 'FULL_REBALANCE' : 'CASH_FIRST',
+      scope: cleanScope,
       options: {
         toleranceBand: Number(toleranceBand) || 2.0,
         allowFractional: Boolean(allowFractional),
@@ -416,6 +430,48 @@ router.post('/calculate', (req, res) => {
   } catch (err) {
     console.error('[Rebalance Calculate Error]', err);
     return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/rebalancing/enrich-equities
+ * Enriches equity assets using Yahoo Finance / online search to discover
+ * and persist correct GICS sector and geographical region into the assets database.
+ */
+router.post('/enrich-equities', async (req, res) => {
+  const { force = false, ticker = null } = req.body || {};
+
+  try {
+    let query = `SELECT * FROM assets WHERE (type IN ('EQUITY', 'STOCK', 'ETF', 'SHARE') OR type IS NULL)`;
+    const params = [];
+
+    if (ticker) {
+      query += ' AND ticker = ?';
+      params.push(String(ticker).trim().toUpperCase());
+    } else if (!force) {
+      query += ` AND (sector IS NULL OR sector = '' OR sector = 'Unclassified' OR sector = 'N/D' OR region IS NULL OR region = '' OR region = 'N/D' OR country IS NULL OR country = '')`;
+    }
+
+    const assetsToEnrich = db.prepare(query).all(...params);
+    const enrichedList = [];
+
+    for (const a of assetsToEnrich) {
+      if (a.ticker.endsWith('=X') || a.type === 'CASH' || a.type === 'CURRENCY') continue;
+      const resEnrich = await enrichEquityClassification(a.ticker, a, db);
+      if (resEnrich) {
+        enrichedList.push(resEnrich);
+      }
+    }
+
+    return res.json({
+      success: true,
+      count: enrichedList.length,
+      enriched: enrichedList,
+      message: `${enrichedList.length} titoli azionari verificati e aggiornati con settore e area geografica.`
+    });
+  } catch (err) {
+    console.error('[Enrich Equities Route Error]', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 

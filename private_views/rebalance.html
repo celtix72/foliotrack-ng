@@ -52,6 +52,168 @@
     <main class="flex-1 px-8 pb-16 space-y-6 max-w-7xl mx-auto w-full">
 
       <!-- ========================================== -->
+      <!-- 0. TOP MACRO ASSET ALLOCATION (Azionario, Obbligazionario, Liquidità, Oro) -->
+      <!-- ========================================== -->
+      <section class="signature-card p-6 space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-gray-100 dark:border-white/5 gap-3">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Composizione Macro del Portafoglio</h2>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                Asset Allocation
+              </span>
+            </div>
+            <p class="text-xs text-gray-500 font-mono mt-0.5">
+              Ripartizione globale in Azionario, Obbligazionario, Liquidità e Oro con filtro dell'ambito di analisi
+            </p>
+          </div>
+
+          <!-- Scope Switcher Pills -->
+          <div class="flex items-center space-x-2">
+            <span class="text-xs text-gray-500 font-mono hidden sm:inline">Ambito di Analisi:</span>
+            <div class="inline-flex rounded-xl p-0.5 bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-xs font-mono">
+              <button type="button" data-scope-btn="all" class="scope-pill-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold shadow-sm transition cursor-pointer">
+                🌐 Tutti (Globale)
+              </button>
+              <button type="button" data-scope-btn="AZIONARIO" class="scope-pill-btn px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition cursor-pointer">
+                📈 Solo Azionario
+              </button>
+              <button type="button" data-scope-btn="OBBLIGAZIONARIO" class="scope-pill-btn px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition cursor-pointer">
+                🏛️ Solo Obbligazionario
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <!-- Left: Doughnut / Pie Chart -->
+          <div class="lg:col-span-4 flex flex-col items-center justify-center p-2">
+            <div class="relative w-48 h-48 sm:w-52 sm:h-52">
+              <canvas id="macroAllocationChart"></canvas>
+              <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Totale</span>
+                <span id="macroChartCenterTotal" class="text-base sm:text-lg font-bold font-mono text-gray-900 dark:text-white">€ 0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: 4 Macro KPI Cards -->
+          <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <!-- 1. Azionario -->
+            <div id="cardMacroAzionario" class="p-3.5 rounded-xl border border-blue-200/60 dark:border-blue-900/40 bg-blue-50/30 dark:bg-blue-950/20 hover:border-blue-400 transition cursor-pointer" data-scope-trigger="AZIONARIO">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-base">📈</span>
+                  <span class="text-xs font-bold font-mono text-gray-900 dark:text-white">Azionario</span>
+                </div>
+                <span id="macroPctAzionario" class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">0.0%</span>
+              </div>
+              <div id="macroValAzionario" class="text-xl font-bold font-mono text-gray-900 dark:text-white">€ 0</div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-gray-500 dark:text-gray-400 mt-1">
+                <span id="macroCountAzionario">0 titoli attivi</span>
+                <span class="text-blue-500 hover:underline">Filtra Azionario ➔</span>
+              </div>
+            </div>
+
+            <!-- 2. Obbligazionario -->
+            <div id="cardMacroObbligazionario" class="p-3.5 rounded-xl border border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/20 hover:border-emerald-400 transition cursor-pointer" data-scope-trigger="OBBLIGAZIONARIO">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-base">🏛️</span>
+                  <span class="text-xs font-bold font-mono text-gray-900 dark:text-white">Obbligazionario</span>
+                </div>
+                <span id="macroPctObbligazionario" class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">0.0%</span>
+              </div>
+              <div id="macroValObbligazionario" class="text-xl font-bold font-mono text-gray-900 dark:text-white">€ 0</div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-gray-500 dark:text-gray-400 mt-1">
+                <span id="macroCountObbligazionario">0 titoli / depositi</span>
+                <span class="text-emerald-500 hover:underline">Filtra Bond ➔</span>
+              </div>
+            </div>
+
+            <!-- 3. Liquidità -->
+            <div class="p-3.5 rounded-xl border border-cyan-200/60 dark:border-cyan-900/40 bg-cyan-50/30 dark:bg-cyan-950/20">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-base">💧</span>
+                  <span class="text-xs font-bold font-mono text-gray-900 dark:text-white">Liquidità</span>
+                </div>
+                <span id="macroPctLiquidita" class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">0.0%</span>
+              </div>
+              <div id="macroValLiquidita" class="text-xl font-bold font-mono text-gray-900 dark:text-white">€ 0</div>
+              <div class="text-[10px] font-mono text-gray-500 dark:text-gray-400 mt-1">
+                <span id="macroCountLiquidita">Cassa + ETF Monetari</span>
+              </div>
+            </div>
+
+            <!-- 4. Oro -->
+            <div class="p-3.5 rounded-xl border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/20">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-base">🪙</span>
+                  <span class="text-xs font-bold font-mono text-gray-900 dark:text-white">Oro & Metalli</span>
+                </div>
+                <span id="macroPctOro" class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">0.0%</span>
+              </div>
+              <div id="macroValOro" class="text-xl font-bold font-mono text-gray-900 dark:text-white">€ 0</div>
+              <div class="text-[10px] font-mono text-gray-500 dark:text-gray-400 mt-1">
+                <span id="macroCountOro">0 ETC / Materie Prime</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- 0.1 AGGREGAZIONE SETTORIALE & GEOGRAFICA (EQUITIES) -->
+      <!-- ========================================== -->
+      <section id="sectorAggregationSection" class="signature-card p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-gray-100 dark:border-white/5 gap-3">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Aggregazione Settoriale & Aree Geografiche (Azionario)</h3>
+              <span id="equityHoldingsCountBadge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                0 Titoli
+              </span>
+            </div>
+            <p class="text-xs text-gray-500 font-mono mt-0.5">
+              Pesi percentuali aggregati per settore GICS e macro-regione geografica
+            </p>
+          </div>
+
+          <!-- Web Analysis & Enrichment Button -->
+          <button type="button" id="btnEnrichEquities" class="btn-pill px-3.5 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm cursor-pointer">
+            <span id="enrichEquitiesIcon">🔍</span>
+            <span>Arricchisci Settori da Internet</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Colonna 1: Settori GICS -->
+          <div class="lg:col-span-7 space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-gray-400 pb-1 border-b border-gray-100 dark:border-white/5">
+              <span>Settore GICS</span>
+              <span>% Azionario / Controvalore</span>
+            </div>
+            <div id="sectorBreakdownContainer" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Colonna 2: Aree Geografiche -->
+          <div class="lg:col-span-5 space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-gray-400 pb-1 border-b border-gray-100 dark:border-white/5">
+              <span>Area Geografica</span>
+              <span>% Azionario</span>
+            </div>
+            <div id="regionBreakdownContainer" class="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-1">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
       <!-- 1. CONTROL & FILTER BAR                   -->
       <!-- ========================================== -->
       <section class="signature-card p-5 space-y-4">
@@ -214,6 +376,7 @@
               <tr class="border-b border-gray-200/70 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02] text-[10px] font-mono uppercase tracking-wider text-gray-400">
                 <th class="px-4 py-3">Categoria / Ticker</th>
                 <th class="px-4 py-3 text-right">Stato Attuale</th>
+                <th class="px-4 py-3 text-right">% di Possesso</th>
                 <th class="px-4 py-3 text-center">Target (%)</th>
                 <th class="px-4 py-3 text-right">Scostamento (Drift)</th>
                 <th class="px-4 py-3 text-center">Azione</th>
@@ -336,6 +499,7 @@
     </div>
   </div>
 
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
   <script src="/rebalance.js"></script>
 </body>
 </html>

@@ -11,6 +11,7 @@
     portfolioId: 'all',
     selectedTargetKey: 'classic_60_40', // 'preset:classic_60_40' or 'target:123'
     strategy: 'CASH_FIRST', // 'CASH_FIRST' or 'FULL_REBALANCE'
+    scope: 'all', // 'all', 'AZIONARIO', 'OBBLIGAZIONARIO'
     addedCash: 0.0,
     toleranceBand: 2.0,
     allowFractional: false,
@@ -22,7 +23,8 @@
     worksheet: null,
     targetName: '',
     portfolioName: 'Tutti i Portafogli',
-    currency: 'EUR'
+    currency: 'EUR',
+    macroChartInstance: null
   };
 
   // --- FORMATTERS ---
@@ -248,6 +250,7 @@
       presetId,
       targetId,
       strategy: state.strategy,
+      scope: state.scope,
       addedCash: Number(state.addedCash) || 0.0,
       toleranceBand: Number(state.toleranceBand) || 2.0,
       allowFractional: Boolean(state.allowFractional),
@@ -270,6 +273,12 @@
         state.currency = data.currency || 'EUR';
 
         updateModeButtons(data.worksheet.targetType);
+        if (data.worksheet.macroAllocation) {
+          renderMacroAllocation(data.worksheet.macroAllocation);
+        }
+        if (data.worksheet.bySector) {
+          renderSectorAggregation(data.worksheet.bySector, data.worksheet.byRegion);
+        }
         renderSummaryKpis(data.worksheet);
         renderWorksheetTable(data.worksheet);
         renderDriftChart(data.worksheet);
@@ -288,6 +297,229 @@
     const spinner = document.getElementById('rebalanceLoading');
     if (spinner) {
       spinner.classList.toggle('hidden', !isLoading);
+    }
+  }
+
+  // --- RENDERING TOP MACRO ALLOCATION (Azionario, Obbligazionario, Liquidità, Oro) ---
+  function renderMacroAllocation(macro) {
+    if (!macro || !macro.categories) return;
+
+    // 1. Center Total
+    const centerEl = document.getElementById('macroChartCenterTotal');
+    if (centerEl) centerEl.textContent = fmtEur(macro.totalValue);
+
+    // 2. Azionario Card
+    const valAz = document.getElementById('macroValAzionario');
+    const pctAz = document.getElementById('macroPctAzionario');
+    const countAz = document.getElementById('macroCountAzionario');
+    if (valAz) valAz.textContent = fmtEur(macro.categories.AZIONARIO?.value || 0);
+    if (pctAz) pctAz.textContent = `${(macro.categories.AZIONARIO?.weight || 0).toFixed(1)}%`;
+    if (countAz) countAz.textContent = `${macro.categories.AZIONARIO?.holdingsCount || 0} titoli attivi`;
+
+    // 3. Obbligazionario Card
+    const valOb = document.getElementById('macroValObbligazionario');
+    const pctOb = document.getElementById('macroPctObbligazionario');
+    const countOb = document.getElementById('macroCountObbligazionario');
+    if (valOb) valOb.textContent = fmtEur(macro.categories.OBBLIGAZIONARIO?.value || 0);
+    if (pctOb) pctOb.textContent = `${(macro.categories.OBBLIGAZIONARIO?.weight || 0).toFixed(1)}%`;
+    if (countOb) countOb.textContent = `${macro.categories.OBBLIGAZIONARIO?.holdingsCount || 0} titoli / depositi`;
+
+    // 4. Liquidità Card
+    const valLiq = document.getElementById('macroValLiquidita');
+    const pctLiq = document.getElementById('macroPctLiquidita');
+    const countLiq = document.getElementById('macroCountLiquidita');
+    if (valLiq) valLiq.textContent = fmtEur(macro.categories.LIQUIDITA?.value || 0);
+    if (pctLiq) pctLiq.textContent = `${(macro.categories.LIQUIDITA?.weight || 0).toFixed(1)}%`;
+    if (countLiq) countLiq.textContent = `Cassa: ${fmtEur(macro.totalCashPool || 0)}`;
+
+    // 5. Oro Card
+    const valOro = document.getElementById('macroValOro');
+    const pctOro = document.getElementById('macroPctOro');
+    const countOro = document.getElementById('macroCountOro');
+    if (valOro) valOro.textContent = fmtEur(macro.categories.ORO?.value || 0);
+    if (pctOro) pctOro.textContent = `${(macro.categories.ORO?.weight || 0).toFixed(1)}%`;
+    if (countOro) countOro.textContent = `${macro.categories.ORO?.holdingsCount || 0} ETC / metalli`;
+
+    // 6. Highlight active Scope Pills
+    const curScope = (state.scope || 'all').toUpperCase();
+    document.querySelectorAll('.scope-pill-btn, [data-scope-btn]').forEach(btn => {
+      const bScope = (btn.getAttribute('data-scope-btn') || 'all').toUpperCase();
+      if (bScope === curScope) {
+        btn.classList.add('bg-emerald-600', 'text-white', 'font-semibold', 'shadow-sm');
+        btn.classList.remove('text-gray-600', 'dark:text-gray-400', 'text-gray-500');
+      } else {
+        btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm');
+        btn.classList.add('text-gray-600', 'dark:text-gray-400');
+      }
+    });
+
+    // 7. Active Card Ring
+    const cardAz = document.getElementById('cardMacroAzionario');
+    const cardOb = document.getElementById('cardMacroObbligazionario');
+    if (cardAz) {
+      if (curScope === 'AZIONARIO') {
+        cardAz.classList.add('ring-2', 'ring-blue-500', 'border-transparent');
+      } else {
+        cardAz.classList.remove('ring-2', 'ring-blue-500', 'border-transparent');
+      }
+    }
+    if (cardOb) {
+      if (curScope === 'OBBLIGAZIONARIO') {
+        cardOb.classList.add('ring-2', 'ring-emerald-500', 'border-transparent');
+      } else {
+        cardOb.classList.remove('ring-2', 'ring-emerald-500', 'border-transparent');
+      }
+    }
+
+    // 8. Chart.js Doughnut Chart
+    const canvas = document.getElementById('macroAllocationChart');
+    if (canvas && typeof Chart !== 'undefined') {
+      const vals = [
+        Number(macro.categories.AZIONARIO?.value) || 0,
+        Number(macro.categories.OBBLIGAZIONARIO?.value) || 0,
+        Number(macro.categories.LIQUIDITA?.value) || 0,
+        Number(macro.categories.ORO?.value) || 0
+      ];
+      const total = vals.reduce((a, b) => a + b, 0);
+
+      if (state.macroChartInstance) {
+        state.macroChartInstance.data.datasets[0].data = vals;
+        state.macroChartInstance.update();
+      } else {
+        state.macroChartInstance = new Chart(canvas, {
+          type: 'doughnut',
+          data: {
+            labels: ['Azionario', 'Obbligazionario', 'Liquidità', 'Oro'],
+            datasets: [{
+              data: vals,
+              backgroundColor: ['#3b82f6', '#10b981', '#06b6d4', '#f59e0b'],
+              borderWidth: 2,
+              borderColor: document.documentElement.classList.contains('dark') ? '#18181b' : '#ffffff',
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '72%',
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const val = context.raw || 0;
+                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+                    return ` ${label}: € ${Math.round(val).toLocaleString('it-IT')} (${pct}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+  }
+
+  // --- RENDERING SECTOR & REGION AGGREGATION ---
+  function renderSectorAggregation(bySector, byRegion) {
+    const secContainer = document.getElementById('sectorAggregationSection');
+    const curScope = (state.scope || 'all').toUpperCase();
+
+    if (curScope === 'OBBLIGAZIONARIO') {
+      if (secContainer) secContainer.classList.add('hidden');
+      return;
+    } else {
+      if (secContainer) secContainer.classList.remove('hidden');
+    }
+
+    const badgeEl = document.getElementById('equityHoldingsCountBadge');
+    if (badgeEl && bySector) {
+      const totalTitoli = bySector.sectors?.reduce((a, s) => a + s.holdingsCount, 0) || 0;
+      badgeEl.textContent = `${totalTitoli} Titoli (${fmtEur(bySector.totalEquityValue)})`;
+    }
+
+    const sectorContainer = document.getElementById('sectorBreakdownContainer');
+    if (sectorContainer && bySector && Array.isArray(bySector.sectors)) {
+      if (bySector.sectors.length === 0) {
+        sectorContainer.innerHTML = '<div class="text-xs text-gray-400 py-4 font-mono text-center">Nessun titolo azionario presente.</div>';
+      } else {
+        sectorContainer.innerHTML = bySector.sectors.map((s) => `
+          <div class="p-2.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 space-y-1.5 hover:bg-gray-100/50 dark:hover:bg-white/[0.05] transition">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <div class="flex items-center space-x-1.5 truncate">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span class="font-bold text-gray-900 dark:text-white truncate">${s.name}</span>
+                <span class="text-[10px] text-gray-400">(${s.holdingsCount})</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-blue-600 dark:text-blue-400 font-mono">${s.weightInEquity.toFixed(1)}%</span>
+                <span class="text-gray-400 text-[10px] font-mono">${fmtEur(s.value)}</span>
+              </div>
+            </div>
+            <div class="w-full h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+              <div class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: ${Math.min(100, s.weightInEquity)}%"></div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-gray-400">
+              <span>% su Portafoglio Totale: <strong class="text-gray-700 dark:text-gray-200">${s.weightInPortfolio.toFixed(1)}%</strong></span>
+              <span class="truncate max-w-[220px] text-gray-500">${s.assets.slice(0, 3).map(a => a.ticker).join(', ')}${s.assets.length > 3 ? '...' : ''}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    const regionContainer = document.getElementById('regionBreakdownContainer');
+    if (regionContainer && byRegion && Array.isArray(byRegion.regions)) {
+      if (byRegion.regions.length === 0) {
+        regionContainer.innerHTML = '<div class="text-xs text-gray-400 py-4 font-mono text-center">Nessuna area geografica presente.</div>';
+      } else {
+        regionContainer.innerHTML = byRegion.regions.map((r) => `
+          <div class="p-2.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+            <div>
+              <div class="font-bold text-gray-900 dark:text-white flex items-center space-x-1">
+                <span>🌍</span>
+                <span class="truncate">${r.name}</span>
+              </div>
+              <div class="text-[10px] text-gray-400 mt-0.5">${fmtEur(r.value)} (${r.holdingsCount} titoli)</div>
+            </div>
+            <div class="text-right">
+              <div class="font-bold text-indigo-600 dark:text-indigo-400">${r.weightInEquity.toFixed(1)}% <span class="text-[9px] text-gray-400">Azionario</span></div>
+              <div class="text-[10px] text-gray-400">${r.weightInPortfolio.toFixed(1)}% <span class="text-[9px]">Totale</span></div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+  // --- ONLINE ENRICHMENT FOR EQUITIES ---
+  async function enrichEquities() {
+    const icon = document.getElementById('enrichEquitiesIcon');
+    const btns = document.querySelectorAll('#btnEnrichEquities');
+    btns.forEach(b => b.disabled = true);
+    if (icon) icon.innerHTML = '<svg class="animate-spin h-3.5 w-3.5 inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>';
+
+    try {
+      showToast('🔍 Ricerca e associazione settore/area geografica in corso su Internet...', 'info');
+      const res = await fetch('/api/rebalancing/enrich-equities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: false })
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        showToast(`✅ ${data.message || 'Settori e aree geografiche verificati e aggiornati!'}`, 'success');
+        await calculateWorksheet();
+      } else {
+        showToast(data.error || 'Errore durante l\'arricchimento dei titoli azionari.', 'error');
+      }
+    } catch (err) {
+      console.error('[Enrichment Client Error]', err);
+      showToast('Errore durante la connessione per l\'analisi settoriale.', 'error');
+    } finally {
+      btns.forEach(b => b.disabled = false);
+      if (icon) icon.textContent = '🔍';
     }
   }
 
@@ -357,8 +589,8 @@
     if (!w.lines || w.lines.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" class="text-center py-10 text-gray-400 font-mono text-xs">
-            Nessuna posizione trovata per il portafoglio selezionato.
+          <td colspan="8" class="text-center py-10 text-gray-400 font-mono text-xs">
+            Nessuna posizione trovata per il portafoglio o ambito selezionato.
           </td>
         </tr>
       `;
@@ -397,9 +629,10 @@
         ? 'text-emerald-600 dark:text-emerald-400 font-bold'
         : (line.projectedDriftPercent > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400');
 
-      // Asset Class vs Single Holding presentation
+      // Presentation
       let col1Html = '';
       let col2Html = '';
+      let colWeightHtml = '';
 
       if (isAssetClassMode || line.isAssetClass) {
         const count = line.holdingCount || (line.categoryHoldings ? line.categoryHoldings.length : 0);
@@ -411,7 +644,7 @@
             </div>
             ${count > 0 ? `
               <button type="button" class="btn-toggle-cat-detail text-[11px] text-emerald-600 hover:text-emerald-500 font-sans mt-0.5 flex items-center space-x-1 cursor-pointer focus:outline-none" data-cat-idx="${idx}">
-                <span class="cat-toggle-label">Mostra titoli (${count}) ▾</span>
+                <span class="cat-toggle-label">Mostra dettagli titoli (${count}) ▾</span>
               </button>
             ` : `<div class="text-[10px] text-gray-400 font-mono mt-0.5">Nessun titolo attivo</div>`}
           </div>
@@ -419,22 +652,40 @@
 
         col2Html = `
           <div class="font-bold text-gray-900 dark:text-white">${fmtEur(line.currentValue)}</div>
-          <div class="text-[11px] text-gray-500">${fmtPct(line.currentPercent)} (${count} posizioni)</div>
+          <div class="text-[11px] text-gray-500">${count} posizioni</div>
+        `;
+
+        colWeightHtml = `
+          <td class="px-4 py-3 whitespace-nowrap text-right font-mono">
+            <div class="font-bold text-gray-900 dark:text-white text-sm">${fmtPct(line.currentPercent)}</div>
+            <div class="text-[10px] text-gray-400 font-mono">su portafoglio</div>
+          </td>
         `;
       } else {
         col1Html = `
           <div>
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1.5 flex-wrap gap-1">
               <span class="font-bold text-gray-900 dark:text-white font-mono text-xs sm:text-sm">${line.ticker}</span>
-              <span class="text-gray-400 text-[11px] font-sans truncate max-w-[150px]" title="${line.name}">${line.name}</span>
+              ${line.sector ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">${line.sector}</span>` : ''}
+              ${line.region ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-gray-500/10 text-gray-500 dark:text-gray-400 border border-gray-500/20">${line.region}</span>` : ''}
             </div>
+            <div class="text-gray-400 text-[11px] font-sans truncate max-w-[200px]" title="${line.name}">${line.name}</div>
             <div class="text-[10px] text-gray-400 font-mono mt-0.5">Prezzo: ${fmtPrice(line.currentPrice)}</div>
           </div>
         `;
 
         col2Html = `
           <div class="font-bold text-gray-900 dark:text-white">${fmtEur(line.currentValue)}</div>
-          <div class="text-[11px] text-gray-500">${fmtPct(line.currentPercent)} (${fmtQty(line.currentQuantity, w.allowFractional)} quote)</div>
+          <div class="text-[11px] text-gray-500">${fmtQty(line.currentQuantity, w.allowFractional)} quote</div>
+        `;
+
+        colWeightHtml = `
+          <td class="px-4 py-3 whitespace-nowrap text-right font-mono">
+            <div class="font-bold text-gray-900 dark:text-white text-sm">${fmtPct(line.weightInPortfolio || line.currentPercent)}</div>
+            <div class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold" title="Peso all'interno della macro-classe o ambito">
+              ${fmtPct(line.weightInClass || line.currentPercent)} ambito
+            </div>
+          </td>
         `;
       }
 
@@ -445,30 +696,33 @@
             ${col1Html}
           </td>
 
-          <!-- 2. Current State (Valore & Peso) -->
+          <!-- 2. Current State (Valore & Quote) -->
           <td class="px-4 py-3 whitespace-nowrap text-right">
             ${col2Html}
           </td>
 
-          <!-- 3. Target Weight -->
+          <!-- 3. % di Possesso (Totale + Ambito) -->
+          ${colWeightHtml}
+
+          <!-- 4. Target Weight -->
           <td class="px-4 py-3 whitespace-nowrap text-center">
             <span class="font-bold text-base text-gray-900 dark:text-white font-mono">${fmtPct(line.targetPercent)}</span>
             <div class="text-[10px] text-gray-400">Target: ${fmtEur(line.targetValue)}</div>
           </td>
 
-          <!-- 4. Drift (Scostamento) -->
+          <!-- 5. Drift (Scostamento) -->
           <td class="px-4 py-3 whitespace-nowrap text-right">
             <div class="font-bold ${driftColor} text-sm">${fmtPctSigned(line.driftPercent)}</div>
             <div class="text-[10px] text-gray-400">${fmtEurSigned(line.driftValue)}</div>
             <div class="mt-1">${statusBadge}</div>
           </td>
 
-          <!-- 5. Proposed Action -->
+          <!-- 6. Proposed Action -->
           <td class="px-4 py-3 whitespace-nowrap text-center">
             ${actionBadge}
           </td>
 
-          <!-- 6. Interactive Order Quantity & Amount -->
+          <!-- 7. Interactive Order Quantity & Amount -->
           <td class="px-4 py-3 whitespace-nowrap">
             <div class="flex items-center justify-center space-x-1">
               <button type="button" class="btn-qty-minus p-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 font-bold leading-none w-6 h-6 flex items-center justify-center text-xs cursor-pointer" data-idx="${idx}">-</button>
@@ -481,7 +735,7 @@
             </div>
           </td>
 
-          <!-- 7. Projected Outcome (Valore & Peso Previsto) -->
+          <!-- 8. Projected Outcome (Valore & Peso Previsto) -->
           <td class="px-4 py-3 whitespace-nowrap text-right">
             <div class="font-bold text-gray-900 dark:text-white line-proj-val">${fmtEur(line.projectedValue)}</div>
             <div class="text-[11px] font-semibold ${projDriftColor}">
@@ -497,7 +751,7 @@
         const holdingsList = line.categoryHoldings || [];
         html += `
           <tr id="cat-detail-${idx}" class="cat-detail-row hidden bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5">
-            <td colspan="7" class="px-4 py-3">
+            <td colspan="8" class="px-4 py-3">
               <div class="p-3 rounded-xl bg-white dark:bg-[#141416] border border-gray-200/70 dark:border-white/10 shadow-inner">
                 <div class="text-[11px] font-bold text-gray-700 dark:text-gray-300 font-mono mb-2 flex items-center justify-between">
                   <span>Dettaglio Titoli per "${line.name}" (${holdingsList.length} titoli)</span>
@@ -509,10 +763,12 @@
                       <thead>
                         <tr class="text-gray-400 uppercase text-[9px] border-b border-gray-100 dark:border-white/5">
                           <th class="py-1 px-2">Ticker / Nome</th>
+                          <th class="py-1 px-2">Settore & Area</th>
                           <th class="py-1 px-2 text-right">Quantità</th>
                           <th class="py-1 px-2 text-right">Prezzo</th>
                           <th class="py-1 px-2 text-right">Controvalore</th>
-                          <th class="py-1 px-2 text-right">Peso Portafoglio</th>
+                          <th class="py-1 px-2 text-right">% Portafoglio</th>
+                          <th class="py-1 px-2 text-right">% Categoria</th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-gray-100 dark:divide-white/5">
@@ -520,12 +776,17 @@
                           <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
                             <td class="py-1.5 px-2">
                               <span class="font-bold text-gray-900 dark:text-white">${h.ticker}</span>
-                              <span class="text-gray-400 font-sans ml-1 text-[10px]">${h.name}</span>
+                              <div class="text-gray-400 font-sans text-[10px] truncate max-w-[150px]">${h.name}</div>
+                            </td>
+                            <td class="py-1.5 px-2">
+                              <div class="text-[10px] font-mono text-gray-700 dark:text-gray-300">${h.sector || 'N/D'}</div>
+                              <div class="text-[9px] text-gray-400">${h.region || ''} ${h.country ? `(${h.country})` : ''}</div>
                             </td>
                             <td class="py-1.5 px-2 text-right">${fmtQty(h.quantity, true)}</td>
                             <td class="py-1.5 px-2 text-right">${fmtPrice(h.currentPrice)}</td>
                             <td class="py-1.5 px-2 text-right font-bold text-gray-900 dark:text-white">${fmtEur(h.marketValue)}</td>
-                            <td class="py-1.5 px-2 text-right text-emerald-600 dark:text-emerald-400 font-semibold">${fmtPct(h.weight)}</td>
+                            <td class="py-1.5 px-2 text-right font-mono font-semibold text-gray-900 dark:text-white">${fmtPct(h.weightInPortfolio || h.weight)}</td>
+                            <td class="py-1.5 px-2 text-right font-mono font-bold text-indigo-600 dark:text-indigo-400">${fmtPct(h.weightInClass || h.weight)}</td>
                           </tr>
                         `).join('')}
                       </tbody>
@@ -1066,6 +1327,31 @@
       document.getElementById('applyTradesModal')?.classList.add('hidden');
     });
 
+    // Scope pill buttons (all vs AZIONARIO vs OBBLIGAZIONARIO)
+    document.querySelectorAll('.scope-pill-btn, [data-scope-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const scope = btn.getAttribute('data-scope-btn') || 'all';
+        state.scope = scope;
+        calculateWorksheet();
+      });
+    });
+
+    // Macro KPI Card triggers
+    document.querySelectorAll('[data-scope-trigger]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const scope = card.getAttribute('data-scope-trigger');
+        if (scope) {
+          state.scope = state.scope === scope ? 'all' : scope;
+          calculateWorksheet();
+        }
+      });
+    });
+
+    // Enrich equities button
+    document.querySelectorAll('#btnEnrichEquities').forEach((btn) => {
+      btn.addEventListener('click', enrichEquities);
+    });
+
     // Target modal buttons
     document.getElementById('btnOpenNewTargetModal')?.addEventListener('click', openCreateTargetModal);
     document.getElementById('btnCloseTargetModal')?.addEventListener('click', () => {
@@ -1087,7 +1373,8 @@
     copyOrdersToClipboard,
     exportCsv,
     openApplyModal,
-    confirmApplyTrades
+    confirmApplyTrades,
+    enrichEquities
   };
 
   // Run on DOM ready

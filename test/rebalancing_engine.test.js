@@ -15,10 +15,15 @@ const app = require('../src/app');
 const {
   PRESET_TARGET_MODELS,
   normalizeAssetClass,
+  classifyMacroCategory,
+  computeMacroAllocation,
+  computeSectorAggregation,
+  computeRegionAggregation,
   calculateRebalanceWorksheet,
   generateRebalanceCsv,
   generateClipboardOrderText
 } = require('../src/utils/rebalanceEngine');
+const { enrichEquityClassification } = require('../src/services/yahooFinance');
 
 let server;
 let baseUrl;
@@ -562,7 +567,7 @@ describe('Wealthfolio-Compatible Target Allocation & Rebalancing Engine Tests', 
     assert.ok(text.includes('VWCE.DE'));
   });
 
-  test('Dual-View UI routing: /rebalance serves desktop and mobile views', async () => {
+  test('Dual-View UI routing: /rebalance serves desktop and mobile views with Macro Allocation and Sector cards', async () => {
     // Desktop request
     const desktopRes = await fetch(`${baseUrl}/rebalance`, {
       headers: {
@@ -574,6 +579,10 @@ describe('Wealthfolio-Compatible Target Allocation & Rebalancing Engine Tests', 
     const desktopHtml = await desktopRes.text();
     assert.ok(desktopHtml.includes('Ribilanciamento Portafoglio'));
     assert.ok(desktopHtml.includes('btnCopyOrders'));
+    assert.ok(desktopHtml.includes('macroAllocationChart'));
+    assert.ok(desktopHtml.includes('data-scope-btn="AZIONARIO"'));
+    assert.ok(desktopHtml.includes('sectorBreakdownContainer'));
+    assert.ok(desktopHtml.includes('btnEnrichEquities'));
 
     // Mobile request
     const mobileRes = await fetch(`${baseUrl}/rebalance`, {
@@ -586,5 +595,152 @@ describe('Wealthfolio-Compatible Target Allocation & Rebalancing Engine Tests', 
     const mobileHtml = await mobileRes.text();
     assert.ok(mobileHtml.includes('Ribilanciamento'));
     assert.ok(mobileHtml.includes('safe-area-bottom'));
+    assert.ok(mobileHtml.includes('macroAllocationChart'));
+    assert.ok(mobileHtml.includes('data-scope-btn="AZIONARIO"'));
+    assert.ok(mobileHtml.includes('sectorBreakdownContainer'));
+    assert.ok(mobileHtml.includes('btnEnrichEquities'));
+  });
+
+  // --- NEW TESTS: 4 MACRO ALLOCATION, SCOPE LIMITING, SECTOR AGGREGATION & ENRICHMENT ---
+
+  test('classifyMacroCategory: correctly separates into Azionario, Obbligazionario, Liquidità, Oro', () => {
+    // 1. Azionario
+    assert.strictEqual(classifyMacroCategory({ ticker: 'VWCE.DE', name: 'Vanguard FTSE All-World', type: 'ETF' }), 'AZIONARIO');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'AAPL', name: 'Apple Inc', type: 'STOCK' }), 'AZIONARIO');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'ISP.MI', name: 'Intesa Sanpaolo', type: 'EQUITY' }), 'AZIONARIO');
+
+    // 2. Obbligazionario
+    assert.strictEqual(classifyMacroCategory({ ticker: 'IT0005594483', name: 'BTP Valore Mg30', type: 'BOND' }), 'OBBLIGAZIONARIO');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'X25E.MI', name: 'Xtrackers II Eurozone Govt 25+', type: 'ETF', sector: 'Government' }), 'OBBLIGAZIONARIO');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'CD_WID', name: 'Conto Deposito Vincolato Widiba', type: 'DEPOSITO_VINCOLATO' }), 'OBBLIGAZIONARIO');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'BP_POSTE', name: 'Buono Postale Rinnova', type: 'BUONO_POSTALE' }), 'OBBLIGAZIONARIO');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'TFR_AZIENDALE', name: 'Trattamento Fine Rapporto', type: 'TFR' }), 'OBBLIGAZIONARIO');
+
+    // 3. Liquidità
+    assert.strictEqual(classifyMacroCategory({ ticker: 'XEON.DE', name: 'Xtrackers Overnight Rate', type: 'ETF' }), 'LIQUIDITA');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'C3M.MI', name: 'Amundi Euro Liquidity', type: 'ETF' }), 'LIQUIDITA');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'EURUSD=X', name: 'EUR/USD', type: 'CURRENCY' }), 'LIQUIDITA');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'CASH_EUR', name: 'Liquidità EUR', type: 'CASH' }), 'LIQUIDITA');
+
+    // 4. Oro
+    assert.strictEqual(classifyMacroCategory({ ticker: 'SGLD.MI', name: 'Invesco Physical Gold ETC', type: 'COMMODITY' }), 'ORO');
+    assert.strictEqual(classifyMacroCategory({ ticker: '4GLD.DE', name: 'Xetra-Gold', type: 'ETC' }), 'ORO');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'PHAU.L', name: 'WisdomTree Physical Gold', type: 'COMMODITY' }), 'ORO');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'NGAS.MI', name: 'WisdomTree Natural Gas', type: 'COMMODITY' }), 'ORO');
+  });
+
+  test('computeMacroAllocation & computeSectorAggregation: computes correct weights and groupings', () => {
+    const holdings = [
+      { ticker: 'VWCE.DE', name: 'Vanguard All-World', type: 'ETF', sector: 'Broad Market', region: 'Global', country: 'Globale', marketValue: 60000.0 },
+      { ticker: 'MSFT', name: 'Microsoft', type: 'STOCK', sector: 'Information Technology', region: 'Americas', country: 'Stati Uniti', marketValue: 40000.0 },
+      { ticker: 'IT0005594483', name: 'BTP Valore', type: 'BOND', sector: 'Government', region: 'Europe', country: 'Italia', marketValue: 50000.0 },
+      { ticker: 'XEON.DE', name: 'Xtrackers Overnight', type: 'ETF', marketValue: 30000.0 },
+      { ticker: 'SGLD.MI', name: 'Invesco Gold', type: 'COMMODITY', marketValue: 20000.0 }
+    ];
+
+    const macro = computeMacroAllocation({ holdings, currentCash: 0, addedCash: 0 });
+    assert.strictEqual(macro.totalValue, 200000.0);
+    assert.strictEqual(macro.categories.AZIONARIO.value, 100000.0);
+    assert.strictEqual(macro.categories.AZIONARIO.weight, 50.0);
+    assert.strictEqual(macro.categories.OBBLIGAZIONARIO.value, 50000.0);
+    assert.strictEqual(macro.categories.OBBLIGAZIONARIO.weight, 25.0);
+    assert.strictEqual(macro.categories.LIQUIDITA.value, 30000.0);
+    assert.strictEqual(macro.categories.LIQUIDITA.weight, 15.0);
+    assert.strictEqual(macro.categories.ORO.value, 20000.0);
+    assert.strictEqual(macro.categories.ORO.weight, 10.0);
+
+    const equities = holdings.filter(h => classifyMacroCategory(h) === 'AZIONARIO');
+    const bySector = computeSectorAggregation(equities, macro.totalValue);
+    assert.strictEqual(bySector.totalEquityValue, 100000.0);
+    assert.strictEqual(bySector.sectors.length, 2);
+
+    const broadSector = bySector.sectors.find(s => s.name === 'Broad Market');
+    assert.ok(broadSector);
+    assert.strictEqual(broadSector.value, 60000.0);
+    assert.strictEqual(broadSector.weightInEquity, 60.0);
+    assert.strictEqual(broadSector.weightInPortfolio, 30.0);
+
+    const itSector = bySector.sectors.find(s => s.name === 'Information Technology');
+    assert.ok(itSector);
+    assert.strictEqual(itSector.value, 40000.0);
+    assert.strictEqual(itSector.weightInEquity, 40.0);
+    assert.strictEqual(itSector.weightInPortfolio, 20.0);
+  });
+
+  test('POST /api/rebalancing/calculate: supports scope=AZIONARIO and scope=OBBLIGAZIONARIO', async () => {
+    // 1. Scope = AZIONARIO
+    const resAz = await fetch(`${baseUrl}/api/rebalancing/calculate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        portfolioId,
+        scope: 'AZIONARIO',
+        presetId: 'equal_weight_holdings'
+      })
+    });
+
+    assert.strictEqual(resAz.status, 200);
+    const dataAz = await resAz.json();
+    assert.strictEqual(dataAz.success, true);
+    assert.strictEqual(dataAz.worksheet.scope, 'azionario');
+    assert.ok(dataAz.worksheet.macroAllocation);
+    assert.ok(dataAz.worksheet.bySector);
+    // In AZIONARIO scope, all lines should be equity assets
+    for (const line of dataAz.worksheet.lines) {
+      assert.strictEqual(line.macroCategory, 'AZIONARIO');
+    }
+
+    // 2. Scope = OBBLIGAZIONARIO
+    const resOb = await fetch(`${baseUrl}/api/rebalancing/calculate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        portfolioId,
+        scope: 'OBBLIGAZIONARIO',
+        presetId: 'equal_weight_holdings'
+      })
+    });
+
+    assert.strictEqual(resOb.status, 200);
+    const dataOb = await resOb.json();
+    assert.strictEqual(dataOb.success, true);
+    assert.strictEqual(dataOb.worksheet.scope, 'obbligazionario');
+    for (const line of dataOb.worksheet.lines) {
+      assert.strictEqual(line.macroCategory, 'OBBLIGAZIONARIO');
+    }
+  });
+
+  test('POST /api/rebalancing/enrich-equities: updates unclassified equities with sector and region', async () => {
+    // Insert an unclassified test equity asset into DB
+    db.prepare(`
+      INSERT OR REPLACE INTO assets (ticker, name, type, currency, currentPrice, sector, region, country, updatedAt)
+      VALUES ('TEST_ENRICH_EQUITY', 'Test Unknown Tech Inc', 'EQUITY', 'EUR', 50.0, '', '', '', datetime('now'))
+    `).run();
+
+    const res = await fetch(`${baseUrl}/api/rebalancing/enrich-equities`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ ticker: 'TEST_ENRICH_EQUITY' })
+    });
+
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.count, 1);
+
+    // Verify DB updated
+    const asset = db.prepare('SELECT * FROM assets WHERE ticker = ?').get('TEST_ENRICH_EQUITY');
+    assert.ok(asset);
+    assert.ok(asset.sector && asset.sector.length > 0);
+    assert.ok(asset.region && asset.region.length > 0);
   });
 });
