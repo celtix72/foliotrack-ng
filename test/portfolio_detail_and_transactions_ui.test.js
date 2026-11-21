@@ -222,7 +222,16 @@ describe('Phase 7: Portfolio Detail, Transactions Register & Bulk CSV Uploader',
       assert.strictEqual(msft.costBasis, 380.5);
       // Unrealized PnL: 4000 - 3805 = 195
       assert.strictEqual(msft.unrealizedPnL, 195);
+      assert.strictEqual(msft.unrealizedPnl, 195);
       assert.ok(msft.weight > 0);
+
+      // Portfolio-level unrealized PnL KPI metrics
+      assert.strictEqual(data.portfolio.unrealizedPnl, 195);
+      assert.strictEqual(data.portfolio.unrealizedPnL, 195);
+      assert.strictEqual(data.portfolio.metrics.unrealizedPnl, 195);
+      assert.strictEqual(data.portfolio.metrics.unrealizedPnL, 195);
+      assert.ok(data.portfolio.metrics.unrealizedPnlPercent > 0);
+      assert.ok(data.portfolio.metrics.unrealizedPnLPercent > 0);
     });
 
     test('GET /api/transactions supports multi-criteria filtering', async () => {

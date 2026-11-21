@@ -235,8 +235,16 @@
 
         const nav = portfolioData.totalValue || 0;
         const cash = portfolioData.currentCash || 0;
-        const pnl = (portfolioData.metrics && portfolioData.metrics.unrealizedPnL) || 0;
-        const pnlPct = (portfolioData.metrics && portfolioData.metrics.unrealizedPnLPercent) || 0;
+        const pnl = portfolioData.unrealizedPnl !== undefined 
+          ? Number(portfolioData.unrealizedPnl) 
+          : (portfolioData.metrics?.unrealizedPnl !== undefined 
+              ? Number(portfolioData.metrics.unrealizedPnl) 
+              : (Number(portfolioData.metrics?.unrealizedPnL) || 0));
+        const pnlPct = portfolioData.unrealizedPnlPercent !== undefined 
+          ? Number(portfolioData.unrealizedPnlPercent) 
+          : (portfolioData.metrics?.unrealizedPnlPercent !== undefined 
+              ? Number(portfolioData.metrics.unrealizedPnlPercent) 
+              : (Number(portfolioData.metrics?.unrealizedPnLPercent) || 0));
         const p1d = portfolioData.performance1D || 0;
 
         if (portfolioData.type === 'Pensione') {
@@ -281,8 +289,8 @@
       }
 
       container.innerHTML = holdings.map((h, idx) => {
-        const pnl = h.unrealizedPnL || 0;
-        const pnlPct = h.unrealizedPnLPercent || 0;
+        const pnl = h.unrealizedPnl !== undefined ? h.unrealizedPnl : (h.unrealizedPnL || 0);
+        const pnlPct = h.unrealizedPnlPercent !== undefined ? h.unrealizedPnlPercent : (h.unrealizedPnLPercent || 0);
         const pnlBadge = pnl >= 0 ? 'badge-profit' : 'badge-loss';
 
         return `

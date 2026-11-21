@@ -235,7 +235,9 @@ function recalculatePortfolio(portfolioId, assetsMap = null) {
     performance1D: metrics.dayPnlPercent,
     closedPositions: metrics.closedPositions || [],
     unrealizedPnl: metrics.unrealizedPnl || 0.0,
+    unrealizedPnL: metrics.unrealizedPnl || 0.0,
     unrealizedPnlPercent: metrics.unrealizedPnlPercent || 0.0,
+    unrealizedPnLPercent: metrics.unrealizedPnlPercent || 0.0,
     metrics
   };
 }

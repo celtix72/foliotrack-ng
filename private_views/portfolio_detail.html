@@ -457,8 +457,16 @@
         const nav = portfolioData.totalValue || 0;
         const cash = portfolioData.currentCash || 0;
         const invested = portfolioData.investedCapital || 0;
-        const pnl = (portfolioData.metrics && portfolioData.metrics.unrealizedPnL) || 0;
-        const pnlPct = (portfolioData.metrics && portfolioData.metrics.unrealizedPnLPercent) || 0;
+        const pnl = portfolioData.unrealizedPnl !== undefined 
+          ? Number(portfolioData.unrealizedPnl) 
+          : (portfolioData.metrics?.unrealizedPnl !== undefined 
+              ? Number(portfolioData.metrics.unrealizedPnl) 
+              : (Number(portfolioData.metrics?.unrealizedPnL) || 0));
+        const pnlPct = portfolioData.unrealizedPnlPercent !== undefined 
+          ? Number(portfolioData.unrealizedPnlPercent) 
+          : (portfolioData.metrics?.unrealizedPnlPercent !== undefined 
+              ? Number(portfolioData.metrics.unrealizedPnlPercent) 
+              : (Number(portfolioData.metrics?.unrealizedPnLPercent) || 0));
         const p1d = portfolioData.performance1D || 0;
         const dividends = portfolioData.totalDividends || 0;
 
@@ -534,8 +542,8 @@
       }
 
       tbody.innerHTML = holdings.map((h, idx) => {
-        const pnl = h.unrealizedPnL || 0;
-        const pnlPct = h.unrealizedPnLPercent || 0;
+        const pnl = h.unrealizedPnl !== undefined ? h.unrealizedPnl : (h.unrealizedPnL || 0);
+        const pnlPct = h.unrealizedPnlPercent !== undefined ? h.unrealizedPnlPercent : (h.unrealizedPnLPercent || 0);
         const todayIso = new Date().toISOString().split('T')[0];
         const isPriorDay = h.quoteDate && String(h.quoteDate).substring(0, 10) < todayIso;
         const chg1D = isPriorDay ? 0 : (h.changePercent || 0);
