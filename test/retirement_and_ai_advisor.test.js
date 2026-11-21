@@ -372,6 +372,55 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(data.response.length > 20);
     });
 
+    test('GET /api/ai/prompts/weekly-report returns prompt pre-filled with live portfolio data', async () => {
+      const res = await fetch(`${baseUrl}/api/ai/prompts/weekly-report?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.ok(data.prompt);
+      assert.ok(data.prompt.includes('### RUOLO'));
+      assert.ok(data.prompt.includes('analista finanziario senior specializzato in mercati azionari europei'));
+      assert.ok(data.prompt.includes('### CONTESTO E DATI DI INPUT'));
+      assert.ok(data.prompt.includes('### ISTRUZIONI DI ANALISI'));
+      assert.ok(data.prompt.includes('### FORMATO DI OUTPUT RICHIESTO'));
+      assert.ok(data.prompt.includes('Sintesi Esecutiva'));
+      assert.ok(data.prompt.includes('Tabella Riepilogativa delle Performance'));
+      assert.ok(data.prompt.includes('Analisi delle News per Singolo Asset'));
+      assert.ok(data.prompt.includes('Contesto Macro Settimanale'));
+      assert.ok(data.prompt.includes('| Ticker | Nome | Mercato | Quantità | Prezzo Inizio Settimana | Prezzo Fine Settimana | Valuta |'));
+    });
+
+    test('POST /api/ai/chat executes weekly report prompt and adheres to required 4-part structure', async () => {
+      const promptRes = await fetch(`${baseUrl}/api/ai/prompts/weekly-report?portfolioId=${portfolioId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const promptData = await promptRes.json();
+
+      const chatRes = await fetch(`${baseUrl}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          prompt: promptData.prompt,
+          provider: 'heuristic'
+        })
+      });
+      assert.strictEqual(chatRes.status, 200);
+      const chatData = await chatRes.json();
+      assert.strictEqual(chatData.success, true);
+      assert.ok(chatData.response);
+      assert.ok(chatData.response.includes('1. Sintesi Esecutiva'));
+      assert.ok(chatData.response.includes('2. Tabella Riepilogativa delle Performance'));
+      assert.ok(chatData.response.includes('3. Analisi delle News per Singolo Asset'));
+      assert.ok(chatData.response.includes('4. Contesto Macro Settimanale'));
+      assert.ok(chatData.response.includes('TOTALE PORTAFOGLIO'));
+    });
+
     test('POST /api/ai/chat returns interactive response for portfolio prompt', async () => {
       const res = await fetch(`${baseUrl}/api/ai/chat`, {
         method: 'POST',
@@ -445,11 +494,19 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('nvidia/nemotron-3-ultra-550b-a55b'), 'Should contain NVIDIA Nemotron option');
       assert.ok(html.includes('btnSaveCustomPrompt'), 'Should contain save prompt button');
       assert.ok(html.includes('quickPromptChips'), 'Should contain quick suggestion chips');
+      assert.ok(html.includes('weekly-report-chip'), 'Should contain weekly report chip');
       assert.ok(html.includes('customPromptChipsContainer'), 'Should contain custom saved prompt chips container');
       assert.ok(html.includes('/settings#ai'), 'Should link to settings AI keys panel');
       assert.ok(html.includes('/ai_reports.js'));
       assert.ok(html.includes('/pdf_report.js'));
       assert.ok(!html.includes('Pensione & FIRE'), 'Pensione & FIRE link should be removed from sidebar');
+
+      const repRes = await fetch(`${baseUrl}/reports`, {
+        headers: { Cookie: `foliotrack_token=${authToken}` }
+      });
+      assert.strictEqual(repRes.status, 200);
+      const repHtml = await repRes.text();
+      assert.ok(repHtml.includes('/ai-advisor?prompt=weekly-report'), 'Reports page should link to weekly AI report');
     });
 
     test('GET /goals?view=mobile serves mobile layout', async () => {
@@ -469,7 +526,15 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('nvidia/nemotron-3-ultra-550b-a55b'), 'Mobile view should contain NVIDIA Nemotron option');
       assert.ok(html.includes('btnSaveCustomPrompt'), 'Mobile view should contain save prompt button');
       assert.ok(html.includes('quickPromptChips'), 'Mobile view should contain quick suggestion chips');
+      assert.ok(html.includes('weekly-report-chip'), 'Mobile view should contain weekly report chip');
       assert.ok(html.includes('/settings?tab=ai'), 'Mobile view should link to settings AI tab');
+
+      const repMobRes = await fetch(`${baseUrl}/reports?view=mobile`, {
+        headers: { Cookie: `foliotrack_token=${authToken}` }
+      });
+      assert.strictEqual(repMobRes.status, 200);
+      const repMobHtml = await repMobRes.text();
+      assert.ok(repMobHtml.includes('/ai-advisor?prompt=weekly-report'), 'Reports mobile page should link to weekly AI report');
     });
 
     test('Settings UI (desktop and mobile) renders centralized AI and Tavily configuration', async () => {

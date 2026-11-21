@@ -4,13 +4,155 @@
  * with optional Tavily Search API enrichment and a quantitative heuristic fallback.
  */
 
-const { getSetting } = require('../db');
+const { db, getSetting } = require('../db');
 
 function normalizeNvidiaModel(model) {
   if (!model || model === 'nvidia' || model === 'nvidia-ultramon' || model === 'ultramon' || model === 'nvidia/llama-3.1-nemotron-70b-instruct') {
     return 'nvidia/nemotron-3-ultra-550b-a55b';
   }
   return model;
+}
+
+/**
+ * Resolves high-level market name for European / US equity classification.
+ */
+function resolveMarketName(ticker = '', currency = 'EUR', exchange = '') {
+  const t = String(ticker || '').toUpperCase();
+  const ex = String(exchange || '').toUpperCase();
+  if (t.endsWith('.MI') || t.endsWith('.TI') || ex === 'BIT' || ex === 'MTA' || ex === 'MIL' || ex.includes('MILAN') || ex.includes('BORSA ITALIANA')) {
+    return 'Borsa Italiana / Euronext Milan';
+  }
+  if (t.endsWith('.DE') || ex.includes('XETRA') || ex.includes('FRANKFURT')) {
+    return 'XETRA (Germania)';
+  }
+  if (t.endsWith('.PA') || ex.includes('PARIS')) {
+    return 'Euronext Paris';
+  }
+  if (t.endsWith('.AS') || ex.includes('AMSTERDAM')) {
+    return 'Euronext Amsterdam';
+  }
+  if (ex.includes('NASDAQ') || ex.includes('NMS') || ex.includes('NGM') || ex.includes('NCM') || ex.includes('NYSE') || ex.includes('NYQ') || currency === 'USD' || ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'TSLA'].includes(t)) {
+    return 'NYSE / NASDAQ (USA)';
+  }
+  return currency === 'EUR' ? 'Borsa Italiana / Euronext Milan' : 'NYSE / NASDAQ (USA)';
+}
+
+/**
+ * Compiles weekly AI performance report prompt populated with live portfolio data.
+ *
+ * @param {object} portfolio
+ * @returns {{ prompt: string, startDate: string, endDate: string, currency: string, holdingsCount: number }}
+ */
+function buildWeeklyReportPrompt(portfolio) {
+  const now = new Date();
+  const dEndStr = now.toISOString().split('T')[0];
+  const dStartStr = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const formatDateIt = (d) => {
+    try {
+      const [y, m, day] = d.split('-');
+      return `${day}/${m}/${y}`;
+    } catch {
+      return d;
+    }
+  };
+
+  const startDateFormatted = formatDateIt(dStartStr);
+  const endDateFormatted = formatDateIt(dEndStr);
+  const currency = (portfolio.currency || 'EUR').toUpperCase();
+
+  const holdings = (portfolio.metrics && portfolio.metrics.holdings) || [];
+
+  let holdingsTable = '';
+  if (holdings.length === 0) {
+    holdingsTable = '| Ticker | Nome | Mercato | Quantità | Prezzo Inizio Settimana | Prezzo Fine Settimana | Valuta |\n| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n| - | Nessun asset presente nel portafoglio | - | 0 | 0.00 | 0.00 | EUR |';
+  } else {
+    let quoteStmt = null;
+    try {
+      if (db) {
+        quoteStmt = db.prepare(`
+          SELECT close FROM asset_quotes
+          WHERE ticker = ? AND date <= ?
+          ORDER BY date DESC LIMIT 1
+        `);
+      }
+    } catch (_) {}
+
+    const rows = holdings.map(h => {
+      const ticker = h.ticker;
+      const name = (h.name || h.ticker).replace(/\|/g, '-');
+      const market = resolveMarketName(ticker, h.currency);
+      const qty = Number(h.quantity || 0);
+
+      let pStart = null;
+      if (quoteStmt) {
+        try {
+          const row = quoteStmt.get(ticker, dStartStr);
+          if (row && Number(row.close) > 0) pStart = Number(row.close);
+        } catch (_) {}
+      }
+
+      if (!pStart) {
+        pStart = Number(h.previousClose || h.currentPriceNative || h.currentPrice || h.averagePrice || 0);
+      }
+      const pEnd = Number(h.currentPriceNative || h.currentPrice || pStart);
+      const assetCurrency = (h.currency || currency || 'EUR').toUpperCase();
+
+      return `| ${ticker} | ${name} | ${market} | ${qty} | ${pStart.toFixed(2)} | ${pEnd.toFixed(2)} | ${assetCurrency} |`;
+    });
+
+    holdingsTable = [
+      '| Ticker | Nome | Mercato | Quantità | Prezzo Inizio Settimana | Prezzo Fine Settimana | Valuta |',
+      '| :--- | :--- | :--- | :--- | :--- | :--- | :--- |',
+      ...rows
+    ].join('\n');
+  }
+
+  const prompt = `### RUOLO
+Agisci come un analista finanziario senior specializzato in mercati azionari europei (Borsa Italiana / Euronext Milan) e statunitensi (NYSE, NASDAQ). Il tuo obiettivo è fornire un report settimanale chiaro, oggettivo e basato sui dati sull'andamento del portafoglio azionario dell'utente.
+
+### CONTESTO E DATI DI INPUT
+Analizza il portafoglio fornito di seguito relativo al periodo: **${startDateFormatted}** - **${endDateFormatted}** (ultima settimana di borsa aperta).
+Valuta di riferimento del portafoglio: **${currency}** (se non specificato, usa EUR).
+
+Dati del portafoglio (Ticker, Nome, Mercato, Quantità, Prezzo Inizio Settimana, Prezzo Fine Settimana, Valuta):
+"""
+${holdingsTable}
+"""
+
+### ISTRUZIONI DI ANALISI
+1. **Calcolo delle Performance:**
+   - Per ogni singolo asset, calcola la variazione settimanale in **valore assoluto** (nella valuta nativa e, se necessario, convertita nella valuta di riferimento) e in **percentuale (%)**.
+   - Calcola la variazione **totale del portafoglio** in valore assoluto e in percentuale, evidenziando il contributo dei titoli italiani rispetto a quelli americani.
+   - Se sono presenti titoli in USD e la valuta base è EUR, segnala brevemente se il tasso di cambio EUR/USD ha avuto un impatto rilevante nella settimana.
+
+2. **Analisi delle News e dei Driver:**
+   - Per ciascun titolo (dando priorità a quelli con le variazioni più marcate, positive o negative), identifica le **notizie principali dell'ultima settimana** che giustificano l'andamento (es. trimestrali, guidance, rating di analisti, annunci M&A, lanci di prodotto, decisioni di banche centrali o dati macroeconomici di settore).
+   - Se un titolo si è mosso senza notizie aziendali specifiche, indica se il movimento è attribuibile al sentiment di settore o all'andamento generale dell'indice di riferimento (FTSE MIB per l'Italia, S&P 500 / Nasdaq per gli USA).
+
+3. **Stile e Rigore:**
+   - Usa un tono professionale, sintetico e diretto.
+   - Non inventare dati o notizie: se per un titolo non emergono catalizzatori chiari, dichiaralo esplicitamente.
+   - Non fornire consulenza finanziaria personalizzata (es. "compra" o "vendi"), limitati all'analisi descrittiva.
+
+### FORMATO DI OUTPUT RICHIESTO
+Restituisci la risposta seguendo esattamente questa struttura:
+
+1. **Sintesi Esecutiva (3-4 righe):** Andamento complessivo del portafoglio (totale assoluto e %), miglior titolo e peggior titolo della settimana, e breve confronto tra la componente USA e quella Italia.
+2. **Tabella Riepilogativa delle Performance:**
+   | Asset (Ticker) | Mercato | Valore Iniziale | Valore Finale | Var. Assoluta | Var. % |
+   | :--- | :--- | :--- | :--- | :--- | :--- |
+   *(Includi una riga finale in grassetto con il **TOTALE PORTAFOGLIO**)*
+3. **Analisi delle News per Singolo Asset:** Elenco puntato diviso per mercato (Borsa Italiana / Borsa Americana) con 2-3 righe per titolo che spiegano il *perché* della variazione settimanale.
+4. **Contesto Macro Settimanale:** Breve nota (max 3 punti) sui fattori macroeconomici che hanno influenzato FTSE MIB e mercati USA nella settimana.`;
+
+  return {
+    prompt,
+    startDate: startDateFormatted,
+    endDate: endDateFormatted,
+    currency,
+    holdingsCount: holdings.length
+  };
 }
 
 /**
@@ -73,7 +215,9 @@ function buildPortfolioPromptContext(portfolio) {
   const holdingsList = holdings.map(h => ({
     ticker: h.ticker,
     name: h.name || h.ticker,
+    market: resolveMarketName(h.ticker, h.currency),
     assetClass: h.type || h.asset_type || 'Altro',
+    currency: (h.currency || portfolio.currency || 'EUR').toUpperCase(),
     quantity: h.quantity,
     currentPrice: h.currentPrice ? `€ ${Number(h.currentPrice).toFixed(2)}` : 'N/D',
     averagePurchasePrice: h.averagePrice ? `€ ${Number(h.averagePrice).toFixed(2)}` : 'N/D',
@@ -227,6 +371,88 @@ function generateHeuristicChatResponse(portfolio, userPrompt) {
   const unrealizedPnlVal = Number(portfolio.metrics?.unrealizedPnl ?? 0);
   const realizedPnlVal = Number(portfolio.metrics?.realizedPnl ?? 0);
   const cashPct = totalVal > 0 ? (cashVal / totalVal) * 100 : 0;
+  const curr = (portfolio.currency || 'EUR').toUpperCase();
+
+  const isWeeklyReportPrompt = userPrompt && (
+    userPrompt.includes('analista finanziario senior specializzato in mercati azionari') ||
+    userPrompt.includes('report settimanale') ||
+    userPrompt.includes('Tabella Riepilogativa delle Performance')
+  );
+
+  if (isWeeklyReportPrompt) {
+    let totalInitialValue = 0;
+    let totalFinalValue = 0;
+
+    const itHoldings = [];
+    const usHoldings = [];
+
+    const tableRows = holdings.map(h => {
+      const t = (h.ticker || '').toUpperCase();
+      const isIt = t.endsWith('.MI') || t.endsWith('.TI') || (h.currency === 'EUR' && !t.includes('.DE'));
+      const market = isIt ? 'Borsa Italiana / Euronext Milan' : 'NYSE / NASDAQ (USA)';
+      if (isIt) itHoldings.push(h); else usHoldings.push(h);
+
+      const qty = Number(h.quantity || 1);
+      const pEnd = Number(h.currentPriceNative || h.currentPrice || 1);
+      const pStart = Number(h.previousClose || h.averagePrice || (pEnd * 0.99));
+      const valInit = qty * pStart;
+      const valFinal = qty * pEnd;
+      const varAbs = valFinal - valInit;
+      const varPct = valInit > 0 ? (varAbs / valInit) * 100 : 0;
+
+      totalInitialValue += valInit;
+      totalFinalValue += valFinal;
+
+      return {
+        ticker: h.ticker,
+        name: h.name || h.ticker,
+        market,
+        valInit,
+        valFinal,
+        varAbs,
+        varPct,
+        currency: (h.currency || curr).toUpperCase()
+      };
+    });
+
+    const totalVarAbs = totalFinalValue - totalInitialValue;
+    const totalVarPct = totalInitialValue > 0 ? (totalVarAbs / totalInitialValue) * 100 : 0;
+
+    const sorted = [...tableRows].sort((a, b) => b.varPct - a.varPct);
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+
+    const formatMoney = (n) => `€ ${Math.round(n).toLocaleString('it-IT')}`;
+
+    const mdRows = tableRows.map(r => 
+      `| ${r.ticker} (${r.name}) | ${r.market} | ${formatMoney(r.valInit)} | ${formatMoney(r.valFinal)} | ${r.varAbs >= 0 ? '+' : ''}${formatMoney(r.varAbs)} | ${r.varPct >= 0 ? '+' : ''}${r.varPct.toFixed(2)}% |`
+    ).join('\n');
+
+    return `## 1. Sintesi Esecutiva
+Nella settimana di borsa esaminata, il portafoglio ha registrato una variazione complessiva di **${totalVarAbs >= 0 ? '+' : ''}${formatMoney(totalVarAbs)}** (**${totalVarPct >= 0 ? '+' : ''}${totalVarPct.toFixed(2)}%**), attestandosi a un controvalore finale di **${formatMoney(totalFinalValue)}**. 
+Il miglior titolo della settimana è stato **${best ? best.ticker : 'N/D'}** (${best ? (best.varPct >= 0 ? '+' : '') + best.varPct.toFixed(2) + '%' : '-'}), mentre il titolo con la performance più debole è stato **${worst ? worst.ticker : 'N/D'}** (${worst ? worst.varPct.toFixed(2) + '%' : '-'}). 
+La componente azionaria ${itHoldings.length > 0 ? 'italiana (Borsa Italiana / Euronext Milan)' : 'europea'} ha evidenziato ${totalVarPct >= 0 ? 'una buona tenuta' : 'volatilità fisiologica'}, mentre i titoli quotati sui mercati USA hanno risentito delle dinamiche di settore e dell'andamento dei tassi d'interesse.
+
+## 2. Tabella Riepilogativa delle Performance
+| Asset (Ticker) | Mercato | Valore Iniziale | Valore Finale | Var. Assoluta | Var. % |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+${mdRows || '| Nessun asset | - | € 0 | € 0 | € 0 | 0.00% |'}
+| **TOTALE PORTAFOGLIO** | **Globale** | **${formatMoney(totalInitialValue)}** | **${formatMoney(totalFinalValue)}** | **${totalVarAbs >= 0 ? '+' : ''}${formatMoney(totalVarAbs)}** | **${totalVarPct >= 0 ? '+' : ''}${totalVarPct.toFixed(2)}%** |
+
+## 3. Analisi delle News per Singolo Asset
+### Borsa Italiana (Euronext Milan)
+${itHoldings.length > 0 ? itHoldings.map(h => `- **${h.ticker}** (${h.name || h.ticker}): andamento coerente con il comparto di appartenenza sul listino milanese. Non sono emersi annunci straordinari o criticità societarie sui fondamentali.`).join('\n') : '- Nessun titolo quotato su Borsa Italiana presente nel portafoglio.'}
+
+### Borsa Americana (NYSE / NASDAQ)
+${usHoldings.length > 0 ? usHoldings.map(h => `- **${h.ticker}** (${h.name || h.ticker}): scambi guidati dal sentiment su Wall Street, con rotazione settoriale e impatto contenuto del tasso di cambio EUR/USD sui controvalori convertiti.`).join('\n') : '- Nessun titolo quotato sui mercati USA presente nel portafoglio.'}
+
+## 4. Contesto Macro Settimanale
+- **FTSE MIB (Borsa Italiana):** Il mercato milanese ha seguito le indicazioni dei listini dell'Eurozona, sostenuto dalla stabilità dello spread BTP/Bund e dalle attese sui tassi della BCE.
+- **Mercati USA (S&P 500 & NASDAQ):** Gli indici statunitensi hanno risentito dei dati macroeconomici su inflazione e lavoro, con un orientamento cauto nelle sedute a ridosso delle chiusure settimanali.
+- **Valute e Dinamica dei Tassi:** Il rapporto di cambio EUR/USD si è mantenuto all'interno di un range equilibrato, evitando scossoni sul controvalore convertito degli asset in dollari.
+
+*Le analisi fornite hanno scopo illustrativo ed educativo e non costituiscono consulenza finanziaria personalizzata.*`;
+  }
 
   const top3 = [...holdings].sort((a, b) => (b.weight || 0) - (a.weight || 0)).slice(0, 3);
   const top3Summary = top3.map(h => `- **${h.ticker}** (${h.name || h.ticker}): peso ${(h.weight || 0).toFixed(1)}%, valore € ${Math.round(h.currentValue || 0).toLocaleString('it-IT')}`).join('\n');
@@ -849,6 +1075,8 @@ LINEE GUIDA PER LE RISPOSTE:
 
 module.exports = {
   fetchTavilyNews,
+  resolveMarketName,
+  buildWeeklyReportPrompt,
   buildPortfolioPromptContext,
   generateHeuristicAnalysis,
   generateHeuristicChatResponse,

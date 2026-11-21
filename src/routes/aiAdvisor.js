@@ -8,7 +8,8 @@ const { requireAuth } = require('../middlewares/authMiddleware');
 const { recalculatePortfolio, checkPortfolioAccess, getAssetsMap } = require('./portfolios');
 const {
   generatePortfolioAiAssessment,
-  chatWithPortfolioAi
+  chatWithPortfolioAi,
+  buildWeeklyReportPrompt
 } = require('../services/aiService');
 
 const router = express.Router();
@@ -226,6 +227,33 @@ router.get('/status', (req, res) => {
     openrouterKeyMasked: openrouterKey ? (String(openrouterKey).slice(0, 9) + '...' + String(openrouterKey).slice(-4)) : null,
     openaiKeyMasked: openaiKey ? (String(openaiKey).slice(0, 7) + '...' + String(openaiKey).slice(-4)) : null,
     defaultModel
+  });
+});
+
+/**
+ * GET /api/ai/prompts/weekly-report
+ * Returns pre-filled weekly AI report prompt populated with the selected portfolio data.
+ */
+router.get('/prompts/weekly-report', (req, res) => {
+  const { portfolioId = 'all' } = req.query;
+  const portfolio = getPortfolioOrAggregated(portfolioId, req.user.id, req.user.role);
+  if (!portfolio) {
+    return res.status(404).json({ success: false, error: 'Portafoglio non trovato.' });
+  }
+  if (portfolio.error) {
+    return res.status(portfolio.status || 400).json({ success: false, error: portfolio.error });
+  }
+
+  const promptData = buildWeeklyReportPrompt(portfolio);
+  return res.json({
+    success: true,
+    prompt: promptData.prompt,
+    portfolioId,
+    portfolioName: portfolio.name || 'Tutti i Portafogli',
+    currency: promptData.currency,
+    startDate: promptData.startDate,
+    endDate: promptData.endDate,
+    holdingsCount: promptData.holdingsCount
   });
 });
 

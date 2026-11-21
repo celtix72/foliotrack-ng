@@ -643,7 +643,25 @@
 
     // Quick chips click: load into input, DO NOT auto-execute immediately
     document.querySelectorAll('.quick-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        const promptType = btn.getAttribute('data-prompt-type');
+        if (promptType === 'weekly-report') {
+          const portfolioSelect = document.getElementById('reportPortfolioSelect');
+          const portfolioId = portfolioSelect ? portfolioSelect.value : 'all';
+          showPromptFeedback('Compilazione report settimanale con i dati del portafoglio in corso...');
+          try {
+            const res = await fetch(`/api/ai/prompts/weekly-report?portfolioId=${encodeURIComponent(portfolioId)}`);
+            const data = await res.json();
+            if (data.success && data.prompt) {
+              loadPromptIntoInput(data.prompt);
+              showPromptFeedback('✓ Report settimanale compilato con i dati del portafoglio! Puoi modificarlo o inviarlo.');
+              return;
+            }
+          } catch (err) {
+            console.warn('Errore caricamento prompt report settimanale:', err);
+          }
+        }
+
         const promptText = btn.getAttribute('data-prompt');
         if (promptText) {
           loadPromptIntoInput(promptText);
@@ -1040,6 +1058,15 @@
     await checkGeminiStatus();
     updateSendButtonLabel();
     updateAiChatPortfolioLabel();
+
+    // Auto-trigger weekly report if passed in URL query (?prompt=weekly-report)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('prompt') === 'weekly-report') {
+      const weeklyBtn = document.querySelector('.weekly-report-chip');
+      if (weeklyBtn) {
+        setTimeout(() => weeklyBtn.click(), 200);
+      }
+    }
   });
 
   window.updateAiChatPortfolioLabel = updateAiChatPortfolioLabel;
