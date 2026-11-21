@@ -295,7 +295,7 @@ router.get('/reports', (req, res) => {
     let rows;
     if (portfolioId && portfolioId !== 'all') {
       rows = db.prepare(`
-        SELECT id, user_id, portfolio_id, portfolio_name, report_type, report_title, model, provider, prompt,
+        SELECT id, user_id, portfolio_id, portfolio_name, report_type, report_title, model, provider, prompt, content,
                substr(content, 1, 240) as preview,
                created_at
         FROM ai_reports
@@ -304,7 +304,7 @@ router.get('/reports', (req, res) => {
       `).all(req.user.id, String(portfolioId));
     } else {
       rows = db.prepare(`
-        SELECT id, user_id, portfolio_id, portfolio_name, report_type, report_title, model, provider, prompt,
+        SELECT id, user_id, portfolio_id, portfolio_name, report_type, report_title, model, provider, prompt, content,
                substr(content, 1, 240) as preview,
                created_at
         FROM ai_reports

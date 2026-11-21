@@ -517,6 +517,8 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(textAi.includes('renderAiReportsTable'), 'Should contain renderAiReportsTable');
       assert.ok(textAi.includes('openAiReportViewer'), 'Should contain openAiReportViewer');
       assert.ok(textAi.includes('deleteAiReport'), 'Should contain deleteAiReport');
+      assert.ok(textAi.includes('report-accordion'), 'Should render collapsed accordion list items');
+      assert.ok(textAi.includes('btn-toggle-all-reports'), 'Should contain toggle all expand/collapse button');
 
       const resPdf = await fetch(`${baseUrl}/pdf_report.js`);
       assert.strictEqual(resPdf.status, 200);

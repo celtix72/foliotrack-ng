@@ -1005,103 +1005,166 @@
           <div class="text-3xl">📜</div>
           <div class="text-sm font-bold text-gray-900 dark:text-white">Nessun report IA archiviato</div>
           <p class="text-xs font-mono text-gray-400 max-w-sm mx-auto">
-            I report settimanali e le analisi generate con l'AI Advisor verranno salvati automaticamente qui in ordine cronologico con data/ora, tipo di analisi e modello LLM utilizzato.
+            I report settimanali e le analisi generate con l'AI Advisor verranno salvati automaticamente qui in ordine cronologico con data/ora, titolo e modello LLM utilizzato.
           </p>
         </div>
       `;
       return;
     }
 
-    if (isMobile) {
-      container.innerHTML = `
-        <div class="space-y-2.5">
+    container.innerHTML = `
+      <div class="space-y-3">
+        <!-- List Toolbar: count & toggle expand/collapse all -->
+        <div class="flex items-center justify-between pb-2 px-1 border-b border-gray-100 dark:border-white/5 select-none">
+          <div class="flex items-center space-x-2 text-xs font-mono text-gray-500">
+            <span>📜</span>
+            <span><strong class="text-gray-900 dark:text-white">${reports.length}</strong> report in archivio</span>
+            <span class="text-gray-300 dark:text-white/10">•</span>
+            <span class="text-[11px] text-gray-400">Clicca su una voce per espanderla o comprimerla</span>
+          </div>
+          <button type="button" class="btn-toggle-all-reports text-[11px] font-mono text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold cursor-pointer">
+            Espandi tutti
+          </button>
+        </div>
+
+        <!-- Collapsible Reports List -->
+        <div class="space-y-2.5" id="reportsAccordionContainer">
           ${reports.map(r => `
-            <div class="signature-card p-3 space-y-2 border border-gray-200/80 dark:border-white/10">
-              <div class="flex items-center justify-between">
-                ${getReportTypeBadge(r.report_type, r.report_title)}
-                <span class="text-[10px] font-mono text-gray-400">${formatReportDate(r.created_at)}</span>
-              </div>
-              <div>
-                <h4 class="text-xs font-bold text-gray-900 dark:text-white line-clamp-1">${escapeHtml(r.report_title)}</h4>
-                <p class="text-[10px] font-mono text-gray-500 line-clamp-2 mt-0.5">${escapeHtml(r.prompt || r.preview || '')}</p>
-              </div>
-              <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5 text-[10px] font-mono">
-                <span class="text-gray-400 truncate max-w-[150px]">🤖 ${escapeHtml(r.model)}</span>
-                <div class="flex items-center space-x-1 shrink-0">
-                  <button type="button" class="btn-view-report px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-bold transition hover:bg-emerald-100" data-report-id="${r.id}">
-                    Vedi
-                  </button>
-                  <button type="button" class="btn-delete-report p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition" data-report-id="${r.id}" title="Elimina">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
+            <details class="report-accordion group signature-card p-0 overflow-hidden border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#18181b] transition-all hover:border-emerald-500/40">
+              <!-- Summary: Initially COLLAPSED showing ONLY Data/Ora, Titolo del Report, LLM Usato -->
+              <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer p-3 sm:px-4 sm:py-3.5 flex items-center justify-between gap-3 select-none hover:bg-gray-50/80 dark:hover:bg-white/[0.03] transition">
+                <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1">
+                  <!-- 1. Data e Ora -->
+                  <span class="text-xs font-mono text-gray-500 dark:text-gray-400 shrink-0 flex items-center space-x-1">
+                    <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>${formatReportDate(r.created_at)}</span>
+                  </span>
+
+                  <span class="text-gray-300 dark:text-white/10 hidden sm:inline">•</span>
+
+                  <!-- 2. Titolo del Report -->
+                  <span class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
+                    ${escapeHtml(r.report_title)}
+                  </span>
+                </div>
+
+                <div class="flex items-center space-x-2 shrink-0">
+                  <!-- 3. LLM Usato -->
+                  <span class="px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-semibold truncate max-w-[130px] sm:max-w-[200px]" title="Modello LLM: ${escapeHtml(r.model)}">
+                    🤖 ${escapeHtml(r.model)}
+                  </span>
+
+                  <!-- Expand/Collapse Chevron Indicator -->
+                  <span class="w-5 h-5 rounded-md flex items-center justify-center text-gray-400 group-open:rotate-180 transition-transform duration-200">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </span>
+                </div>
+              </summary>
+
+              <!-- Expanded Details (Revealed on click) -->
+              <div class="border-t border-gray-100 dark:border-white/5 p-4 sm:p-5 space-y-4 bg-gray-50/40 dark:bg-black/10">
+                <!-- Meta Info & Action Buttons -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-white/5 text-xs font-mono">
+                  <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+                    ${getReportTypeBadge(r.report_type, r.report_title)}
+                    <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-[10px] text-gray-600 dark:text-gray-300">
+                      💼 ${escapeHtml(r.portfolio_name || 'Tutti i portafogli')}
+                    </span>
+                    <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-[10px] text-gray-600 dark:text-gray-300">
+                      Gateway: ${escapeHtml(r.provider || 'AI')}
+                    </span>
+                  </div>
+
+                  <div class="flex items-center space-x-1.5">
+                    <button type="button" class="btn-copy-report-content btn-pill px-2.5 py-1 text-[11px] bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 border border-gray-200/60 dark:border-white/10 flex items-center space-x-1 transition cursor-pointer" data-report-id="${r.id}">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      </svg>
+                      <span class="copy-lbl">Copia</span>
+                    </button>
+                    <button type="button" class="btn-fullscreen-report btn-pill px-2.5 py-1 text-[11px] bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 border border-gray-200/60 dark:border-white/10 flex items-center space-x-1 transition cursor-pointer" data-report-id="${r.id}" title="Apri a schermo intero">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                      </svg>
+                      <span>Schermo Intero</span>
+                    </button>
+                    <button type="button" class="btn-delete-report btn-pill px-2.5 py-1 text-[11px] text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-900/30 flex items-center space-x-1 transition cursor-pointer" data-report-id="${r.id}" title="Elimina definitivamente">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                      <span>Elimina</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Prompt Inviato (se disponibile) -->
+                ${r.prompt ? `
+                  <details class="text-[11px] border border-gray-200/60 dark:border-white/5 rounded-xl p-2.5 bg-white dark:bg-[#151518]">
+                    <summary class="font-mono text-gray-500 cursor-pointer select-none flex items-center justify-between">
+                      <span>📝 Prompt inviato all'AI</span>
+                      <span class="text-xs text-gray-400">▾</span>
+                    </summary>
+                    <div class="mt-2 font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-[10px] pt-1.5 border-t border-gray-100 dark:border-white/5 leading-relaxed">
+                      ${escapeHtml(r.prompt)}
+                    </div>
+                  </details>
+                ` : ''}
+
+                <!-- Contenuto del Report Formattato in Markdown -->
+                <div class="signature-card p-4 sm:p-5 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-white/10 text-xs text-gray-800 dark:text-gray-100 leading-relaxed space-y-3 ai-markdown-body">
+                  ${renderMarkdown(r.content || r.preview || '')}
                 </div>
               </div>
-            </div>
+            </details>
           `).join('')}
         </div>
-      `;
-    } else {
-      container.innerHTML = `
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-xs text-left divide-y divide-gray-200 dark:divide-white/10">
-            <thead class="bg-gray-50/70 dark:bg-white/[0.02] text-[10px] font-mono text-gray-500 uppercase">
-              <tr>
-                <th class="px-4 py-3">Data / Ora</th>
-                <th class="px-4 py-3">Tipo di Analisi</th>
-                <th class="px-4 py-3">Titolo & Richiesta</th>
-                <th class="px-4 py-3">Modello LLM</th>
-                <th class="px-4 py-3">Portafoglio</th>
-                <th class="px-4 py-3 text-right">Azioni</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-white/5 font-mono">
-              ${reports.map(r => `
-                <tr class="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition">
-                  <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300">
-                    ${formatReportDate(r.created_at)}
-                  </td>
-                  <td class="px-4 py-3 whitespace-nowrap">
-                    ${getReportTypeBadge(r.report_type, r.report_title)}
-                  </td>
-                  <td class="px-4 py-3 max-w-xs">
-                    <div class="font-bold text-gray-900 dark:text-white truncate">${escapeHtml(r.report_title)}</div>
-                    <div class="text-[10px] text-gray-400 truncate">${escapeHtml(r.prompt || r.preview || '')}</div>
-                  </td>
-                  <td class="px-4 py-3 whitespace-nowrap">
-                    <span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-200">
-                      ${escapeHtml(r.model)}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400 text-[11px]">
-                    ${escapeHtml(r.portfolio_name || 'Tutti')}
-                  </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-right space-x-1">
-                    <button type="button" class="btn-view-report btn-pill px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-[11px] font-bold transition inline-flex items-center space-x-1 cursor-pointer" data-report-id="${r.id}">
-                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                      <span>Rivedi</span>
-                    </button>
-                    <button type="button" class="btn-delete-report btn-pill px-2 py-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 text-[11px] transition inline-flex items-center cursor-pointer" data-report-id="${r.id}" title="Elimina report">
-                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
+      </div>
+    `;
 
     // Attach listeners
-    container.querySelectorAll('.btn-view-report').forEach(btn => {
-      btn.addEventListener('click', () => {
+    const toggleAllBtn = container.querySelector('.btn-toggle-all-reports');
+    if (toggleAllBtn) {
+      toggleAllBtn.addEventListener('click', () => {
+        const items = container.querySelectorAll('.report-accordion');
+        const anyClosed = Array.from(items).some(it => !it.open);
+        items.forEach(it => { it.open = anyClosed; });
+        toggleAllBtn.textContent = anyClosed ? 'Comprimi tutti' : 'Espandi tutti';
+      });
+    }
+
+    // Copy Content
+    container.querySelectorAll('.btn-copy-report-content').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-report-id');
+        const report = reports.find(x => String(x.id) === String(id));
+        if (!report || !report.content) return;
+        navigator.clipboard.writeText(report.content).then(() => {
+          const lbl = btn.querySelector('.copy-lbl') || btn;
+          const orig = lbl.textContent;
+          lbl.textContent = 'Copiato!';
+          setTimeout(() => { lbl.textContent = orig; }, 2000);
+        });
+      });
+    });
+
+    // Fullscreen / Modal Viewer
+    container.querySelectorAll('.btn-fullscreen-report, .btn-view-report').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const id = btn.getAttribute('data-report-id');
         if (id) openAiReportViewer(id);
       });
     });
 
+    // Delete
     container.querySelectorAll('.btn-delete-report').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const id = btn.getAttribute('data-report-id');
         if (id) deleteAiReport(id);
       });
