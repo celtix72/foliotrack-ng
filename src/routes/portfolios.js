@@ -234,6 +234,8 @@ function recalculatePortfolio(portfolioId, assetsMap = null) {
     dayPnlPercent: metrics.dayPnlPercent,
     performance1D: metrics.dayPnlPercent,
     closedPositions: metrics.closedPositions || [],
+    realizedPnl: metrics.realizedPnl || 0.0,
+    realizedPnL: metrics.realizedPnl || 0.0,
     unrealizedPnl: metrics.unrealizedPnl || 0.0,
     unrealizedPnL: metrics.unrealizedPnl || 0.0,
     unrealizedPnlPercent: metrics.unrealizedPnlPercent || 0.0,

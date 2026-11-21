@@ -151,6 +151,8 @@ describe('Phase 7: Portfolio Detail, Transactions Register & Bulk CSV Uploader',
       const html = await res.text();
       assert.ok(html.includes('Posizioni Aperte (Holdings)'));
       assert.ok(html.includes('Posizioni Chiuse'));
+      assert.ok(html.includes('Gain Posizioni Chiuse'));
+      assert.ok(html.includes('statRealizedPnl'));
       assert.ok(html.includes('closedTbody'));
       assert.ok(html.includes('data-holding-sort'));
       assert.ok(html.includes('data-closed-sort'));
@@ -168,6 +170,7 @@ describe('Phase 7: Portfolio Detail, Transactions Register & Bulk CSV Uploader',
       const html = await res.text();
       assert.ok(html.includes('mHoldingsContainer'));
       assert.ok(html.includes('mStatNav'));
+      assert.ok(html.includes('mStatRealizedPnl'));
       assert.ok(html.includes('mTabClosed'));
       assert.ok(html.includes('mClosedContainer'));
       assert.ok(html.includes('mNewTxFab'));
@@ -395,6 +398,10 @@ describe('Phase 7: Portfolio Detail, Transactions Register & Bulk CSV Uploader',
       assert.strictEqual(closed[1].sellPrice, 200);
       // Cost: 10 * 100 = 1000. Proceeds: 10 * 200 - 5 = 1995. Realized PnL: 995.
       assert.strictEqual(closed[1].realizedPnl, 995);
+
+      // Portfolio total realized PnL KPI
+      assert.strictEqual(pData.portfolio.realizedPnl, 1490);
+      assert.strictEqual(pData.portfolio.metrics.realizedPnl, 1490);
     });
   });
 });

@@ -92,7 +92,9 @@ function renderMobilePortfolios(portfolios) {
   const totValue = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.totalValue) || 0) : sum, 0);
   const totCash = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.currentCash) || 0) : sum, 0);
   const totGain = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.unrealizedPnl ?? p.metrics?.unrealizedPnl) || 0) : sum, 0);
+  const totRealized = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.realizedPnl ?? p.metrics?.realizedPnl) || 0) : sum, 0);
   const isTotGainPos = totGain >= 0;
+  const isTotRealizedPos = totRealized >= 0;
   const activeCount = portfolios.filter(p => p.include_in_totals).length;
 
   let summaryHtml = '';
@@ -103,7 +105,7 @@ function renderMobilePortfolios(portfolios) {
           <span>Totale Portafogli</span>
           <span>${activeCount}/${portfolios.length} inclusi nei calcoli</span>
         </div>
-        <div class="grid grid-cols-3 gap-2 mt-1 pt-1 border-t border-emerald-500/15 font-mono">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1 pt-1 border-t border-emerald-500/15 font-mono">
           <div>
             <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Controvalore</span>
             <div class="mt-0.5">
@@ -116,10 +118,16 @@ function renderMobilePortfolios(portfolios) {
               <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">${fmtEur(totCash)}</span>
             </div>
           </div>
-          <div class="text-right">
-            <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Gain Pos. Aperte</span>
+          <div>
+            <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider truncate">Gain Aperte</span>
             <div class="mt-0.5">
               <span class="text-xs font-bold tabular-nums ${isTotGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${fmtEurSigned(totGain)}</span>
+            </div>
+          </div>
+          <div class="text-right sm:text-left">
+            <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider truncate">Gain Chiuse</span>
+            <div class="mt-0.5">
+              <span class="text-xs font-bold tabular-nums ${isTotRealizedPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${fmtEurSigned(totRealized)}</span>
             </div>
           </div>
         </div>
@@ -132,6 +140,8 @@ function renderMobilePortfolios(portfolios) {
     const pnlPct = p.unrealizedPnlPercent !== undefined ? Number(p.unrealizedPnlPercent) : (p.metrics?.unrealizedPnlPercent || 0);
     const isPos = pnl >= 0;
     const badgePnlClass = isPos ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-rose-600 dark:text-rose-400 font-bold';
+    const realizedPnl = p.realizedPnl !== undefined ? Number(p.realizedPnl) : (p.metrics?.realizedPnl || 0);
+    const isRealizedPos = realizedPnl >= 0;
     const isIncluded = Boolean(p.include_in_totals);
     const isPension = p.type === 'Pensione';
     const pensionTaxRate = p.taxRate !== null && p.taxRate !== undefined && !isNaN(Number(p.taxRate)) ? Number(p.taxRate) : 15.0;
@@ -197,12 +207,20 @@ function renderMobilePortfolios(portfolios) {
           </div>
         </div>
 
-        <!-- Line 3: Gain Posizioni Aperte -->
-        <div class="flex items-center justify-between p-1.5 px-2 rounded-lg bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-[10px] font-mono">
-          <span class="uppercase font-bold text-gray-400 tracking-wider">Gain Pos. Aperte</span>
-          <div class="flex items-baseline space-x-1.5">
-            <span class="font-bold tabular-nums ${badgePnlClass}">${fmtEurSigned(pnl)}</span>
-            <span class="text-[9px] font-semibold tabular-nums ${badgePnlClass}">(${fmtPct(pnlPct)})</span>
+        <!-- Line 3: Gain Posizioni Aperte e Chiuse -->
+        <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
+          <div class="p-1.5 px-2 rounded-lg bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
+            <span class="uppercase font-bold text-gray-400 tracking-wider block text-[9px]">Gain Pos. Aperte</span>
+            <div class="flex items-baseline space-x-1 mt-0.5">
+              <span class="font-bold tabular-nums ${badgePnlClass}">${fmtEurSigned(pnl)}</span>
+              <span class="text-[9px] font-semibold tabular-nums ${badgePnlClass}">(${fmtPct(pnlPct)})</span>
+            </div>
+          </div>
+          <div class="p-1.5 px-2 rounded-lg bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5">
+            <span class="uppercase font-bold text-gray-400 tracking-wider block text-[9px]">Gain Pos. Chiuse</span>
+            <div class="mt-0.5">
+              <span class="font-bold tabular-nums ${isRealizedPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${fmtEurSigned(realizedPnl)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -217,9 +235,11 @@ function renderDesktopPortfolios(portfolios) {
   const totCash = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.currentCash) || 0) : sum, 0);
   const totInvested = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.investedCapital) || 0) : sum, 0);
   const totGain = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.unrealizedPnl ?? p.metrics?.unrealizedPnl) || 0) : sum, 0);
+  const totRealized = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.realizedPnl ?? p.metrics?.realizedPnl) || 0) : sum, 0);
   const totCostBasis = totValue - totGain - totCash;
   const totGainPct = totCostBasis > 0 ? (totGain / totCostBasis) * 100 : 0;
   const isTotGainPos = totGain >= 0;
+  const isTotRealizedPos = totRealized >= 0;
   const activeCount = portfolios.filter(p => p.include_in_totals).length;
 
   let summaryHtml = '';
@@ -254,6 +274,12 @@ function renderDesktopPortfolios(portfolios) {
               ${fmtEurSigned(totGain)} <span class="text-xs font-semibold">(${fmtPct(totGainPct)})</span>
             </span>
           </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Gain Pos. Chiuse</span>
+            <span class="text-base font-bold tabular-nums ${isTotRealizedPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
+              ${fmtEurSigned(totRealized)}
+            </span>
+          </div>
         </div>
       </div>
     `;
@@ -264,6 +290,8 @@ function renderDesktopPortfolios(portfolios) {
     const pnlPct = p.unrealizedPnlPercent !== undefined ? Number(p.unrealizedPnlPercent) : (p.metrics?.unrealizedPnlPercent || 0);
     const isPos = pnl >= 0;
     const badgePnlClass = isPos ? 'badge-profit' : 'badge-loss';
+    const realizedPnl = p.realizedPnl !== undefined ? Number(p.realizedPnl) : (p.metrics?.realizedPnl || 0);
+    const isRealizedPos = realizedPnl >= 0;
     const isIncluded = Boolean(p.include_in_totals);
     const isPension = p.type === 'Pensione';
     const pensionTaxRate = p.taxRate !== null && p.taxRate !== undefined && !isNaN(Number(p.taxRate)) ? Number(p.taxRate) : 15.0;
@@ -324,19 +352,36 @@ function renderDesktopPortfolios(portfolios) {
             `}
           </div>
 
-          <!-- Gain Posizioni Aperte Block -->
-          <div class="mt-3.5 p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex items-center justify-between font-mono">
-            <div>
-              <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Gain Posizioni Aperte</span>
-              <span class="text-[11px] text-gray-500 dark:text-gray-400">P&L non realizzato</span>
+          <!-- P&L Blocks: Posizioni Aperte e Chiuse -->
+          <div class="mt-3.5 grid grid-cols-2 gap-2.5 font-mono">
+            <div class="p-2.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider truncate" title="Gain Posizioni Aperte">Gain Pos. Aperte</span>
+                <span class="text-[10px] text-gray-400 dark:text-gray-500">non realizzato</span>
+              </div>
+              <div class="mt-1">
+                <span class="text-sm font-bold tabular-nums block ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
+                  ${fmtEurSigned(pnl)}
+                </span>
+                <span class="${badgePnlClass} text-[10px] tabular-nums inline-block mt-0.5">
+                  ${fmtPct(pnlPct)}
+                </span>
+              </div>
             </div>
-            <div class="text-right">
-              <span class="text-base font-bold tabular-nums block ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
-                ${fmtEurSigned(pnl)}
-              </span>
-              <span class="${badgePnlClass} text-[11px] tabular-nums inline-block mt-0.5">
-                ${fmtPct(pnlPct)}
-              </span>
+
+            <div class="p-2.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider truncate" title="Gain Posizioni Chiuse">Gain Pos. Chiuse</span>
+                <span class="text-[10px] text-gray-400 dark:text-gray-500">realizzato</span>
+              </div>
+              <div class="mt-1">
+                <span class="text-sm font-bold tabular-nums block ${isRealizedPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
+                  ${fmtEurSigned(realizedPnl)}
+                </span>
+                <span class="text-[10px] text-gray-400 font-semibold inline-block mt-0.5">
+                  ${(p.closedPositions || p.metrics?.closedPositions || []).length} vendite
+                </span>
+              </div>
             </div>
           </div>
 

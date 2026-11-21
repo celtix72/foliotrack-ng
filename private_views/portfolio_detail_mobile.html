@@ -63,14 +63,18 @@
         <div id="mStat1D" class="text-xs font-mono font-semibold text-gray-400 mt-0.5">0.00% 1D</div>
       </div>
 
-      <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-white/5 text-xs font-mono tabular-nums">
+      <div class="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-white/5 text-xs font-mono tabular-nums">
         <div>
           <span class="text-gray-400 text-[10px] block">Liquidità</span>
-          <strong id="mStatCash" class="text-gray-900 dark:text-white">€ 0.00</strong>
+          <strong id="mStatCash" class="text-gray-900 dark:text-white">€ 0</strong>
         </div>
         <div>
-          <span class="text-gray-400 text-[10px] block">P&L Non Realizzato</span>
-          <strong id="mStatPnl">€ 0.00</strong>
+          <span class="text-gray-400 text-[10px] block truncate" title="P&L Non Realizzato (Posizioni Aperte)">P&L Non Real.</span>
+          <strong id="mStatPnl">€ 0</strong>
+        </div>
+        <div>
+          <span class="text-gray-400 text-[10px] block truncate" title="Gain Posizioni Chiuse">Gain Chiuse</span>
+          <strong id="mStatRealizedPnl">€ 0</strong>
         </div>
       </div>
     </div>
@@ -270,6 +274,18 @@
         const pnlEl = document.getElementById('mStatPnl');
         pnlEl.textContent = `${fmtEurSigned(pnl)} (${fmtPct(pnlPct)})`;
         pnlEl.className = `${pnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+
+        const realized = portfolioData.realizedPnl !== undefined 
+          ? Number(portfolioData.realizedPnl) 
+          : (portfolioData.metrics?.realizedPnl !== undefined 
+              ? Number(portfolioData.metrics.realizedPnl) 
+              : (Number(portfolioData.metrics?.realizedPnL) || 0));
+
+        const mRealEl = document.getElementById('mStatRealizedPnl');
+        if (mRealEl) {
+          mRealEl.textContent = fmtEurSigned(realized);
+          mRealEl.className = `${realized >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`;
+        }
 
         document.getElementById('mAssetCount').textContent = allHoldings.length;
         document.getElementById('mClosedCount').textContent = allClosedPositions.length;
