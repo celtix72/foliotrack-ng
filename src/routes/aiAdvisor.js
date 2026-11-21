@@ -258,6 +258,109 @@ router.get('/prompts/weekly-report', (req, res) => {
 });
 
 /**
+ * Saves generated AI report into chronological archive table.
+ */
+function saveAiReportRecord({ userId, portfolioId, portfolioName, reportType, reportTitle, model, provider, prompt, content, metadata }) {
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO ai_reports (user_id, portfolio_id, portfolio_name, report_type, report_title, model, provider, prompt, content, metadata, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+    `);
+    const info = stmt.run(
+      userId,
+      String(portfolioId || 'all'),
+      portfolioName || 'Tutti i Portafogli',
+      reportType || 'CHAT_ADVISOR',
+      reportTitle || 'Analisi AI Portfolio',
+      model || 'gemini',
+      provider || 'gemini',
+      prompt || '',
+      content || '',
+      metadata ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null
+    );
+    return info.lastInsertRowid;
+  } catch (err) {
+    console.warn('[AI Reports DB Warning]:', err.message);
+    return null;
+  }
+}
+
+/**
+ * GET /api/ai/reports
+ * Returns chronological list of all saved AI reports for current user.
+ */
+router.get('/reports', (req, res) => {
+  const { portfolioId } = req.query;
+  try {
+    let rows;
+    if (portfolioId && portfolioId !== 'all') {
+      rows = db.prepare(`
+        SELECT id, user_id, portfolio_id, portfolio_name, report_type, report_title, model, provider, prompt,
+               substr(content, 1, 240) as preview,
+               created_at
+        FROM ai_reports
+        WHERE user_id = ? AND (portfolio_id = ? OR portfolio_id = 'all')
+        ORDER BY id DESC
+      `).all(req.user.id, String(portfolioId));
+    } else {
+      rows = db.prepare(`
+        SELECT id, user_id, portfolio_id, portfolio_name, report_type, report_title, model, provider, prompt,
+               substr(content, 1, 240) as preview,
+               created_at
+        FROM ai_reports
+        WHERE user_id = ?
+        ORDER BY id DESC
+      `).all(req.user.id);
+    }
+    return res.json({ success: true, reports: rows });
+  } catch (err) {
+    console.error('[AI Reports GET Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/ai/reports/:id
+ * Returns single full saved report by ID.
+ */
+router.get('/reports/:id', (req, res) => {
+  const { id } = req.params;
+  try {
+    const row = db.prepare(`SELECT * FROM ai_reports WHERE id = ?`).get(id);
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Report non trovato.' });
+    }
+    if (row.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Accesso negato al report.' });
+    }
+    return res.json({ success: true, report: row });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/ai/reports/:id
+ * Deletes single saved report by ID.
+ */
+router.delete('/reports/:id', (req, res) => {
+  const { id } = req.params;
+  try {
+    const row = db.prepare(`SELECT * FROM ai_reports WHERE id = ?`).get(id);
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Report non trovato.' });
+    }
+    if (row.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Accesso negato al report.' });
+    }
+    db.prepare(`DELETE FROM ai_reports WHERE id = ?`).run(id);
+    return res.json({ success: true, message: 'Report eliminato con successo.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * POST /api/ai/chat
  * Free-form conversational prompt analysis with Gemini AI Pro, NVIDIA NIM Nemotron, OpenRouter, or chosen provider.
  */
@@ -322,11 +425,44 @@ router.post('/chat', async (req, res) => {
       customBaseUrl
     });
 
+    // Automatically save generated report in chronological history
+    let reportType = 'CHAT_ADVISOR';
+    let reportTitle = prompt.trim().length > 60 ? (prompt.trim().slice(0, 57) + '...') : prompt.trim();
+    if (prompt.includes('analista finanziario senior') || prompt.includes('report settimanale') || prompt.includes('Tabella Riepilogativa delle Performance')) {
+      reportType = 'REPORT_SETTIMANALE';
+      reportTitle = 'Report Settimanale Performance & News';
+    } else if (prompt.includes('Rischio & Concentrazione') || prompt.includes('principali rischi')) {
+      reportTitle = 'Analisi Rischio & Concentrazione';
+    } else if (prompt.includes('Strategia Ribilanciamento') || prompt.includes('ribilanciare')) {
+      reportTitle = 'Strategia di Ribilanciamento';
+    } else if (prompt.includes('Stress test') || prompt.includes('Stress Test')) {
+      reportTitle = 'Stress Test Macro';
+    } else if (prompt.includes('fiscale') || prompt.includes('plusvalenze')) {
+      reportTitle = 'Analisi Fiscale & Minusvalenze';
+    } else if (prompt.includes('geografica') || prompt.includes('home bias')) {
+      reportTitle = 'Esposizione Geografica & Valutaria';
+    } else if (prompt.includes('top titoli') || prompt.includes('Top Titoli') || prompt.includes('3 titoli')) {
+      reportTitle = 'Check-up Top Titoli';
+    }
+
+    const savedId = saveAiReportRecord({
+      userId: req.user.id,
+      portfolioId,
+      portfolioName: portfolio.name || 'Tutti i Portafogli',
+      reportType,
+      reportTitle,
+      model: result.model || model,
+      provider: result.provider || provider,
+      prompt: prompt.trim(),
+      content: result.message
+    });
+
     return res.json({
       success: true,
       response: result.message,
       provider: result.provider,
-      model: result.model
+      model: result.model,
+      reportId: savedId
     });
   } catch (err) {
     console.error('[AI Advisor Chat Error]:', err.message);
@@ -385,9 +521,23 @@ router.post('/analyze', async (req, res) => {
       customBaseUrl
     });
 
+    const savedId = saveAiReportRecord({
+      userId: req.user.id,
+      portfolioId,
+      portfolioName: portfolio.name || 'Tutti i Portafogli',
+      reportType: 'SCORECARD_QUANTITATIVA',
+      reportTitle: `Scorecard Quantitativa (${analysis.assetAllocationQuality || 'Asset Allocation'})`,
+      model: analysis.model || model || 'Gemini / Euristico',
+      provider: analysis.provider || provider,
+      prompt: 'Analisi qualitativa e quantitativa con Scorecard di Rischio e Diversificazione',
+      content: `### Scorecard Quantitativa Asset Allocation\n\n- **Qualità Allocazione:** ${analysis.assetAllocationQuality}\n- **Punteggio di Rischio:** ${analysis.riskScore}/100\n- **Punteggio Diversificazione:** ${analysis.diversificationScore}/100\n\n#### Punti di Forza:\n${(analysis.strengths || []).map(s => `- ${s}`).join('\n')}\n\n#### Aree di Attenzione & Concentrazione:\n${(analysis.weaknesses || []).map(w => `- ${w}`).join('\n')}\n\n#### Raccomandazioni Tattiche:\n${(analysis.tacticalRecommendations || []).map(t => `- ${t}`).join('\n')}\n\n#### Raccomandazioni Strategiche:\n${(analysis.strategicRecommendations || []).map(s => `- ${s}`).join('\n')}\n\n#### Contesto di Mercato:\n${analysis.marketContextSummary || '-'}`,
+      metadata: analysis
+    });
+
     return res.json({
       success: true,
-      analysis
+      analysis,
+      reportId: savedId
     });
   } catch (err) {
     console.error('[AI Advisor Analyze Error]:', err.message);

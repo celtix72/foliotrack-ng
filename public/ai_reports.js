@@ -357,6 +357,10 @@
 
       lastAiAnalysisData = data.analysis;
       renderAiResults(data.analysis);
+      loadSavedReportsCount();
+      if (typeof refreshActiveReportsList === 'function') {
+        refreshActiveReportsList();
+      }
     } catch (err) {
       alert('Errore di comunicazione: ' + err.message);
     } finally {
@@ -883,6 +887,12 @@
       chatHistory.push({ role: 'user', content: promptText });
       chatHistory.push({ role: 'model', content: data.response });
 
+      // Auto-refresh reports archive and counter
+      loadSavedReportsCount();
+      if (typeof refreshActiveReportsList === 'function') {
+        refreshActiveReportsList();
+      }
+
     } catch (err) {
       removeThinkingIndicator();
       appendModelMessage(`⚠️ **Errore di rete:** ${err.message}`, { model: 'Errore' });
@@ -908,6 +918,351 @@
         </div>
       `;
     }
+  }
+
+  // ==========================================
+  // AI REPORTS ARCHIVE & CHRONOLOGICAL HISTORY
+  // ==========================================
+  let cachedReportsList = [];
+  let currentViewedReport = null;
+
+  function formatReportDate(dateStr) {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr.replace(' ', 'T'));
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  function getReportTypeBadge(type, title) {
+    const t = type || 'CHAT_ADVISOR';
+    if (t === 'REPORT_SETTIMANALE') {
+      return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-500/20">📰 Settimanale</span>';
+    }
+    if (t === 'SCORECARD_QUANTITATIVA') {
+      return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-500/20">📊 Scorecard</span>';
+    }
+    if (t === 'RISCHIO_CONCENTRAZIONE') {
+      return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-500/20">🎯 Rischio</span>';
+    }
+    if (t === 'RIBILANCIAMENTO') {
+      return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-500/20">⚖️ Ribilanciamento</span>';
+    }
+    if (t === 'STRESS_TEST') {
+      return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-500/20">📉 Stress Test</span>';
+    }
+    if (t === 'EFFICIENZA_FISCALE') {
+      return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300 border border-teal-500/20">💰 Fiscale</span>';
+    }
+    return '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 border border-gray-200 dark:border-white/10">💬 Chat Advisor</span>';
+  }
+
+  async function fetchAiReports(portfolioId = null) {
+    try {
+      const url = portfolioId && portfolioId !== 'all'
+        ? `/api/ai/reports?portfolioId=${encodeURIComponent(portfolioId)}`
+        : '/api/ai/reports';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.reports)) {
+        cachedReportsList = data.reports;
+        return data.reports;
+      }
+      return [];
+    } catch (e) {
+      console.warn('Errore fetchAiReports:', e);
+      return [];
+    }
+  }
+
+  async function loadSavedReportsCount() {
+    try {
+      const reports = await fetchAiReports();
+      const count = reports.length;
+      document.querySelectorAll('#savedReportsCount, #savedAiReportsCountReportsPage, #mSavedAiReportsCount, .savedReportsCountBadge').forEach(el => {
+        el.textContent = String(count);
+      });
+      return count;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function renderAiReportsTable(container, reports, isMobile = false) {
+    if (!container) return;
+    if (!reports || reports.length === 0) {
+      container.innerHTML = `
+        <div class="p-8 text-center space-y-2">
+          <div class="text-3xl">📜</div>
+          <div class="text-sm font-bold text-gray-900 dark:text-white">Nessun report IA archiviato</div>
+          <p class="text-xs font-mono text-gray-400 max-w-sm mx-auto">
+            I report settimanali e le analisi generate con l'AI Advisor verranno salvati automaticamente qui in ordine cronologico con data/ora, tipo di analisi e modello LLM utilizzato.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    if (isMobile) {
+      container.innerHTML = `
+        <div class="space-y-2.5">
+          ${reports.map(r => `
+            <div class="signature-card p-3 space-y-2 border border-gray-200/80 dark:border-white/10">
+              <div class="flex items-center justify-between">
+                ${getReportTypeBadge(r.report_type, r.report_title)}
+                <span class="text-[10px] font-mono text-gray-400">${formatReportDate(r.created_at)}</span>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-gray-900 dark:text-white line-clamp-1">${escapeHtml(r.report_title)}</h4>
+                <p class="text-[10px] font-mono text-gray-500 line-clamp-2 mt-0.5">${escapeHtml(r.prompt || r.preview || '')}</p>
+              </div>
+              <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5 text-[10px] font-mono">
+                <span class="text-gray-400 truncate max-w-[150px]">🤖 ${escapeHtml(r.model)}</span>
+                <div class="flex items-center space-x-1 shrink-0">
+                  <button type="button" class="btn-view-report px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-bold transition hover:bg-emerald-100" data-report-id="${r.id}">
+                    Vedi
+                  </button>
+                  <button type="button" class="btn-delete-report p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition" data-report-id="${r.id}" title="Elimina">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-xs text-left divide-y divide-gray-200 dark:divide-white/10">
+            <thead class="bg-gray-50/70 dark:bg-white/[0.02] text-[10px] font-mono text-gray-500 uppercase">
+              <tr>
+                <th class="px-4 py-3">Data / Ora</th>
+                <th class="px-4 py-3">Tipo di Analisi</th>
+                <th class="px-4 py-3">Titolo & Richiesta</th>
+                <th class="px-4 py-3">Modello LLM</th>
+                <th class="px-4 py-3">Portafoglio</th>
+                <th class="px-4 py-3 text-right">Azioni</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-white/5 font-mono">
+              ${reports.map(r => `
+                <tr class="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition">
+                  <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300">
+                    ${formatReportDate(r.created_at)}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    ${getReportTypeBadge(r.report_type, r.report_title)}
+                  </td>
+                  <td class="px-4 py-3 max-w-xs">
+                    <div class="font-bold text-gray-900 dark:text-white truncate">${escapeHtml(r.report_title)}</div>
+                    <div class="text-[10px] text-gray-400 truncate">${escapeHtml(r.prompt || r.preview || '')}</div>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-200">
+                      ${escapeHtml(r.model)}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400 text-[11px]">
+                    ${escapeHtml(r.portfolio_name || 'Tutti')}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-right space-x-1">
+                    <button type="button" class="btn-view-report btn-pill px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-[11px] font-bold transition inline-flex items-center space-x-1 cursor-pointer" data-report-id="${r.id}">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                      <span>Rivedi</span>
+                    </button>
+                    <button type="button" class="btn-delete-report btn-pill px-2 py-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 text-[11px] transition inline-flex items-center cursor-pointer" data-report-id="${r.id}" title="Elimina report">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // Attach listeners
+    container.querySelectorAll('.btn-view-report').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-report-id');
+        if (id) openAiReportViewer(id);
+      });
+    });
+
+    container.querySelectorAll('.btn-delete-report').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-report-id');
+        if (id) deleteAiReport(id);
+      });
+    });
+  }
+
+  async function openAiReportViewer(reportId) {
+    try {
+      const res = await fetch(`/api/ai/reports/${reportId}`);
+      const data = await res.json();
+      if (!data.success || !data.report) {
+        alert(data.error || 'Impossibile caricare il report.');
+        return;
+      }
+
+      currentViewedReport = data.report;
+      const r = data.report;
+
+      const modal = document.getElementById('aiReportViewerModal');
+      if (!modal) {
+        console.warn('aiReportViewerModal non presente nel DOM');
+        return;
+      }
+
+      const titleEl = document.getElementById('viewerReportTitle');
+      const dateEl = document.getElementById('viewerReportDate');
+      const modelEl = document.getElementById('viewerReportModel');
+      const portEl = document.getElementById('viewerReportPortfolio');
+      const typeEl = document.getElementById('viewerReportTypeBadge');
+      const promptEl = document.getElementById('viewerReportPrompt');
+      const contentEl = document.getElementById('viewerReportContent');
+
+      if (titleEl) titleEl.textContent = r.report_title || 'Report IA';
+      if (dateEl) dateEl.textContent = formatReportDate(r.created_at);
+      if (modelEl) modelEl.textContent = `${r.model} (${r.provider})`;
+      if (portEl) portEl.textContent = r.portfolio_name || 'Tutti i portafogli';
+      if (typeEl) typeEl.innerHTML = getReportTypeBadge(r.report_type, r.report_title);
+      if (promptEl) promptEl.textContent = r.prompt || '';
+      if (contentEl) contentEl.innerHTML = renderMarkdown(r.content || '');
+
+      modal.classList.remove('hidden');
+    } catch (err) {
+      alert('Errore caricamento report: ' + err.message);
+    }
+  }
+
+  async function deleteAiReport(reportId) {
+    if (!confirm('Sei sicuro di voler eliminare definitivamente questo report dall\'archivio?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/ai/reports/${reportId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || 'Errore eliminazione report.');
+        return;
+      }
+
+      // Close modal if deleted report was currently open
+      const modal = document.getElementById('aiReportViewerModal');
+      if (modal && currentViewedReport && String(currentViewedReport.id) === String(reportId)) {
+        modal.classList.add('hidden');
+        currentViewedReport = null;
+      }
+
+      await loadSavedReportsCount();
+      await refreshActiveReportsList();
+    } catch (err) {
+      alert('Errore eliminazione: ' + err.message);
+    }
+  }
+
+  async function refreshActiveReportsList() {
+    const isMobile = window.innerWidth < 768 || !!document.getElementById('mobileArchiveReportsList');
+    const container = document.getElementById('archiveReportsListContainer') || document.getElementById('mobileArchiveReportsList');
+    if (container) {
+      const pSel = document.getElementById('reportPortfolioSelect')?.value || 'all';
+      const reports = await fetchAiReports(pSel);
+      renderAiReportsTable(container, reports, isMobile);
+    }
+
+    // Also update reports page container if present
+    const reportsPageContainer = document.getElementById('aiReportsContainerReportsPage');
+    if (reportsPageContainer) {
+      const pSel = document.getElementById('portfolioSelect')?.value || 'all';
+      const reports = await fetchAiReports(pSel);
+      renderAiReportsTable(reportsPageContainer, reports, false);
+    }
+
+    // Also update mobile reports page container if present
+    const mReportsPageContainer = document.getElementById('mAiReportsContainer');
+    if (mReportsPageContainer) {
+      const pSel = document.getElementById('mobilePortfolioSelect')?.value || 'all';
+      const reports = await fetchAiReports(pSel);
+      renderAiReportsTable(mReportsPageContainer, reports, true);
+    }
+  }
+
+  function initArchiveModalHandlers() {
+    const archiveModal = document.getElementById('aiReportsArchiveModal');
+    const openArchiveBtn = document.getElementById('btnOpenReportsArchive');
+    const closeArchiveBtn = document.getElementById('btnCloseArchiveModal');
+    const refreshArchiveBtn = document.getElementById('btnRefreshArchive');
+
+    const showArchive = async () => {
+      if (!archiveModal) return;
+      archiveModal.classList.remove('hidden');
+      await refreshActiveReportsList();
+    };
+
+    const hideArchive = () => {
+      if (!archiveModal) return;
+      archiveModal.classList.add('hidden');
+    };
+
+    openArchiveBtn?.addEventListener('click', showArchive);
+    closeArchiveBtn?.addEventListener('click', hideArchive);
+    refreshArchiveBtn?.addEventListener('click', refreshActiveReportsList);
+    archiveModal?.addEventListener('click', (e) => {
+      if (e.target === archiveModal) hideArchive();
+    });
+
+    // Viewer Modal Handlers
+    const viewerModal = document.getElementById('aiReportViewerModal');
+    const closeViewerTop = document.getElementById('viewerCloseBtnTop');
+    const closeViewerBottom = document.getElementById('viewerCloseBtn');
+    const copyViewerBtn = document.getElementById('viewerCopyBtn');
+    const deleteViewerBtn = document.getElementById('viewerDeleteBtn');
+    const printViewerBtn = document.getElementById('viewerPrintBtn');
+
+    const hideViewer = () => {
+      if (!viewerModal) return;
+      viewerModal.classList.add('hidden');
+    };
+
+    closeViewerTop?.addEventListener('click', hideViewer);
+    closeViewerBottom?.addEventListener('click', hideViewer);
+    viewerModal?.addEventListener('click', (e) => {
+      if (e.target === viewerModal) hideViewer();
+    });
+
+    copyViewerBtn?.addEventListener('click', () => {
+      if (!currentViewedReport?.content) return;
+      navigator.clipboard.writeText(currentViewedReport.content).then(() => {
+        const span = copyViewerBtn.querySelector('span:last-child') || copyViewerBtn;
+        const orig = span.textContent;
+        span.textContent = 'Copiato!';
+        setTimeout(() => { span.textContent = orig; }, 2000);
+      });
+    });
+
+    deleteViewerBtn?.addEventListener('click', () => {
+      if (currentViewedReport?.id) {
+        deleteAiReport(currentViewedReport.id);
+      }
+    });
+
+    printViewerBtn?.addEventListener('click', () => {
+      window.print();
+    });
   }
 
   // ==========================================
@@ -1054,6 +1409,10 @@
     // Key Modal
     initKeyModal();
 
+    // Archive Modal & Viewer Handlers
+    initArchiveModalHandlers();
+    loadSavedReportsCount();
+
     // Check Gemini API Status
     await checkGeminiStatus();
     updateSendButtonLabel();
@@ -1077,6 +1436,12 @@
     sendAiChatPrompt,
     resetChatHistory,
     renderMarkdown,
+    fetchAiReports,
+    loadSavedReportsCount,
+    renderAiReportsTable,
+    openAiReportViewer,
+    deleteAiReport,
+    refreshActiveReportsList,
     getLastSimulation: () => lastSimulationData,
     getLastAiAnalysis: () => lastAiAnalysisData
   };

@@ -86,6 +86,10 @@
                   <option value="gpt-4o" data-provider="openai">OpenAI GPT-4o</option>
                 </optgroup>
               </select>
+              <button id="btnOpenReportsArchive" class="btn-pill px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-mono text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 transition flex items-center space-x-1" title="Visualizza archivio report e analisi salvati">
+                <span>📜</span>
+                <span>Archivio (<span id="savedReportsCount">0</span>)</span>
+              </button>
               <button id="btnResetChat" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-mono text-gray-600 dark:text-gray-300 transition flex items-center space-x-1" title="Azzera conversazione">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                 <span>Nuova Chat</span>
@@ -283,6 +287,108 @@
         FolioTrack Signature Analytics • Generato il <span id="reportGenDate"></span>. Le analisi dell'AI Advisor hanno finalità puramente illustrative ed educative e non costituiscono consulenza finanziaria personalizzata o sollecitazione al pubblico risparmio.
       </footer>
     </main>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: AI REPORTS ARCHIVE (CRONOLOGICO)     -->
+  <!-- ========================================== -->
+  <div id="aiReportsArchiveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden no-print">
+    <div class="signature-card w-full max-w-5xl bg-white dark:bg-[#151518] border border-gray-200 dark:border-white/10 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg">
+            📜
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="text-base font-bold text-gray-900 dark:text-white">Archivio Report & Analisi IA</h3>
+              <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                <span class="savedReportsCountBadge" id="modalSavedReportsCount">0</span> salvati
+              </span>
+            </div>
+            <p class="text-xs text-gray-500 font-mono">Storico cronologico di report settimanali, chat e scorecard con data/ora, tipologia e modello LLM utilizzato</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="btnRefreshArchive" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-mono text-gray-600 dark:text-gray-300 transition flex items-center space-x-1 cursor-pointer" title="Aggiorna lista">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <span>Aggiorna</span>
+          </button>
+          <button id="btnCloseArchiveModal" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition cursor-pointer" title="Chiudi">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Content Table / Cards Container -->
+      <div id="archiveReportsListContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+        <!-- Dynamically populated by renderAiReportsTable -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: REPORT VIEWER (RIVEDI REPORT IA)    -->
+  <!-- ========================================== -->
+  <div id="aiReportViewerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden no-print">
+    <div class="signature-card w-full max-w-4xl bg-white dark:bg-[#151518] border border-gray-200 dark:border-white/10 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between gap-3">
+        <div class="space-y-1 min-w-0">
+          <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+            <span id="viewerReportTypeBadge"></span>
+            <span class="text-xs font-mono text-gray-400">📅 <span id="viewerReportDate">-</span></span>
+            <span class="text-xs font-mono text-gray-400">🤖 <span id="viewerReportModel">-</span></span>
+            <span class="text-xs font-mono text-gray-400">💼 <span id="viewerReportPortfolio">-</span></span>
+          </div>
+          <h3 id="viewerReportTitle" class="text-base font-bold text-gray-900 dark:text-white truncate">Report IA</h3>
+        </div>
+        <button id="viewerCloseBtnTop" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition shrink-0 cursor-pointer" title="Chiudi">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-4">
+        <!-- Prompt Box -->
+        <details class="text-xs group border border-gray-200 dark:border-white/10 rounded-xl bg-gray-50/50 dark:bg-white/[0.02] p-3">
+          <summary class="font-mono font-semibold text-gray-600 dark:text-gray-300 cursor-pointer select-none flex items-center justify-between">
+            <span>📝 Prompt inviato all'AI</span>
+            <span class="text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+          </summary>
+          <div id="viewerReportPrompt" class="mt-2 font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap pt-2 border-t border-gray-200 dark:border-white/10 text-[11px] leading-relaxed">
+          </div>
+        </details>
+
+        <!-- Full Rendered Content -->
+        <div id="viewerReportContent" class="signature-card p-5 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 text-xs text-gray-900 dark:text-gray-100 leading-relaxed shadow-xs space-y-3 ai-markdown-body">
+          <!-- Rendered markdown goes here -->
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="px-6 py-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-white/[0.01]">
+        <button id="viewerDeleteBtn" class="btn-pill px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-mono font-semibold transition flex items-center space-x-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          <span>Elimina Report</span>
+        </button>
+
+        <div class="flex items-center space-x-2">
+          <button id="viewerCopyBtn" class="btn-pill px-3.5 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium text-gray-700 dark:text-gray-200 transition flex items-center space-x-1.5 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <span>Copia Contenuto</span>
+          </button>
+          <button id="viewerPrintBtn" class="btn-pill px-3.5 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-medium text-gray-700 dark:text-gray-200 transition flex items-center space-x-1.5 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            <span>Stampa / PDF</span>
+          </button>
+          <button id="viewerCloseBtn" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition cursor-pointer">
+            Chiudi
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Vendors & Component Scripts -->

@@ -459,6 +459,49 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.strictEqual(data.success, false);
       assert.ok(data.error.includes('obbligatorio'));
     });
+
+    test('Saves AI reports chronologically and allows fetching, viewing and deleting them', async () => {
+      // 1. Fetch reports list
+      const listRes = await fetch(`${baseUrl}/api/ai/reports`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      assert.strictEqual(listRes.status, 200);
+      const listData = await listRes.json();
+      assert.strictEqual(listData.success, true);
+      assert.ok(Array.isArray(listData.reports));
+      assert.ok(listData.reports.length >= 2, 'Should contain at least 2 saved reports from previous test chat prompts');
+
+      const latestReport = listData.reports[0];
+      assert.ok(latestReport.id);
+      assert.ok(latestReport.created_at, 'Should contain created_at timestamp');
+      assert.ok(latestReport.model, 'Should contain model');
+      assert.ok(latestReport.report_type, 'Should contain report_type');
+
+      // 2. Fetch single report detail
+      const singleRes = await fetch(`${baseUrl}/api/ai/reports/${latestReport.id}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      assert.strictEqual(singleRes.status, 200);
+      const singleData = await singleRes.json();
+      assert.strictEqual(singleData.success, true);
+      assert.strictEqual(singleData.report.id, latestReport.id);
+      assert.ok(singleData.report.content.length > 0, 'Should return full markdown content');
+
+      // 3. Delete the report
+      const delRes = await fetch(`${baseUrl}/api/ai/reports/${latestReport.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      assert.strictEqual(delRes.status, 200);
+      const delData = await delRes.json();
+      assert.strictEqual(delData.success, true);
+
+      // 4. Verify 404 after deletion
+      const checkRes = await fetch(`${baseUrl}/api/ai/reports/${latestReport.id}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      assert.strictEqual(checkRes.status, 404);
+    });
   });
 
   describe('4. Dual-View Reports & Client-Side Scripts', () => {
@@ -470,6 +513,10 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(textAi.includes('initPromptChipsLogic'), 'Should contain initPromptChipsLogic');
       assert.ok(textAi.includes('loadPromptIntoInput'), 'Should contain loadPromptIntoInput');
       assert.ok(textAi.includes('btnSaveCustomPrompt'), 'Should handle btnSaveCustomPrompt');
+      assert.ok(textAi.includes('fetchAiReports'), 'Should contain fetchAiReports');
+      assert.ok(textAi.includes('renderAiReportsTable'), 'Should contain renderAiReportsTable');
+      assert.ok(textAi.includes('openAiReportViewer'), 'Should contain openAiReportViewer');
+      assert.ok(textAi.includes('deleteAiReport'), 'Should contain deleteAiReport');
 
       const resPdf = await fetch(`${baseUrl}/pdf_report.js`);
       assert.strictEqual(resPdf.status, 200);
@@ -496,6 +543,9 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('quickPromptChips'), 'Should contain quick suggestion chips');
       assert.ok(html.includes('weekly-report-chip'), 'Should contain weekly report chip');
       assert.ok(html.includes('customPromptChipsContainer'), 'Should contain custom saved prompt chips container');
+      assert.ok(html.includes('btnOpenReportsArchive'), 'Should contain archive button');
+      assert.ok(html.includes('aiReportsArchiveModal'), 'Should contain reports archive modal');
+      assert.ok(html.includes('aiReportViewerModal'), 'Should contain report viewer modal');
       assert.ok(html.includes('/settings#ai'), 'Should link to settings AI keys panel');
       assert.ok(html.includes('/ai_reports.js'));
       assert.ok(html.includes('/pdf_report.js'));
@@ -507,6 +557,9 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.strictEqual(repRes.status, 200);
       const repHtml = await repRes.text();
       assert.ok(repHtml.includes('/ai-advisor?prompt=weekly-report'), 'Reports page should link to weekly AI report');
+      assert.ok(repHtml.includes('tabBtnAiReports'), 'Reports page should contain AI reports tab button');
+      assert.ok(repHtml.includes('sectionAiReports'), 'Reports page should contain AI reports section');
+      assert.ok(repHtml.includes('aiReportViewerModal'), 'Reports page should contain report viewer modal');
     });
 
     test('GET /goals?view=mobile serves mobile layout', async () => {
@@ -527,6 +580,9 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('btnSaveCustomPrompt'), 'Mobile view should contain save prompt button');
       assert.ok(html.includes('quickPromptChips'), 'Mobile view should contain quick suggestion chips');
       assert.ok(html.includes('weekly-report-chip'), 'Mobile view should contain weekly report chip');
+      assert.ok(html.includes('btnOpenReportsArchive'), 'Mobile view should contain archive button');
+      assert.ok(html.includes('aiReportsArchiveModal'), 'Mobile view should contain archive modal');
+      assert.ok(html.includes('aiReportViewerModal'), 'Mobile view should contain viewer modal');
       assert.ok(html.includes('/settings?tab=ai'), 'Mobile view should link to settings AI tab');
 
       const repMobRes = await fetch(`${baseUrl}/reports?view=mobile`, {
@@ -535,6 +591,9 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.strictEqual(repMobRes.status, 200);
       const repMobHtml = await repMobRes.text();
       assert.ok(repMobHtml.includes('/ai-advisor?prompt=weekly-report'), 'Reports mobile page should link to weekly AI report');
+      assert.ok(repMobHtml.includes('mTabBtnAiReports'), 'Reports mobile should contain AI reports tab button');
+      assert.ok(repMobHtml.includes('mSectionAiReports'), 'Reports mobile should contain AI reports section');
+      assert.ok(repMobHtml.includes('aiReportViewerModal'), 'Reports mobile should contain viewer modal');
     });
 
     test('Settings UI (desktop and mobile) renders centralized AI and Tavily configuration', async () => {

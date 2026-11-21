@@ -353,6 +353,24 @@ function createSchema(database) {
       UNIQUE(user_id, ticker, type, event_date)
     );
 
+    CREATE TABLE IF NOT EXISTS ai_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      portfolio_id TEXT NOT NULL DEFAULT 'all',
+      portfolio_name TEXT DEFAULT 'Tutti i Portafogli',
+      report_type TEXT NOT NULL DEFAULT 'REPORT_SETTIMANALE',
+      report_title TEXT NOT NULL,
+      model TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      content TEXT NOT NULL,
+      metadata TEXT DEFAULT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ai_reports_user_created ON ai_reports(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_ai_reports_portfolio ON ai_reports(portfolio_id);
+
     CREATE INDEX IF NOT EXISTS idx_dashboard_alerts_user_ack ON dashboard_alerts(user_id, is_acknowledged, event_date);
     CREATE INDEX IF NOT EXISTS idx_dashboard_alerts_ticker ON dashboard_alerts(ticker);
 
