@@ -63,6 +63,8 @@
             <optgroup label="🌐 OpenRouter" data-provider="openrouter">
               <option value="deepseek/deepseek-chat" data-provider="openrouter">DeepSeek V3</option>
               <option value="deepseek/deepseek-r1" data-provider="openrouter">DeepSeek R1</option>
+              <option value="nvidia/nemotron-3-ultra-550b-a55b" data-provider="openrouter">Nemotron Ultra (OpenRouter)</option>
+              <option value="nvidia/nemotron-3-ultra-550b-a55b:free" data-provider="openrouter">Nemotron Ultra Free (OpenRouter :free)</option>
               <option value="anthropic/claude-3.5-sonnet" data-provider="openrouter">Claude 3.5</option>
               <option value="meta-llama/llama-3.3-70b-instruct" data-provider="openrouter">Llama 3.3 70B</option>
             </optgroup>
@@ -82,47 +84,64 @@
       </div>
 
       <!-- Quick Prompt Chips Carousel -->
-      <div class="overflow-x-auto no-scrollbar -mx-1 px-1 py-1">
-        <div class="flex space-x-1.5 whitespace-nowrap" id="quickPromptChips">
-          <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Quali sono i principali rischi e le concentrazioni critiche del mio portafoglio?">
-            🎯 Rischio & Concentrazione
-          </button>
-          <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Come posso ribilanciare i pesi per un migliore equilibrio?">
-            ⚖️ Ribilanciamento
-          </button>
-          <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Stress test: come si comporterebbe questo portafoglio in caso di recessione o rialzo tassi?">
-            📉 Stress Test
-          </button>
-          <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Analisi fiscale: come posso ottimizzare plusvalenze e minusvalenze?">
-            💰 Fisco & P&L
-          </button>
-          <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Fai un'analisi critica sui 3 titoli con peso maggiore nel portafoglio.">
-            🔍 Top Titoli
-          </button>
+      <div class="space-y-1">
+        <div class="flex items-center justify-between px-1">
+          <span class="text-[10px] font-mono text-gray-400">Prompt suggeriti con un click:</span>
+          <span class="text-[9px] font-mono text-emerald-500">Tocca per modificare</span>
+        </div>
+        <div class="overflow-x-auto no-scrollbar -mx-1 px-1 py-0.5">
+          <div class="flex space-x-1.5 whitespace-nowrap" id="quickPromptChips">
+            <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Quali sono i principali rischi e le concentrazioni critiche del mio portafoglio?">
+              🎯 Rischio & Concentrazione
+            </button>
+            <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Come posso ribilanciare i pesi per un migliore equilibrio?">
+              ⚖️ Ribilanciamento
+            </button>
+            <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Stress test: come si comporterebbe questo portafoglio in caso di recessione o rialzo tassi?">
+              📉 Stress Test
+            </button>
+            <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Analisi fiscale: come posso ottimizzare plusvalenze e minusvalenze?">
+              💰 Fisco & P&L
+            </button>
+            <button type="button" class="quick-chip px-2 py-0.5 rounded-full text-[10px] font-mono bg-gray-100 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-gray-700 dark:text-gray-300" data-prompt="Fai un'analisi critica sui 3 titoli con peso maggiore nel portafoglio.">
+              🔍 Top Titoli
+            </button>
+          </div>
+        </div>
+        <!-- User Saved Custom Prompt Chips -->
+        <div class="overflow-x-auto no-scrollbar -mx-1 px-1 py-0.5 hidden" id="customPromptChipsContainer">
+          <div class="flex space-x-1.5 whitespace-nowrap" id="customPromptChipsInner">
+          </div>
         </div>
       </div>
 
       <!-- Chat Thread Stream -->
       <div id="aiChatThread" class="space-y-3 max-h-[380px] overflow-y-auto p-2 rounded-xl bg-gray-50/70 dark:bg-black/20 border border-gray-200/40 dark:border-white/5 text-xs">
         <div id="chatWelcomeBanner" class="p-2.5 rounded-lg bg-white dark:bg-[#18181b] border border-gray-200/50 dark:border-white/5 space-y-1 text-[11px]">
-          <span class="font-bold text-emerald-600 dark:text-emerald-400 block">✦ Chiedi a Gemini Pro</span>
+          <span class="font-bold text-emerald-600 dark:text-emerald-400 block">✦ AI Portfolio Advisor pronto</span>
           <p class="text-gray-500 leading-tight">
-            I dati del portafoglio (asset, pesi, liquidità, P&L) vengono allegati in tempo reale per rispondere alle tue domande finanziarie.
+            I dati del portafoglio (asset, pesi, liquidità, P&L) vengono allegati in tempo reale. Tocca un prompt per modificarlo o salvarlo prima di inviarlo.
           </p>
         </div>
       </div>
 
       <!-- Input Bar -->
       <div class="space-y-1">
-        <div class="flex items-end gap-1.5 bg-white dark:bg-[#141416] p-1.5 rounded-xl border border-gray-200 dark:border-white/10">
-          <textarea id="aiPromptInput" rows="1" placeholder="Fai una domanda a Gemini..."
-            class="flex-1 bg-transparent resize-none border-0 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none px-1 py-1 leading-snug"></textarea>
-          <button id="btnSendPrompt" type="button" class="btn-pill px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold flex items-center space-x-1 disabled:opacity-50">
-            <span>Invia</span>
-            <span>✦</span>
-          </button>
+        <div class="flex flex-col gap-1.5 bg-white dark:bg-[#141416] p-2 rounded-xl border border-gray-200 dark:border-white/10">
+          <textarea id="aiPromptInput" rows="1" placeholder="Fai una domanda sul portafoglio o tocca un chip in alto..."
+            class="w-full bg-transparent resize-none border-0 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none px-1 py-1 leading-snug"></textarea>
+          <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5">
+            <button id="btnSaveCustomPrompt" type="button" class="px-2 py-1 rounded text-[11px] font-mono bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 flex items-center space-x-1" title="Salva prompt modificato">
+              <span>💾 Salva</span>
+            </button>
+            <button id="btnSendPrompt" type="button" class="btn-pill px-3 py-1 bg-emerald-600 text-white text-xs font-semibold flex items-center space-x-1 disabled:opacity-50">
+              <span id="btnSendPromptLabel">Invia</span>
+              <span>✦</span>
+            </button>
+          </div>
         </div>
-        <div class="text-[9px] font-mono text-gray-400 px-1 flex justify-between">
+        <div class="text-[9px] font-mono text-gray-400 px-1 flex justify-between items-center">
+          <span id="promptActionFeedback" class="text-emerald-500 font-semibold hidden"></span>
           <span id="chatActivePortfolioLabel">Globale Aggregato</span>
         </div>
       </div>

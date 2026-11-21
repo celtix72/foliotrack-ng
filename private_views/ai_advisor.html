@@ -70,6 +70,8 @@
                 <optgroup label="🌐 OpenRouter AI Gateway" data-provider="openrouter">
                   <option value="deepseek/deepseek-chat" data-provider="openrouter">DeepSeek V3 (OpenRouter)</option>
                   <option value="deepseek/deepseek-r1" data-provider="openrouter">DeepSeek R1 Reasoning (OpenRouter)</option>
+                  <option value="nvidia/nemotron-3-ultra-550b-a55b" data-provider="openrouter">NVIDIA Nemotron Ultra (OpenRouter)</option>
+                  <option value="nvidia/nemotron-3-ultra-550b-a55b:free" data-provider="openrouter">NVIDIA Nemotron Ultra Free (OpenRouter :free)</option>
                   <option value="anthropic/claude-3.5-sonnet" data-provider="openrouter">Claude 3.5 Sonnet (OpenRouter)</option>
                   <option value="meta-llama/llama-3.3-70b-instruct" data-provider="openrouter">Meta Llama 3.3 70B (OpenRouter)</option>
                   <option value="qwen/qwen-2.5-72b-instruct" data-provider="openrouter">Qwen 2.5 72B (OpenRouter)</option>
@@ -93,7 +95,10 @@
 
           <!-- Prompt Quick Suggestions Chips -->
           <div class="space-y-1.5">
-            <span class="text-[11px] font-mono text-gray-400 block">Prompt suggeriti con un click:</span>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-mono text-gray-400 block">Prompt suggeriti con un click:</span>
+              <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">Clicca un prompt per caricarlo nell'editor, personalizzarlo o salvarlo</span>
+            </div>
             <div class="flex flex-wrap gap-2" id="quickPromptChips">
               <button type="button" class="quick-chip px-2.5 py-1 rounded-lg text-xs font-mono bg-gray-100 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200/50 dark:border-white/5 transition" data-prompt="Quali sono i principali rischi e le concentrazioni critiche del mio portafoglio?">
                 🎯 Rischio & Concentrazione
@@ -114,6 +119,10 @@
                 🔍 Check-up Top Titoli
               </button>
             </div>
+            <!-- User-Saved Custom Chips -->
+            <div id="customPromptChipsContainer" class="flex flex-wrap gap-2 pt-1 hidden">
+              <!-- Dynamically populated -->
+            </div>
           </div>
 
           <!-- Chat Thread Stream -->
@@ -122,23 +131,32 @@
             <div id="chatWelcomeBanner" class="p-4 rounded-xl bg-white dark:bg-[#18181b] border border-gray-200/60 dark:border-white/5 space-y-2 text-xs">
               <div class="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-bold">
                 <span>✦</span>
-                <span>Assistente Finanziario Gemini AI Pro pronto</span>
+                <span>Assistente Finanziario AI Advisor pronto</span>
               </div>
               <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
-                Scrivi un prompt o seleziona un suggerimento in alto per analizzare i tuoi investimenti. FolioTrack fornisce in tempo reale a Gemini la composizione esatta del portafoglio selezionato (asset, pesi %, liquidità, P&L realizzato e non realizzato, dividendi, settori e aree geografiche) per formulare risposte personalizzate e ad alta precisione.
+                Scrivi una richiesta o tocca uno dei suggerimenti in alto per visualizzarlo nell'editor, personalizzarlo con parametri specifici e salvarlo. FolioTrack include automaticamente nel prompt la composizione esatta del portafoglio (asset, pesi %, liquidità, P&L realizzato e non realizzato, dividendi, settori e aree geografiche).
               </p>
             </div>
           </div>
 
           <!-- Chat Input Area -->
           <div class="space-y-2">
-            <div class="relative flex items-end gap-2 bg-white dark:bg-[#141416] p-2 rounded-2xl border border-gray-200 dark:border-white/10 focus-within:ring-2 focus-within:ring-emerald-500/50 focus-within:border-emerald-500 transition shadow-sm">
-              <textarea id="aiPromptInput" rows="2" placeholder="Fai una domanda a Gemini Pro sul tuo portafoglio... (es: 'Quali asset dovrei ribilanciare?')"
-                class="flex-1 bg-transparent resize-none border-0 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 px-2 py-1 leading-relaxed"></textarea>
-              <button id="btnSendPrompt" type="button" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm shadow-emerald-600/20 disabled:opacity-50">
-                <span>Chiedi a Gemini</span>
-                <span>✦</span>
-              </button>
+            <div class="relative flex flex-col gap-2 bg-white dark:bg-[#141416] p-3 rounded-2xl border border-gray-200 dark:border-white/10 focus-within:ring-2 focus-within:ring-emerald-500/50 focus-within:border-emerald-500 transition shadow-sm">
+              <textarea id="aiPromptInput" rows="2" placeholder="Fai una domanda sul tuo portafoglio o seleziona un suggerimento in alto per visualizzarlo, modificarlo e salvarlo..."
+                class="w-full bg-transparent resize-none border-0 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 px-2 py-1 leading-relaxed"></textarea>
+              <div class="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-white/5">
+                <div class="flex items-center space-x-2">
+                  <button id="btnSaveCustomPrompt" type="button" class="btn-pill px-3 py-1 text-xs font-mono bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition flex items-center space-x-1.5" title="Salva questo prompt modificato nei tuoi suggerimenti personalizzati">
+                    <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                    <span>Salva Prompt</span>
+                  </button>
+                  <span id="promptActionFeedback" class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-medium hidden"></span>
+                </div>
+                <button id="btnSendPrompt" type="button" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm shadow-emerald-600/20 disabled:opacity-50">
+                  <span id="btnSendPromptLabel">Invia Prompt</span>
+                  <span>✦</span>
+                </button>
+              </div>
             </div>
             <div class="flex items-center justify-between text-[10px] font-mono text-gray-400 px-1">
               <span>Premi <kbd class="px-1 py-0.5 rounded bg-gray-100 dark:bg-white/10">Invio</kbd> per inviare, <kbd class="px-1 py-0.5 rounded bg-gray-100 dark:bg-white/10">Shift+Invio</kbd> per andare a capo</span>

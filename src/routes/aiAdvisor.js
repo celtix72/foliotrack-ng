@@ -244,25 +244,29 @@ router.post('/chat', async (req, res) => {
     customBaseUrl
   } = req.body || {};
 
-  // Auto-detect or align provider based on model names
-  if (model && (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon'))) {
-    provider = 'nvidia';
-  } else if (model && (model.startsWith('gpt-') || model.startsWith('o1-') || model.startsWith('o3-'))) {
-    provider = 'openai';
-  } else if (model && model.startsWith('gemini-')) {
-    provider = 'gemini';
-  } else if (
-    model && (
-      model.startsWith('openrouter') ||
-      model.startsWith('deepseek/') ||
-      model.startsWith('anthropic/') ||
-      model.startsWith('meta-llama/') ||
-      model.startsWith('qwen/') ||
-      model.startsWith('mistralai/') ||
-      model.includes('/')
-    )
-  ) {
-    provider = 'openrouter';
+  // Auto-detect or align provider based on model names if provider is not explicitly provided
+  if (!provider || provider === 'auto') {
+    if (model && (model.startsWith('gpt-') || model.startsWith('o1-') || model.startsWith('o3-'))) {
+      provider = 'openai';
+    } else if (model && model.startsWith('gemini-')) {
+      provider = 'gemini';
+    } else if (
+      model && (
+        model.includes(':free') ||
+        model.startsWith('openrouter') ||
+        model.startsWith('deepseek/') ||
+        model.startsWith('anthropic/') ||
+        model.startsWith('meta-llama/') ||
+        model.startsWith('qwen/') ||
+        model.startsWith('mistralai/')
+      )
+    ) {
+      provider = 'openrouter';
+    } else if (model && (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon'))) {
+      provider = 'nvidia';
+    } else if (model && model.includes('/')) {
+      provider = 'openrouter';
+    }
   }
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {

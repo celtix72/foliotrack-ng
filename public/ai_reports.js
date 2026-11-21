@@ -520,6 +520,163 @@
     if (targetValue) {
       sel.value = targetValue;
     }
+    updateSendButtonLabel();
+  }
+
+  function updateSendButtonLabel() {
+    const sel = document.getElementById('chatModelSelect');
+    const labelEl = document.getElementById('btnSendPromptLabel');
+    if (!sel || !labelEl) return;
+    const opt = sel.selectedOptions?.[0];
+    const prov = opt?.getAttribute('data-provider') || opt?.parentElement?.getAttribute('data-provider') || '';
+    if (prov === 'openrouter') {
+      labelEl.textContent = 'Invia a OpenRouter';
+    } else if (prov === 'nvidia') {
+      labelEl.textContent = 'Invia a NVIDIA';
+    } else if (prov === 'openai') {
+      labelEl.textContent = 'Invia a OpenAI';
+    } else if (prov === 'gemini') {
+      labelEl.textContent = 'Chiedi a Gemini';
+    } else {
+      labelEl.textContent = 'Invia Prompt';
+    }
+  }
+
+  // ==========================================
+  // CUSTOM & QUICK PROMPT CHIPS MANAGEMENT
+  // ==========================================
+  const SAVED_PROMPTS_KEY = 'foliotrack_saved_prompts';
+
+  function getSavedPrompts() {
+    try {
+      const raw = localStorage.getItem(SAVED_PROMPTS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function setSavedPrompts(list) {
+    try {
+      localStorage.setItem(SAVED_PROMPTS_KEY, JSON.stringify(list));
+    } catch (_) {}
+  }
+
+  function showPromptFeedback(message, isError = false) {
+    const el = document.getElementById('promptActionFeedback');
+    if (!el) return;
+    el.textContent = message;
+    el.className = isError
+      ? 'text-[11px] font-mono text-rose-500 font-medium'
+      : 'text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-medium';
+    el.classList.remove('hidden');
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => {
+      el.classList.add('hidden');
+    }, 3500);
+  }
+
+  function loadPromptIntoInput(promptText) {
+    const promptInput = document.getElementById('aiPromptInput');
+    if (!promptInput || !promptText) return;
+
+    promptInput.value = promptText;
+    promptInput.style.height = 'auto';
+    promptInput.style.height = Math.min(promptInput.scrollHeight, 180) + 'px';
+    promptInput.focus();
+    promptInput.setSelectionRange(promptInput.value.length, promptInput.value.length);
+    promptInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    showPromptFeedback('✏️ Prompt pronto nell\'editor: puoi modificarlo o salvarlo prima di inviarlo.');
+  }
+
+  function renderSavedPrompts() {
+    const container = document.getElementById('customPromptChipsContainer');
+    if (!container) return;
+    const inner = document.getElementById('customPromptChipsInner') || container;
+
+    const saved = getSavedPrompts();
+    if (!saved || saved.length === 0) {
+      container.classList.add('hidden');
+      inner.innerHTML = '';
+      return;
+    }
+
+    container.classList.remove('hidden');
+    inner.innerHTML = `
+      <div class="flex items-center space-x-1 text-[10px] font-mono text-gray-400 py-0.5 w-full">
+        <span>⭐ Prompt salvati:</span>
+      </div>
+    `;
+
+    saved.forEach(item => {
+      const chipWrapper = document.createElement('div');
+      chipWrapper.className = 'inline-flex items-center rounded-lg text-xs font-mono bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 shadow-sm transition hover:border-emerald-500/70 mr-1.5 mb-1';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'px-2.5 py-1 text-left flex items-center space-x-1 hover:text-emerald-900 dark:hover:text-emerald-100 transition';
+      btn.innerHTML = `<span class="text-xs">💡</span> <span class="font-medium">${escapeHtml(item.label || item.prompt.slice(0, 20))}</span>`;
+      btn.title = item.prompt;
+      btn.addEventListener('click', () => loadPromptIntoInput(item.prompt));
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'px-1.5 py-1 text-gray-400 hover:text-rose-500 dark:hover:text-rose-400 transition text-xs font-bold leading-none';
+      delBtn.title = 'Rimuovi dai salvati';
+      delBtn.innerHTML = '&times;';
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const updated = getSavedPrompts().filter(p => p.id !== item.id);
+        setSavedPrompts(updated);
+        renderSavedPrompts();
+        showPromptFeedback('Prompt rimosso dai suggerimenti.');
+      });
+
+      chipWrapper.appendChild(btn);
+      chipWrapper.appendChild(delBtn);
+      inner.appendChild(chipWrapper);
+    });
+  }
+
+  function initPromptChipsLogic() {
+    const promptInput = document.getElementById('aiPromptInput');
+
+    // Quick chips click: load into input, DO NOT auto-execute immediately
+    document.querySelectorAll('.quick-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const promptText = btn.getAttribute('data-prompt');
+        if (promptText) {
+          loadPromptIntoInput(promptText);
+        }
+      });
+    });
+
+    // Save custom prompt button
+    document.getElementById('btnSaveCustomPrompt')?.addEventListener('click', () => {
+      const text = promptInput?.value?.trim();
+      if (!text) {
+        showPromptFeedback('Scrivi o seleziona prima un prompt da salvare.', true);
+        promptInput?.focus();
+        return;
+      }
+
+      const defaultLabel = text.length > 25 ? text.slice(0, 22) + '...' : text;
+      const userLabel = window.prompt('Inserisci un nome breve per salvare questo prompt tra i suggerimenti:', defaultLabel);
+      if (userLabel === null) return;
+
+      const label = userLabel.trim() || defaultLabel;
+      const saved = getSavedPrompts();
+      saved.push({
+        id: Date.now(),
+        label,
+        prompt: text
+      });
+      setSavedPrompts(saved);
+      renderSavedPrompts();
+      showPromptFeedback('✓ Prompt salvato nei tuoi suggerimenti!');
+    });
+
+    renderSavedPrompts();
   }
 
   function updateAiProviderSelect(data) {
@@ -652,13 +809,20 @@
     // Determine AI provider from option attribute or model
     let provider = selectedOpt?.getAttribute('data-provider') || 'auto';
     if (!provider || provider === 'auto') {
-      if (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon')) {
+      if (selectedOpt?.parentElement?.tagName === 'OPTGROUP') {
+        provider = selectedOpt.parentElement.getAttribute('data-provider') || 'auto';
+      }
+    }
+    if (!provider || provider === 'auto') {
+      if (model.includes(':free') || model.startsWith('openrouter/') || model.startsWith('deepseek/') || model.startsWith('anthropic/') || model.startsWith('meta-llama/') || model.startsWith('qwen/') || model.startsWith('mistralai/')) {
+        provider = 'openrouter';
+      } else if (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon')) {
         provider = 'nvidia';
       } else if (model.startsWith('gpt-')) {
         provider = 'openai';
       } else if (model.startsWith('gemini-')) {
         provider = 'gemini';
-      } else {
+      } else if (model.includes('/')) {
         provider = 'openrouter';
       }
     }
@@ -857,20 +1021,8 @@
       });
     }
 
-    // Quick Prompt Chips
-    document.querySelectorAll('.quick-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const promptText = btn.getAttribute('data-prompt');
-        if (promptText) {
-          if (promptInput) {
-            promptInput.value = promptText;
-            promptInput.style.height = 'auto';
-            promptInput.style.height = Math.min(promptInput.scrollHeight, 140) + 'px';
-          }
-          sendAiChatPrompt(promptText);
-        }
-      });
-    });
+    // Prompt Chips (Quick Suggestions + User Custom Saved)
+    initPromptChipsLogic();
 
     // Reset Chat
     document.getElementById('btnResetChat')?.addEventListener('click', resetChatHistory);
@@ -878,6 +1030,7 @@
     // Save model choice
     document.getElementById('chatModelSelect')?.addEventListener('change', (e) => {
       localStorage.setItem('foliotrack_ai_chat_model', e.target.value);
+      updateSendButtonLabel();
     });
 
     // Key Modal
@@ -885,6 +1038,7 @@
 
     // Check Gemini API Status
     await checkGeminiStatus();
+    updateSendButtonLabel();
     updateAiChatPortfolioLabel();
   });
 

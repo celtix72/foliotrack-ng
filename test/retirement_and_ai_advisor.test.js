@@ -331,6 +331,27 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(data.response.length > 20);
     });
 
+    test('POST /api/ai/chat supports NVIDIA Nemotron Ultra via OpenRouter routing', async () => {
+      const res = await fetch(`${baseUrl}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          prompt: 'Qual è il rischio del mio portafoglio?',
+          provider: 'openrouter',
+          model: 'nvidia/nemotron-3-ultra-550b-a55b'
+        })
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.ok(data.response);
+      assert.ok(data.response.length > 20);
+    });
+
     test('POST /api/ai/chat supports NVIDIA Nemotron Free model routing and fallback', async () => {
       const res = await fetch(`${baseUrl}/api/ai/chat`, {
         method: 'POST',
@@ -397,6 +418,9 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.strictEqual(resAi.status, 200);
       const textAi = await resAi.text();
       assert.ok(textAi.includes('runMonteCarloRetirement') || textAi.includes('AiReportsController'));
+      assert.ok(textAi.includes('initPromptChipsLogic'), 'Should contain initPromptChipsLogic');
+      assert.ok(textAi.includes('loadPromptIntoInput'), 'Should contain loadPromptIntoInput');
+      assert.ok(textAi.includes('btnSaveCustomPrompt'), 'Should handle btnSaveCustomPrompt');
 
       const resPdf = await fetch(`${baseUrl}/pdf_report.js`);
       assert.strictEqual(resPdf.status, 200);
@@ -419,6 +443,9 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('chatModelSelect'), 'Should contain model selector');
       assert.ok(html.includes('deepseek/deepseek-chat'), 'Should contain OpenRouter DeepSeek option');
       assert.ok(html.includes('nvidia/nemotron-3-ultra-550b-a55b'), 'Should contain NVIDIA Nemotron option');
+      assert.ok(html.includes('btnSaveCustomPrompt'), 'Should contain save prompt button');
+      assert.ok(html.includes('quickPromptChips'), 'Should contain quick suggestion chips');
+      assert.ok(html.includes('customPromptChipsContainer'), 'Should contain custom saved prompt chips container');
       assert.ok(html.includes('/settings#ai'), 'Should link to settings AI keys panel');
       assert.ok(html.includes('/ai_reports.js'));
       assert.ok(html.includes('/pdf_report.js'));
@@ -440,6 +467,8 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('chatModelSelect'), 'Mobile view should contain model selector');
       assert.ok(html.includes('deepseek/deepseek-chat'), 'Mobile view should contain OpenRouter DeepSeek option');
       assert.ok(html.includes('nvidia/nemotron-3-ultra-550b-a55b'), 'Mobile view should contain NVIDIA Nemotron option');
+      assert.ok(html.includes('btnSaveCustomPrompt'), 'Mobile view should contain save prompt button');
+      assert.ok(html.includes('quickPromptChips'), 'Mobile view should contain quick suggestion chips');
       assert.ok(html.includes('/settings?tab=ai'), 'Mobile view should link to settings AI tab');
     });
 
