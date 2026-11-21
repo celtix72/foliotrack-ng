@@ -151,8 +151,22 @@ describe('Phase 7: Portfolio Detail, Transactions Register & Bulk CSV Uploader',
       const html = await res.text();
       assert.ok(html.includes('Posizioni Aperte (Holdings)'));
       assert.ok(html.includes('Posizioni Chiuse'));
-      assert.ok(html.includes('Gain Posizioni Chiuse'));
+      assert.ok(html.includes('GAIN Totale Posizioni Chiuse'));
+      assert.ok(html.includes('Dividendi Incassati'));
+      assert.ok(!html.includes('Capitale Versato Netto'), 'Capitale Versato Netto card must be removed from detail view');
       assert.ok(html.includes('statRealizedPnl'));
+
+      // Verify card ordering: NAV -> Cash -> P&L Non Realizzato -> GAIN Totale Posizioni Chiuse -> Dividendi Incassati
+      const idxNav = html.indexOf('id="statNav"');
+      const idxCash = html.indexOf('id="statCash"');
+      const idxUnreal = html.indexOf('id="statPnl"');
+      const idxReal = html.indexOf('id="statRealizedPnl"');
+      const idxDiv = html.indexOf('id="statDividends"');
+      assert.ok(idxNav < idxCash, 'NAV must precede Cash');
+      assert.ok(idxCash < idxUnreal, 'Cash must precede Unrealized P&L');
+      assert.ok(idxUnreal < idxReal, 'Unrealized P&L must precede Realized P&L');
+      assert.ok(idxReal < idxDiv, 'Realized P&L must precede Dividends');
+
       assert.ok(html.includes('closedTbody'));
       assert.ok(html.includes('data-holding-sort'));
       assert.ok(html.includes('data-closed-sort'));
@@ -171,6 +185,7 @@ describe('Phase 7: Portfolio Detail, Transactions Register & Bulk CSV Uploader',
       assert.ok(html.includes('mHoldingsContainer'));
       assert.ok(html.includes('mStatNav'));
       assert.ok(html.includes('mStatRealizedPnl'));
+      assert.ok(html.includes('mStatDividends'));
       assert.ok(html.includes('mTabClosed'));
       assert.ok(html.includes('mClosedContainer'));
       assert.ok(html.includes('mNewTxFab'));

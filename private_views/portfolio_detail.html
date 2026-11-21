@@ -79,7 +79,7 @@
       </div>
 
       <!-- Quick KPI Metric Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <!-- 1. Total Value (NAV) -->
         <div class="signature-card p-4 space-y-1">
           <span id="statNavLabel" class="text-xs text-gray-500 font-medium">Valore Totale (NAV)</span>
@@ -94,30 +94,23 @@
           <div id="statCashWeight" class="text-xs font-mono text-gray-400">0.0% del totale</div>
         </div>
 
-        <!-- 3. Invested Capital -->
-        <div class="signature-card p-4 space-y-1">
-          <span class="text-xs text-gray-500 font-medium">Capitale Versato Netto</span>
-          <div id="statInvested" class="text-xl font-bold font-mono text-gray-900 dark:text-white tabular-nums">€ 0</div>
-          <div class="text-xs font-mono text-gray-400">Net Deposits</div>
-        </div>
-
-        <!-- 4. Unrealized P&L (Posizioni Aperte) -->
+        <!-- 3. Unrealized P&L (Posizioni Aperte) -->
         <div class="signature-card p-4 space-y-1">
           <span class="text-xs text-gray-500 font-medium">P&L Non Realizzato</span>
           <div id="statPnl" class="text-xl font-bold font-mono tabular-nums">€ 0</div>
           <div id="statPnlPct" class="text-xs font-mono font-semibold">0.00%</div>
         </div>
 
-        <!-- 5. Realized P&L (Posizioni Chiuse) -->
+        <!-- 4. Realized P&L (Posizioni Chiuse) -->
         <div class="signature-card p-4 space-y-1">
-          <span class="text-xs text-gray-500 font-medium">Gain Posizioni Chiuse</span>
+          <span class="text-xs text-gray-500 font-medium" title="Gain Posizioni Chiuse">GAIN Totale Posizioni Chiuse</span>
           <div id="statRealizedPnl" class="text-xl font-bold font-mono tabular-nums">€ 0</div>
           <div id="statClosedCount" class="text-xs font-mono text-gray-400">0 vendite realizzate</div>
         </div>
 
-        <!-- 6. Total Dividends -->
+        <!-- 5. Total Dividends -->
         <div class="signature-card p-4 space-y-1">
-          <span class="text-xs text-gray-500 font-medium">Dividendi Totali Incassati</span>
+          <span class="text-xs text-gray-500 font-medium">Dividendi Incassati</span>
           <div id="statDividends" class="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">€ 0</div>
           <div id="statAssetCount" class="text-xs font-mono text-gray-400">0 titoli in portafoglio</div>
         </div>
@@ -498,7 +491,9 @@
         document.getElementById('statCash').textContent = fmtEur(cash);
         document.getElementById('statCashWeight').textContent = nav > 0 ? `${((cash / nav) * 100).toFixed(1)}% del totale` : '0.0%';
 
-        document.getElementById('statInvested').textContent = fmtEur(invested);
+        if (document.getElementById('statInvested')) {
+          document.getElementById('statInvested').textContent = fmtEur(invested);
+        }
 
         const pnlEl = document.getElementById('statPnl');
         pnlEl.textContent = fmtEurSigned(pnl);
