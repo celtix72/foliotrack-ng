@@ -311,6 +311,26 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(statusData.nvidiaKeyMasked.startsWith('nvapi-t'));
     });
 
+    test('POST /api/ai/chat supports OpenRouter model routing (e.g. DeepSeek V3)', async () => {
+      const res = await fetch(`${baseUrl}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          prompt: 'Qual è il rischio del mio portafoglio?',
+          model: 'deepseek/deepseek-chat'
+        })
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.ok(data.response);
+      assert.ok(data.response.length > 20);
+    });
+
     test('POST /api/ai/chat supports NVIDIA Nemotron Free model routing and fallback', async () => {
       const res = await fetch(`${baseUrl}/api/ai/chat`, {
         method: 'POST',
@@ -397,6 +417,7 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('aiDiversificationScore'));
       assert.ok(html.includes('aiPromptInput'), 'Should contain interactive AI prompt input');
       assert.ok(html.includes('chatModelSelect'), 'Should contain model selector');
+      assert.ok(html.includes('deepseek/deepseek-chat'), 'Should contain OpenRouter DeepSeek option');
       assert.ok(html.includes('nvidia/nemotron-3-ultra-550b-a55b'), 'Should contain NVIDIA Nemotron option');
       assert.ok(html.includes('/settings#ai'), 'Should link to settings AI keys panel');
       assert.ok(html.includes('/ai_reports.js'));
@@ -417,6 +438,7 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('aiDiversificationScore'));
       assert.ok(html.includes('aiPromptInput'), 'Mobile view should contain prompt input');
       assert.ok(html.includes('chatModelSelect'), 'Mobile view should contain model selector');
+      assert.ok(html.includes('deepseek/deepseek-chat'), 'Mobile view should contain OpenRouter DeepSeek option');
       assert.ok(html.includes('nvidia/nemotron-3-ultra-550b-a55b'), 'Mobile view should contain NVIDIA Nemotron option');
       assert.ok(html.includes('/settings?tab=ai'), 'Mobile view should link to settings AI tab');
     });

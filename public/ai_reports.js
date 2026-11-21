@@ -426,9 +426,9 @@
 
       const activeProviders = [];
       if (data.hasGeminiKey) activeProviders.push('Gemini');
+      if (data.hasOpenRouterKey) activeProviders.push('OpenRouter');
       if (data.hasNvidiaKey) activeProviders.push('NVIDIA');
       if (data.hasOpenAiKey) activeProviders.push('OpenAI');
-      if (data.hasOpenRouterKey) activeProviders.push('OpenRouter');
 
       if (data.success && activeProviders.length > 0) {
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
@@ -437,9 +437,115 @@
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
         if (label) label.textContent = '⚙️ Configura Chiavi AI';
       }
+
+      // Update and filter model dropdowns based on active keys in settings
+      updateChatModelDropdown(data);
+      updateAiProviderSelect(data);
     } catch (err) {
       console.warn('Errore verifica status AI:', err);
     }
+  }
+
+  function updateChatModelDropdown(data) {
+    const sel = document.getElementById('chatModelSelect');
+    if (!sel) return;
+
+    const keyMap = {
+      gemini: !!data.hasGeminiKey,
+      openrouter: !!data.hasOpenRouterKey,
+      nvidia: !!data.hasNvidiaKey,
+      openai: !!data.hasOpenAiKey
+    };
+
+    const hasAnyKey = Object.values(keyMap).some(Boolean);
+    const optgroups = sel.querySelectorAll('optgroup');
+
+    let firstActiveOptionValue = null;
+    const currentSelectedValue = sel.value;
+    const savedModel = localStorage.getItem('foliotrack_ai_chat_model');
+
+    optgroups.forEach(og => {
+      const prov = og.getAttribute('data-provider');
+      const isActive = keyMap[prov];
+      const baseLabel = og.getAttribute('data-base-label') || og.label.replace(/\s*\([^)]*\)/g, '').trim();
+      if (!og.hasAttribute('data-base-label')) {
+        og.setAttribute('data-base-label', baseLabel);
+      }
+
+      if (isActive) {
+        og.label = `${baseLabel} (✓ Chiave Attiva)`;
+        og.querySelectorAll('option').forEach(opt => {
+          opt.disabled = false;
+          const origText = opt.getAttribute('data-base-text') || opt.textContent.replace(/\s*\[.*?\]/g, '').trim();
+          if (!opt.hasAttribute('data-base-text')) opt.setAttribute('data-base-text', origText);
+          opt.textContent = origText;
+          if (!firstActiveOptionValue) firstActiveOptionValue = opt.value;
+        });
+      } else {
+        og.label = `${baseLabel} (Nessuna chiave - vedi Impostazioni)`;
+        og.querySelectorAll('option').forEach(opt => {
+          const origText = opt.getAttribute('data-base-text') || opt.textContent.replace(/\s*\[.*?\]/g, '').trim();
+          if (!opt.hasAttribute('data-base-text')) opt.setAttribute('data-base-text', origText);
+          if (hasAnyKey) {
+            opt.textContent = `${origText} [Manca Chiave]`;
+            opt.disabled = true;
+          } else {
+            opt.textContent = origText;
+            opt.disabled = false;
+          }
+        });
+      }
+    });
+
+    // Check if current selection or savedModel is valid and active
+    let targetValue = null;
+    if (savedModel) {
+      const savedOpt = sel.querySelector(`option[value="${savedModel}"]`);
+      if (savedOpt && !savedOpt.disabled) {
+        targetValue = savedModel;
+      }
+    }
+
+    if (!targetValue) {
+      const currentOpt = sel.querySelector(`option[value="${currentSelectedValue}"]`);
+      if (currentOpt && !currentOpt.disabled) {
+        targetValue = currentSelectedValue;
+      }
+    }
+
+    if (!targetValue && firstActiveOptionValue) {
+      targetValue = firstActiveOptionValue;
+    }
+
+    if (targetValue) {
+      sel.value = targetValue;
+    }
+  }
+
+  function updateAiProviderSelect(data) {
+    const sel = document.getElementById('aiProviderSelect');
+    if (!sel) return;
+
+    const keyMap = {
+      gemini: !!data.hasGeminiKey,
+      openrouter: !!data.hasOpenRouterKey,
+      nvidia: !!data.hasNvidiaKey,
+      openai: !!data.hasOpenAiKey
+    };
+
+    sel.querySelectorAll('option').forEach(opt => {
+      const val = opt.value;
+      if (val === 'auto' || val === 'heuristic') return;
+      const baseText = opt.getAttribute('data-base-text') || opt.textContent.replace(/\s*\([^)]*\)/g, '').trim();
+      if (!opt.hasAttribute('data-base-text')) opt.setAttribute('data-base-text', baseText);
+
+      if (keyMap[val]) {
+        opt.textContent = `${baseText} (✓ Attivo)`;
+        opt.disabled = false;
+      } else {
+        opt.textContent = `${baseText} (Nessuna chiave)`;
+      }
+    });
   }
 
   function appendUserMessage(text) {
@@ -504,7 +610,7 @@
     thread.scrollTop = thread.scrollHeight;
   }
 
-  function showThinkingIndicator() {
+  function showThinkingIndicator(modelLabel = 'AI Advisor') {
     const thread = document.getElementById('aiChatThread');
     if (!thread) return;
 
@@ -513,7 +619,7 @@
     ind.className = 'flex items-center space-x-2 text-xs font-mono text-emerald-600 dark:text-emerald-400 py-2 px-1';
     ind.innerHTML = `
       <span class="animate-spin w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full"></span>
-      <span class="animate-pulse">Gemini AI Pro sta analizzando il portafoglio...</span>
+      <span class="animate-pulse">${escapeHtml(modelLabel)} sta analizzando il portafoglio...</span>
     `;
     thread.appendChild(ind);
     thread.scrollTop = thread.scrollHeight;
@@ -535,6 +641,7 @@
 
     const modelSelect = document.getElementById('chatModelSelect');
     const model = modelSelect ? modelSelect.value : 'gemini-2.0-flash';
+    const selectedOpt = modelSelect?.selectedOptions?.[0];
 
     // Clear input
     if (input) {
@@ -542,19 +649,25 @@
       input.style.height = 'auto';
     }
 
-    // Determine AI provider from model
-    let provider = 'gemini';
-    if (model.startsWith('nvidia/') || model.startsWith('meta/') || model.includes('nemotron')) {
-      provider = 'nvidia';
-    } else if (model.startsWith('gpt-')) {
-      provider = 'openai';
-    } else if (model.startsWith('openrouter')) {
-      provider = 'openrouter';
+    // Determine AI provider from option attribute or model
+    let provider = selectedOpt?.getAttribute('data-provider') || 'auto';
+    if (!provider || provider === 'auto') {
+      if (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon')) {
+        provider = 'nvidia';
+      } else if (model.startsWith('gpt-')) {
+        provider = 'openai';
+      } else if (model.startsWith('gemini-')) {
+        provider = 'gemini';
+      } else {
+        provider = 'openrouter';
+      }
     }
+
+    const modelDisplayName = selectedOpt?.textContent?.replace(/\s*\([^)]*\)/g, '')?.replace(/\[.*?\]/g, '')?.trim() || model;
 
     // UI Updates
     appendUserMessage(promptText);
-    showThinkingIndicator();
+    showThinkingIndicator(modelDisplayName);
 
     const sendBtn = document.getElementById('btnSendPrompt');
     if (sendBtn) sendBtn.disabled = true;
@@ -577,7 +690,7 @@
       removeThinkingIndicator();
 
       if (!data.success || !data.response) {
-        appendModelMessage(`⚠️ **Impossibile completare l'analisi:**\n\n${data.error || 'Errore di connessione o chiave API non valida.'}\n\n*Puoi verificare o aggiornare le tue chiavi API (Google Gemini, NVIDIA Nemotron, OpenAI) nella pagina [Impostazioni > Chiavi API](/settings#ai).*`, { model: 'Errore' });
+        appendModelMessage(`⚠️ **Impossibile completare l'analisi con ${escapeHtml(modelDisplayName)}:**\n\n${data.error || 'Errore di connessione o chiave API non valida.'}\n\n*Puoi verificare o aggiornare le tue chiavi API (Google Gemini, OpenRouter, NVIDIA Nemotron, OpenAI) nella pagina [Impostazioni > Chiavi API](/settings#ai).*`, { model: 'Errore' });
         return;
       }
 
@@ -761,6 +874,11 @@
 
     // Reset Chat
     document.getElementById('btnResetChat')?.addEventListener('click', resetChatHistory);
+
+    // Save model choice
+    document.getElementById('chatModelSelect')?.addEventListener('change', (e) => {
+      localStorage.setItem('foliotrack_ai_chat_model', e.target.value);
+    });
 
     // Key Modal
     initKeyModal();

@@ -559,15 +559,21 @@ Devi restituire ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di codice m
       const data = await res.json();
       rawText = data.choices?.[0]?.message?.content || '';
     } else {
-      usedModel = model || (selectedProvider === 'openrouter' ? 'meta-llama/llama-3.3-70b-instruct' : 'gpt-4o-mini');
+      usedModel = model || (selectedProvider === 'openrouter' ? 'deepseek/deepseek-chat' : 'gpt-4o-mini');
       const baseUrl = customBaseUrl || (selectedProvider === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1');
 
-      const res = await fetch(`${baseUrl}/chat/completions`, {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeKey}`
+      };
+      if (selectedProvider === 'openrouter') {
+        headers['HTTP-Referer'] = 'https://foliotrack.app';
+        headers['X-Title'] = 'FolioTrack NG';
+      }
+
+      let res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${activeKey}`
-        },
+        headers,
         body: JSON.stringify({
           model: usedModel,
           messages: [
@@ -578,6 +584,22 @@ Devi restituire ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di codice m
           temperature: 0.2
         })
       });
+
+      // If provider rejects json_object format (HTTP 400), retry without response_format
+      if (!res.ok && res.status === 400 && selectedProvider === 'openrouter') {
+        res = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: usedModel,
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: `Dati Portafoglio:\n${JSON.stringify(promptData, null, 2)}` }
+            ],
+            temperature: 0.2
+          })
+        });
+      }
 
       if (!res.ok) {
         const errText = await res.text();
@@ -752,7 +774,7 @@ LINEE GUIDA PER LE RISPOSTE:
     defaultModel = 'nvidia/nemotron-3-ultra-550b-a55b';
     defaultBaseUrl = 'https://integrate.api.nvidia.com/v1';
   } else if (selectedProvider === 'openrouter') {
-    defaultModel = 'meta-llama/llama-3.3-70b-instruct';
+    defaultModel = 'deepseek/deepseek-chat';
     defaultBaseUrl = 'https://openrouter.ai/api/v1';
   }
 
@@ -775,13 +797,19 @@ LINEE GUIDA PER LE RISPOSTE:
 
   messages.push({ role: 'user', content: userPrompt.trim() });
 
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${activeKey}`
+  };
+  if (selectedProvider === 'openrouter') {
+    headers['HTTP-Referer'] = 'https://foliotrack.app';
+    headers['X-Title'] = 'FolioTrack NG';
+  }
+
   try {
     const res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${activeKey}`
-      },
+      headers,
       body: JSON.stringify({
         model: usedModel,
         messages,

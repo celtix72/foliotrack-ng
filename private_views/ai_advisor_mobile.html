@@ -49,18 +49,31 @@
         <div class="flex items-center space-x-2">
           <span class="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-sm shadow-emerald-500/20">✦</span>
           <div>
-            <h2 class="text-xs font-bold text-gray-900 dark:text-white">Chat con Gemini Pro</h2>
+            <h2 class="text-xs font-bold text-gray-900 dark:text-white">Chat con AI Advisor</h2>
             <p class="text-[9px] font-mono text-gray-400">Analisi personalizzata live</p>
           </div>
         </div>
         <div class="flex items-center space-x-1.5">
-          <select id="chatModelSelect" class="px-2 py-0.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[10px] font-mono">
-            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-            <option value="nvidia/nemotron-3-ultra-550b-a55b">NVIDIA Nemotron Ultra (Free)</option>
-            <option value="nvidia/nemotron-3.5-lightning-30b-a3b">NVIDIA Lightning (Free)</option>
-            <option value="gpt-4o-mini">GPT-4o-mini</option>
+          <select id="chatModelSelect" class="px-2 py-0.5 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-[10px] font-mono max-w-[150px]">
+            <optgroup label="✦ Google Gemini" data-provider="gemini">
+              <option value="gemini-2.0-flash" data-provider="gemini">Gemini 2.0 Flash</option>
+              <option value="gemini-1.5-pro" data-provider="gemini">Gemini 1.5 Pro</option>
+              <option value="gemini-1.5-flash" data-provider="gemini">Gemini 1.5 Flash</option>
+            </optgroup>
+            <optgroup label="🌐 OpenRouter" data-provider="openrouter">
+              <option value="deepseek/deepseek-chat" data-provider="openrouter">DeepSeek V3</option>
+              <option value="deepseek/deepseek-r1" data-provider="openrouter">DeepSeek R1</option>
+              <option value="anthropic/claude-3.5-sonnet" data-provider="openrouter">Claude 3.5</option>
+              <option value="meta-llama/llama-3.3-70b-instruct" data-provider="openrouter">Llama 3.3 70B</option>
+            </optgroup>
+            <optgroup label="⚡ NVIDIA NIM" data-provider="nvidia">
+              <option value="nvidia/nemotron-3-ultra-550b-a55b" data-provider="nvidia">Nemotron Ultra</option>
+              <option value="nvidia/nemotron-3.5-lightning-30b-a3b" data-provider="nvidia">Nemotron Light</option>
+            </optgroup>
+            <optgroup label="🤖 OpenAI" data-provider="openai">
+              <option value="gpt-4o-mini" data-provider="openai">GPT-4o-mini</option>
+              <option value="gpt-4o" data-provider="openai">GPT-4o</option>
+            </optgroup>
           </select>
           <button id="btnResetChat" class="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-white" title="Nuova Chat">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>

@@ -53,28 +53,35 @@
               </div>
               <div>
                 <div class="flex items-center space-x-2">
-                  <h2 class="text-base font-bold text-gray-900 dark:text-white">Chat & Prompt Personalizzato con Gemini Pro</h2>
+                  <h2 class="text-base font-bold text-gray-900 dark:text-white">Chat & Prompt Personalizzato con AI Advisor</h2>
                   <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Live AI</span>
                 </div>
-                <p class="text-xs text-gray-500 font-mono">Fai qualsiasi domanda o analisi sul tuo portafoglio direttamente a Google Gemini Pro</p>
+                <p class="text-xs text-gray-500 font-mono">Fai qualsiasi domanda o analisi sul tuo portafoglio a Gemini, OpenRouter, NVIDIA Nemotron o OpenAI</p>
               </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-2 no-print">
               <select id="chatModelSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                <optgroup label="Google DeepMind (Nativo)">
-                  <option value="gemini-2.0-flash">Google Gemini 2.0 Flash (Consigliato: Rapido & Stabile)</option>
-                  <option value="gemini-1.5-pro">Google Gemini 1.5 Pro (Ragionamento Approfondito)</option>
-                  <option value="gemini-1.5-flash">Google Gemini 1.5 Flash (Ultra Leggero)</option>
+                <optgroup label="✦ Google Gemini" data-provider="gemini">
+                  <option value="gemini-2.0-flash" data-provider="gemini">Google Gemini 2.0 Flash (Consigliato: Rapido & Stabile)</option>
+                  <option value="gemini-1.5-pro" data-provider="gemini">Google Gemini 1.5 Pro (Ragionamento Approfondito)</option>
+                  <option value="gemini-1.5-flash" data-provider="gemini">Google Gemini 1.5 Flash (Ultra Leggero)</option>
                 </optgroup>
-                <optgroup label="NVIDIA NIM (Free Serverless • Nemotron)">
-                  <option value="nvidia/nemotron-3-ultra-550b-a55b">NVIDIA Nemotron Ultra Free (nvidia-ultramon)</option>
-                  <option value="nvidia/nemotron-3.5-lightning-30b-a3b">NVIDIA Nemotron 3.5 Lightning Free (Ultra Rapido)</option>
-                  <option value="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning">NVIDIA Nemotron 3 Reasoning Free</option>
+                <optgroup label="🌐 OpenRouter AI Gateway" data-provider="openrouter">
+                  <option value="deepseek/deepseek-chat" data-provider="openrouter">DeepSeek V3 (OpenRouter)</option>
+                  <option value="deepseek/deepseek-r1" data-provider="openrouter">DeepSeek R1 Reasoning (OpenRouter)</option>
+                  <option value="anthropic/claude-3.5-sonnet" data-provider="openrouter">Claude 3.5 Sonnet (OpenRouter)</option>
+                  <option value="meta-llama/llama-3.3-70b-instruct" data-provider="openrouter">Meta Llama 3.3 70B (OpenRouter)</option>
+                  <option value="qwen/qwen-2.5-72b-instruct" data-provider="openrouter">Qwen 2.5 72B (OpenRouter)</option>
                 </optgroup>
-                <optgroup label="OpenAI Platform">
-                  <option value="gpt-4o-mini">OpenAI GPT-4o-mini</option>
-                  <option value="gpt-4o">OpenAI GPT-4o</option>
+                <optgroup label="⚡ NVIDIA NIM Free (Nemotron • Ultramon)" data-provider="nvidia">
+                  <option value="nvidia/nemotron-3-ultra-550b-a55b" data-provider="nvidia">NVIDIA Nemotron Ultra Free (nvidia-ultramon)</option>
+                  <option value="nvidia/nemotron-3.5-lightning-30b-a3b" data-provider="nvidia">NVIDIA Nemotron 3.5 Lightning Free (Ultra Rapido)</option>
+                  <option value="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning" data-provider="nvidia">NVIDIA Nemotron 3 Reasoning Free</option>
+                </optgroup>
+                <optgroup label="🤖 OpenAI Platform" data-provider="openai">
+                  <option value="gpt-4o-mini" data-provider="openai">OpenAI GPT-4o-mini</option>
+                  <option value="gpt-4o" data-provider="openai">OpenAI GPT-4o</option>
                 </optgroup>
               </select>
               <button id="btnResetChat" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-mono text-gray-600 dark:text-gray-300 transition flex items-center space-x-1" title="Azzera conversazione">

@@ -203,6 +203,17 @@ router.get('/status', (req, res) => {
   const openrouterKey = getSetting(req.user.id, 'openrouter_api_key', true) || process.env.OPENROUTER_API_KEY || null;
   const tavilyKey = getSetting(req.user.id, 'tavily_api_key', true) || process.env.TAVILY_API_KEY || null;
 
+  let defaultModel = 'gemini-2.0-flash';
+  if (geminiKey) {
+    defaultModel = 'gemini-2.0-flash';
+  } else if (openrouterKey) {
+    defaultModel = 'deepseek/deepseek-chat';
+  } else if (nvidiaKey) {
+    defaultModel = 'nvidia/nemotron-3-ultra-550b-a55b';
+  } else if (openaiKey) {
+    defaultModel = 'gpt-4o-mini';
+  }
+
   return res.json({
     success: true,
     hasGeminiKey: !!geminiKey,
@@ -212,34 +223,46 @@ router.get('/status', (req, res) => {
     hasTavilyKey: !!tavilyKey,
     geminiKeyMasked: geminiKey ? (String(geminiKey).slice(0, 6) + '...' + String(geminiKey).slice(-4)) : null,
     nvidiaKeyMasked: nvidiaKey ? (String(nvidiaKey).slice(0, 7) + '...' + String(nvidiaKey).slice(-4)) : null,
-    defaultModel: geminiKey ? 'gemini-2.0-flash' : (nvidiaKey ? 'nvidia/nemotron-3-ultra-550b-a55b' : 'gemini-2.0-flash')
+    openrouterKeyMasked: openrouterKey ? (String(openrouterKey).slice(0, 9) + '...' + String(openrouterKey).slice(-4)) : null,
+    openaiKeyMasked: openaiKey ? (String(openaiKey).slice(0, 7) + '...' + String(openaiKey).slice(-4)) : null,
+    defaultModel
   });
 });
 
 /**
  * POST /api/ai/chat
- * Free-form conversational prompt analysis with Gemini AI Pro, NVIDIA NIM Nemotron, or chosen provider.
+ * Free-form conversational prompt analysis with Gemini AI Pro, NVIDIA NIM Nemotron, OpenRouter, or chosen provider.
  */
 router.post('/chat', async (req, res) => {
   let {
     portfolioId = 'all',
     prompt,
     history = [],
-    provider = 'gemini',
+    provider = 'auto',
     model = 'gemini-2.0-flash',
     apiKey,
     customBaseUrl
   } = req.body || {};
 
-  // Auto-detect provider if model matches specific LLM families
+  // Auto-detect or align provider based on model names
   if (model && (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon'))) {
     provider = 'nvidia';
-  } else if (model && model.startsWith('gpt-')) {
+  } else if (model && (model.startsWith('gpt-') || model.startsWith('o1-') || model.startsWith('o3-'))) {
     provider = 'openai';
-  } else if (model && model.startsWith('openrouter')) {
-    provider = 'openrouter';
   } else if (model && model.startsWith('gemini-')) {
     provider = 'gemini';
+  } else if (
+    model && (
+      model.startsWith('openrouter') ||
+      model.startsWith('deepseek/') ||
+      model.startsWith('anthropic/') ||
+      model.startsWith('meta-llama/') ||
+      model.startsWith('qwen/') ||
+      model.startsWith('mistralai/') ||
+      model.includes('/')
+    )
+  ) {
+    provider = 'openrouter';
   }
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
@@ -298,6 +321,15 @@ router.post('/analyze', async (req, res) => {
 
   if (model && (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon'))) {
     if (provider === 'auto') provider = 'nvidia';
+  } else if (model && (
+    model.startsWith('openrouter') ||
+    model.startsWith('deepseek/') ||
+    model.startsWith('anthropic/') ||
+    model.startsWith('meta-llama/') ||
+    model.startsWith('qwen/') ||
+    model.startsWith('mistralai/')
+  )) {
+    if (provider === 'auto') provider = 'openrouter';
   }
 
   const portfolio = getPortfolioOrAggregated(portfolioId, req.user.id, req.user.role);
