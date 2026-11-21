@@ -6,6 +6,13 @@
 
 const { getSetting } = require('../db');
 
+function normalizeNvidiaModel(model) {
+  if (!model || model === 'nvidia' || model === 'nvidia-ultramon' || model === 'ultramon' || model === 'nvidia/llama-3.1-nemotron-70b-instruct') {
+    return 'nvidia/nemotron-3-ultra-550b-a55b';
+  }
+  return model;
+}
+
 /**
  * Searches the web for relevant market/macro news on top portfolio holdings via Tavily Search API.
  *
@@ -456,6 +463,9 @@ async function generatePortfolioAiAssessment({
     } else if (process.env.GEMINI_API_KEY) {
       selectedProvider = 'gemini';
       activeKey = process.env.GEMINI_API_KEY.trim();
+    } else if (process.env.NVIDIA_API_KEY) {
+      selectedProvider = 'nvidia';
+      activeKey = process.env.NVIDIA_API_KEY.trim();
     } else if (process.env.OPENAI_API_KEY) {
       selectedProvider = 'openai';
       activeKey = process.env.OPENAI_API_KEY.trim();
@@ -521,6 +531,33 @@ Devi restituire ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di codice m
       });
       usedModel = res.model;
       rawText = res.text;
+    } else if (selectedProvider === 'nvidia') {
+      usedModel = normalizeNvidiaModel(model);
+      const baseUrl = customBaseUrl || 'https://integrate.api.nvidia.com/v1';
+
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${activeKey}`
+        },
+        body: JSON.stringify({
+          model: usedModel,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: `Dati Portafoglio:\n${JSON.stringify(promptData, null, 2)}` }
+          ],
+          temperature: 0.2
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`NVIDIA NIM Error (${res.status}): ${errText}`);
+      }
+
+      const data = await res.json();
+      rawText = data.choices?.[0]?.message?.content || '';
     } else {
       usedModel = model || (selectedProvider === 'openrouter' ? 'meta-llama/llama-3.3-70b-instruct' : 'gpt-4o-mini');
       const baseUrl = customBaseUrl || (selectedProvider === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1');
@@ -602,9 +639,15 @@ async function chatWithPortfolioAi({
     } else if (process.env.GEMINI_API_KEY) {
       selectedProvider = 'gemini';
       activeKey = process.env.GEMINI_API_KEY.trim();
+    } else if (process.env.NVIDIA_API_KEY) {
+      selectedProvider = 'nvidia';
+      activeKey = process.env.NVIDIA_API_KEY.trim();
     } else if (process.env.OPENAI_API_KEY) {
       selectedProvider = 'openai';
       activeKey = process.env.OPENAI_API_KEY.trim();
+    } else if (process.env.OPENROUTER_API_KEY) {
+      selectedProvider = 'openrouter';
+      activeKey = process.env.OPENROUTER_API_KEY.trim();
     } else {
       selectedProvider = 'heuristic';
     }
@@ -701,9 +744,20 @@ LINEE GUIDA PER LE RISPOSTE:
     }
   }
 
-  // OpenAI / OpenRouter / Custom compatible API
-  const usedModel = model || (selectedProvider === 'openrouter' ? 'meta-llama/llama-3.3-70b-instruct' : 'gpt-4o');
-  const baseUrl = customBaseUrl || (selectedProvider === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1');
+  // NVIDIA NIM / OpenAI / OpenRouter / Custom compatible API
+  let defaultModel = 'gpt-4o';
+  let defaultBaseUrl = 'https://api.openai.com/v1';
+
+  if (selectedProvider === 'nvidia') {
+    defaultModel = 'nvidia/nemotron-3-ultra-550b-a55b';
+    defaultBaseUrl = 'https://integrate.api.nvidia.com/v1';
+  } else if (selectedProvider === 'openrouter') {
+    defaultModel = 'meta-llama/llama-3.3-70b-instruct';
+    defaultBaseUrl = 'https://openrouter.ai/api/v1';
+  }
+
+  const usedModel = (selectedProvider === 'nvidia' ? normalizeNvidiaModel(model) : model) || defaultModel;
+  const baseUrl = customBaseUrl || defaultBaseUrl;
 
   const messages = [
     { role: 'system', content: systemInstructionText }
@@ -721,32 +775,48 @@ LINEE GUIDA PER LE RISPOSTE:
 
   messages.push({ role: 'user', content: userPrompt.trim() });
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${activeKey}`
-    },
-    body: JSON.stringify({
+  try {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeKey}`
+      },
+      body: JSON.stringify({
+        model: usedModel,
+        messages,
+        temperature: 0.35
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      let parsedErrMsg = errText;
+      try {
+        const j = JSON.parse(errText);
+        if (j.error?.message) parsedErrMsg = j.error.message;
+        else if (j.message) parsedErrMsg = j.message;
+      } catch (_) {}
+      throw new Error(`${selectedProvider.toUpperCase()} (${res.status}): ${parsedErrMsg}`);
+    }
+
+    const data = await res.json();
+    const replyText = data.choices?.[0]?.message?.content || 'Nessuna risposta ricevuta.';
+
+    return {
+      provider: selectedProvider,
       model: usedModel,
-      messages,
-      temperature: 0.35
-    })
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`${selectedProvider} Error (${res.status}): ${errText}`);
+      message: replyText
+    };
+  } catch (err) {
+    console.warn(`[AI Advisor] Chiamata ${selectedProvider} fallita:`, err.message);
+    const heuristicMsg = generateHeuristicChatResponse(portfolio, userPrompt);
+    return {
+      provider: 'heuristic',
+      model: 'motore-quantitativo-fallback',
+      message: `⚠️ *(Chiamata a ${selectedProvider.toUpperCase()} non riuscita: ${err.message}. Di seguito l'analisi calcolata dal motore quantitativo locale)*\n\n${heuristicMsg}`
+    };
   }
-
-  const data = await res.json();
-  const replyText = data.choices?.[0]?.message?.content || 'Nessuna risposta ricevuta.';
-
-  return {
-    provider: selectedProvider,
-    model: usedModel,
-    message: replyText
-  };
 }
 
 module.exports = {

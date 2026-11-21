@@ -274,7 +274,7 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(data.analysis.riskScore > 0);
     });
 
-    test('GET /api/ai/status returns provider key status', async () => {
+    test('GET /api/ai/status returns provider key status including NVIDIA and Gemini', async () => {
       const res = await fetch(`${baseUrl}/api/ai/status`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
@@ -282,7 +282,53 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       const data = await res.json();
       assert.strictEqual(data.success, true);
       assert.strictEqual(typeof data.hasGeminiKey, 'boolean');
-      assert.strictEqual(data.defaultModel, 'gemini-2.0-flash');
+      assert.strictEqual(typeof data.hasNvidiaKey, 'boolean');
+      assert.strictEqual(typeof data.hasOpenAiKey, 'boolean');
+      assert.strictEqual(typeof data.hasOpenRouterKey, 'boolean');
+      assert.ok(data.defaultModel);
+    });
+
+    test('PUT /api/settings saves nvidia_api_key and GET /api/ai/status reflects it', async () => {
+      const putRes = await fetch(`${baseUrl}/api/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          nvidia_api_key: 'nvapi-test-key-mock-12345',
+          openrouter_api_key: 'sk-or-v1-mock-key'
+        })
+      });
+      assert.strictEqual(putRes.status, 200);
+
+      const statusRes = await fetch(`${baseUrl}/api/ai/status`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const statusData = await statusRes.json();
+      assert.strictEqual(statusData.hasNvidiaKey, true);
+      assert.strictEqual(statusData.hasOpenRouterKey, true);
+      assert.ok(statusData.nvidiaKeyMasked.startsWith('nvapi-t'));
+    });
+
+    test('POST /api/ai/chat supports NVIDIA Nemotron Free model routing and fallback', async () => {
+      const res = await fetch(`${baseUrl}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          prompt: 'Qual è il rischio del mio portafoglio?',
+          model: 'nvidia/llama-3.1-nemotron-70b-instruct'
+        })
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.ok(data.response);
+      assert.ok(data.response.length > 20);
     });
 
     test('POST /api/ai/chat returns interactive response for portfolio prompt', async () => {
@@ -351,7 +397,8 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('aiDiversificationScore'));
       assert.ok(html.includes('aiPromptInput'), 'Should contain interactive AI prompt input');
       assert.ok(html.includes('chatModelSelect'), 'Should contain model selector');
-      assert.ok(html.includes('geminiKeyModal'), 'Should contain Gemini API key modal');
+      assert.ok(html.includes('nvidia/nemotron-3-ultra-550b-a55b'), 'Should contain NVIDIA Nemotron option');
+      assert.ok(html.includes('/settings#ai'), 'Should link to settings AI keys panel');
       assert.ok(html.includes('/ai_reports.js'));
       assert.ok(html.includes('/pdf_report.js'));
       assert.ok(!html.includes('Pensione & FIRE'), 'Pensione & FIRE link should be removed from sidebar');
@@ -370,7 +417,33 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(html.includes('aiDiversificationScore'));
       assert.ok(html.includes('aiPromptInput'), 'Mobile view should contain prompt input');
       assert.ok(html.includes('chatModelSelect'), 'Mobile view should contain model selector');
-      assert.ok(html.includes('geminiKeyModal'), 'Mobile view should contain Gemini key modal');
+      assert.ok(html.includes('nvidia/nemotron-3-ultra-550b-a55b'), 'Mobile view should contain NVIDIA Nemotron option');
+      assert.ok(html.includes('/settings?tab=ai'), 'Mobile view should link to settings AI tab');
+    });
+
+    test('Settings UI (desktop and mobile) renders centralized AI and Tavily configuration', async () => {
+      const deskRes = await fetch(`${baseUrl}/settings`, {
+        headers: { Cookie: `foliotrack_token=${authToken}` }
+      });
+      assert.strictEqual(deskRes.status, 200);
+      const deskHtml = await deskRes.text();
+      assert.ok(deskHtml.includes('id="gemini_api_key"'));
+      assert.ok(deskHtml.includes('id="nvidia_api_key"'));
+      assert.ok(deskHtml.includes('id="openai_api_key"'));
+      assert.ok(deskHtml.includes('id="openrouter_api_key"'));
+      assert.ok(deskHtml.includes('id="tavily_api_key"'));
+      assert.ok(deskHtml.includes('NVIDIA NIM'));
+
+      const mobRes = await fetch(`${baseUrl}/settings?view=mobile`, {
+        headers: { Cookie: `foliotrack_token=${authToken}` }
+      });
+      assert.strictEqual(mobRes.status, 200);
+      const mobHtml = await mobRes.text();
+      assert.ok(mobHtml.includes('id="gemini_api_key"'));
+      assert.ok(mobHtml.includes('id="nvidia_api_key"'));
+      assert.ok(mobHtml.includes('id="openai_api_key"'));
+      assert.ok(mobHtml.includes('id="tavily_api_key"'));
+      assert.ok(mobHtml.includes('NVIDIA NIM'));
     });
   });
 });

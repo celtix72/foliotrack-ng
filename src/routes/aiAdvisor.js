@@ -21,6 +21,10 @@ router.use(requireAuth);
 function resolveApiKey(provider, userKey, userId) {
   if (userKey && String(userKey).trim()) return String(userKey).trim();
 
+  if (provider === 'nvidia' || provider === 'nemotron') {
+    const k = getSetting(userId, 'nvidia_api_key', true) || process.env.NVIDIA_API_KEY || null;
+    return k ? String(k).trim() : null;
+  }
   if (provider === 'gemini') {
     const k = getSetting(userId, 'gemini_api_key', true) || process.env.GEMINI_API_KEY || null;
     return k ? String(k).trim() : null;
@@ -34,8 +38,9 @@ function resolveApiKey(provider, userKey, userId) {
     return k ? String(k).trim() : null;
   }
 
-  // Auto: prefer Gemini, then OpenAI, then OpenRouter
+  // Auto: prefer Gemini, then NVIDIA, then OpenAI, then OpenRouter
   const k = getSetting(userId, 'gemini_api_key', true) || process.env.GEMINI_API_KEY
+    || getSetting(userId, 'nvidia_api_key', true) || process.env.NVIDIA_API_KEY
     || getSetting(userId, 'openai_api_key', true) || process.env.OPENAI_API_KEY
     || getSetting(userId, 'openrouter_api_key', true) || process.env.OPENROUTER_API_KEY
     || null;
@@ -193,25 +198,30 @@ function getPortfolioOrAggregated(portfolioId, userId, userRole) {
  */
 router.get('/status', (req, res) => {
   const geminiKey = getSetting(req.user.id, 'gemini_api_key', true) || process.env.GEMINI_API_KEY || null;
+  const nvidiaKey = getSetting(req.user.id, 'nvidia_api_key', true) || process.env.NVIDIA_API_KEY || null;
   const openaiKey = getSetting(req.user.id, 'openai_api_key', true) || process.env.OPENAI_API_KEY || null;
+  const openrouterKey = getSetting(req.user.id, 'openrouter_api_key', true) || process.env.OPENROUTER_API_KEY || null;
   const tavilyKey = getSetting(req.user.id, 'tavily_api_key', true) || process.env.TAVILY_API_KEY || null;
 
   return res.json({
     success: true,
     hasGeminiKey: !!geminiKey,
+    hasNvidiaKey: !!nvidiaKey,
     hasOpenAiKey: !!openaiKey,
+    hasOpenRouterKey: !!openrouterKey,
     hasTavilyKey: !!tavilyKey,
     geminiKeyMasked: geminiKey ? (String(geminiKey).slice(0, 6) + '...' + String(geminiKey).slice(-4)) : null,
-    defaultModel: 'gemini-2.0-flash'
+    nvidiaKeyMasked: nvidiaKey ? (String(nvidiaKey).slice(0, 7) + '...' + String(nvidiaKey).slice(-4)) : null,
+    defaultModel: geminiKey ? 'gemini-2.0-flash' : (nvidiaKey ? 'nvidia/nemotron-3-ultra-550b-a55b' : 'gemini-2.0-flash')
   });
 });
 
 /**
  * POST /api/ai/chat
- * Free-form conversational prompt analysis with Gemini AI Pro or chosen provider.
+ * Free-form conversational prompt analysis with Gemini AI Pro, NVIDIA NIM Nemotron, or chosen provider.
  */
 router.post('/chat', async (req, res) => {
-  const {
+  let {
     portfolioId = 'all',
     prompt,
     history = [],
@@ -220,6 +230,17 @@ router.post('/chat', async (req, res) => {
     apiKey,
     customBaseUrl
   } = req.body || {};
+
+  // Auto-detect provider if model matches specific LLM families
+  if (model && (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon'))) {
+    provider = 'nvidia';
+  } else if (model && model.startsWith('gpt-')) {
+    provider = 'openai';
+  } else if (model && model.startsWith('openrouter')) {
+    provider = 'openrouter';
+  } else if (model && model.startsWith('gemini-')) {
+    provider = 'gemini';
+  }
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ success: false, error: 'Il prompt / domanda è obbligatorio.' });
@@ -266,7 +287,7 @@ router.post('/chat', async (req, res) => {
  * Generates structured AI advisor analysis for a portfolio.
  */
 router.post('/analyze', async (req, res) => {
-  const {
+  let {
     portfolioId = 'all',
     provider = 'auto',
     model,
@@ -274,6 +295,10 @@ router.post('/analyze', async (req, res) => {
     tavilyKey,
     customBaseUrl
   } = req.body || {};
+
+  if (model && (model.startsWith('nvidia/') || model.includes('nemotron') || model.includes('ultramon'))) {
+    if (provider === 'auto') provider = 'nvidia';
+  }
 
   const portfolio = getPortfolioOrAggregated(portfolioId, req.user.id, req.user.role);
   if (!portfolio) {

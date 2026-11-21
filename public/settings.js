@@ -73,8 +73,13 @@ function initTabs() {
     });
   }
 
-  // Activate initial tab
-  switchTab(savedTab);
+  // Activate initial tab (support URL hash e.g. #ai or ?tab=ai)
+  const hashTab = (window.location.hash || '').replace('#', '').trim();
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramTab = urlParams.get('tab');
+  const validTabs = ['fx', 'assets', 'api', 'db', 'notifications', 'backups', 'ai', 'theme', 'user'];
+  const initialTab = (paramTab && validTabs.includes(paramTab)) ? paramTab : ((hashTab && validTabs.includes(hashTab)) ? hashTab : savedTab);
+  switchTab(initialTab);
 }
 
 function switchTab(tabId) {
@@ -330,9 +335,19 @@ function initEventListeners() {
     }
   });
 
-  // Notifications & Backups
+  // Notifications & Backups & AI Settings
   document.getElementById('settings-form')?.addEventListener('submit', handleSaveSettings);
   document.getElementById('btn-save-settings-ai')?.addEventListener('click', handleSaveSettings);
+  document.getElementById('btn-save-ai-settings')?.addEventListener('click', handleSaveSettings);
+  document.querySelectorAll('.btn-toggle-key-vis').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+      }
+    });
+  });
   document.getElementById('btn-telegram-test')?.addEventListener('click', handleTelegramTest);
   document.getElementById('btn-telegram-digest')?.addEventListener('click', handleTelegramDigest);
   document.getElementById('btn-check-alerts')?.addEventListener('click', handleCheckAlerts);
@@ -2634,7 +2649,9 @@ async function loadSettings() {
     setVal('telegram_bot_token', s.telegram_bot_token);
     setVal('telegram_chat_id', s.telegram_chat_id);
     setVal('gemini_api_key', s.gemini_api_key);
+    setVal('nvidia_api_key', s.nvidia_api_key);
     setVal('openai_api_key', s.openai_api_key);
+    setVal('openrouter_api_key', s.openrouter_api_key);
     setVal('tavily_api_key', s.tavily_api_key);
     setVal('gdrive_client_email', s.gdrive_client_email);
     setVal('gdrive_folder_id', s.gdrive_folder_id);
@@ -2664,14 +2681,16 @@ async function loadSettings() {
 
 async function handleSaveSettings(e) {
   if (e && e.preventDefault) e.preventDefault();
-  const btn = document.getElementById('btn-save-settings') || document.getElementById('btn-save-settings-ai');
+  const btn = document.getElementById('btn-save-settings') || document.getElementById('btn-save-settings-ai') || document.getElementById('btn-save-ai-settings');
   if (btn) btn.disabled = true;
 
   const payload = {
     telegram_bot_token: document.getElementById('telegram_bot_token')?.value || '',
     telegram_chat_id: document.getElementById('telegram_chat_id')?.value || '',
     gemini_api_key: document.getElementById('gemini_api_key')?.value || '',
+    nvidia_api_key: document.getElementById('nvidia_api_key')?.value || '',
     openai_api_key: document.getElementById('openai_api_key')?.value || '',
+    openrouter_api_key: document.getElementById('openrouter_api_key')?.value || '',
     tavily_api_key: document.getElementById('tavily_api_key')?.value || '',
     gdrive_client_email: document.getElementById('gdrive_client_email')?.value || '',
     gdrive_folder_id: document.getElementById('gdrive_folder_id')?.value || ''

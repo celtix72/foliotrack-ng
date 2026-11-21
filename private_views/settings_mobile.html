@@ -538,6 +538,23 @@
         </div>
       </div>
 
+      <!-- Google Drive Remote Backup Config Mobile -->
+      <div class="signature-card p-4 space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">☁️ Backup Cloud Google Drive</h3>
+        <div class="space-y-2 text-xs font-mono">
+          <div>
+            <label class="block text-[10px] text-gray-400">Google Drive Service Email</label>
+            <input type="text" id="gdrive_client_email" placeholder="backup-service@app.iam.gserviceaccount.com"
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400">Google Drive Folder ID</label>
+            <input type="text" id="gdrive_folder_id" placeholder="1a2b3c4d5e..."
+              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+          </div>
+        </div>
+      </div>
+
       <!-- Zona Pericolo Mobile: Reset Database Finanziario -->
       <div class="signature-card p-4 border border-rose-500/30 bg-rose-500/[0.02] space-y-2">
         <h3 class="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center space-x-1.5">
@@ -556,38 +573,112 @@
     <!-- ========================================== -->
     <!-- TAB 7: AI & API KEYS                      -->
     <!-- ========================================== -->
-    <div id="panel-ai" class="tab-panel hidden space-y-4">
-      <div class="signature-card p-4 space-y-3">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">🧠 Chiavi API AI</h3>
-        <div class="space-y-2 text-xs font-mono">
-          <div>
-            <label class="block text-[10px] text-gray-400">Google Gemini API Key</label>
+    <div id="panel-ai" class="tab-panel hidden space-y-3">
+      <div class="signature-card p-4 space-y-4">
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white flex items-center space-x-1.5">
+            <span>🧠</span>
+            <span>Chiavi API AI & Ricerca Web</span>
+          </h3>
+          <p class="text-[10px] text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+            Cifrate con crittografia forte AES-256-GCM sul database SQLite locale.
+          </p>
+        </div>
+
+        <div class="space-y-3 text-xs font-mono">
+          <!-- Google Gemini -->
+          <div class="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-gray-900 dark:text-white">✦ Google Gemini (DeepMind)</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-semibold">Free 15 RPM</span>
+            </div>
+            <p class="text-[10px] text-gray-500 font-sans">
+              Modelli <code>gemini-2.0-flash</code>, <code>gemini-1.5-pro</code>.
+            </p>
             <input type="password" id="gemini_api_key" placeholder="AIzaSy..."
-              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+              class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#141416] border border-gray-200 dark:border-white/10 text-xs">
+            <div class="text-right">
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-sans">
+                Ottieni chiave gratuita su Google AI Studio ↗
+              </a>
+            </div>
           </div>
-          <div>
-            <label class="block text-[10px] text-gray-400">OpenAI API Key</label>
-            <input type="password" id="openai_api_key" placeholder="sk-..."
-              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+
+          <!-- NVIDIA NIM Nemotron Free -->
+          <div class="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-gray-900 dark:text-white">⚡ NVIDIA NIM (Nemotron Free / Ultramon)</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold">Free Crediti</span>
+            </div>
+            <p class="text-[10px] text-gray-500 font-sans">
+              Modelli <code>nvidia/nemotron-3-ultra-550b-a55b</code> (nvidia-ultramon), <code>nvidia/nemotron-3.5-lightning-30b-a3b</code>.
+            </p>
+            <input type="password" id="nvidia_api_key" placeholder="nvapi-..."
+              class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#141416] border border-gray-200 dark:border-white/10 text-xs">
+            <div class="text-right">
+              <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" class="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-sans">
+                Ottieni chiave su build.nvidia.com ↗
+              </a>
+            </div>
           </div>
-          <div>
-            <label class="block text-[10px] text-gray-400">Tavily Search Key</label>
+
+          <!-- OpenAI -->
+          <div class="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-gray-900 dark:text-white">🤖 OpenAI Platform</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-semibold">Pay-As-You-Go</span>
+            </div>
+            <p class="text-[10px] text-gray-500 font-sans">
+              Modelli <code>gpt-4o-mini</code>, <code>gpt-4o</code>.
+            </p>
+            <input type="password" id="openai_api_key" placeholder="sk-proj-..."
+              class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#141416] border border-gray-200 dark:border-white/10 text-xs">
+            <div class="text-right">
+              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" class="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-sans">
+                Ottieni chiave su OpenAI ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- OpenRouter -->
+          <div class="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-gray-900 dark:text-white">🌐 OpenRouter Gateway</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 font-semibold">Multi-LLM</span>
+            </div>
+            <p class="text-[10px] text-gray-500 font-sans">
+              Claude 3.5, DeepSeek V3/R1, Qwen 2.5, Llama 3.3.
+            </p>
+            <input type="password" id="openrouter_api_key" placeholder="sk-or-v1-..."
+              class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#141416] border border-gray-200 dark:border-white/10 text-xs">
+            <div class="text-right">
+              <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" class="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-sans">
+                Ottieni chiave su OpenRouter ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- Tavily Search -->
+          <div class="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-gray-900 dark:text-white">🔎 Tavily Financial Search</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 font-semibold">1k Free/Mese</span>
+            </div>
+            <p class="text-[10px] text-gray-500 font-sans">
+              Ricerca news finanziarie per arricchimento prompt.
+            </p>
             <input type="password" id="tavily_api_key" placeholder="tvly-..."
-              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
-          </div>
-          <div>
-            <label class="block text-[10px] text-gray-400">Google Drive Service Email</label>
-            <input type="text" id="gdrive_client_email" placeholder="backup-service@app.iam.gserviceaccount.com"
-              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
-          </div>
-          <div>
-            <label class="block text-[10px] text-gray-400">Google Drive Folder ID</label>
-            <input type="text" id="gdrive_folder_id" placeholder="1a2b3c4d5e..."
-              class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs">
+              class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#141416] border border-gray-200 dark:border-white/10 text-xs">
+            <div class="text-right">
+              <a href="https://tavily.com" target="_blank" rel="noopener noreferrer" class="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-sans">
+                Ottieni chiave su Tavily ↗
+              </a>
+            </div>
           </div>
         </div>
-        <button type="button" id="btn-save-settings-ai" class="btn-pill w-full py-2 bg-blue-600 text-white text-xs font-semibold">
-          💾 Salva Impostazioni
+
+        <button type="button" id="btn-save-settings-ai" class="btn-pill w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm text-center">
+          💾 Salva Token AI
         </button>
       </div>
     </div>

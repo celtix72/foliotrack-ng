@@ -423,19 +423,22 @@
       const data = await res.json();
       const dot = document.getElementById('geminiStatusDot');
       const label = document.getElementById('geminiStatusLabel');
-      const modalStatus = document.getElementById('modalKeyStatusText');
 
-      if (data.success && data.hasGeminiKey) {
+      const activeProviders = [];
+      if (data.hasGeminiKey) activeProviders.push('Gemini');
+      if (data.hasNvidiaKey) activeProviders.push('NVIDIA');
+      if (data.hasOpenAiKey) activeProviders.push('OpenAI');
+      if (data.hasOpenRouterKey) activeProviders.push('OpenRouter');
+
+      if (data.success && activeProviders.length > 0) {
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-        if (label) label.textContent = 'Gemini API: Attiva (Pro)';
-        if (modalStatus) modalStatus.textContent = `Stato: Chiave attiva (${data.geminiKeyMasked || 'Cifrata'})`;
+        if (label) label.textContent = `AI: ${activeProviders.join('+')} Attiva`;
       } else {
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
-        if (label) label.textContent = 'Gemini API: Configura';
-        if (modalStatus) modalStatus.textContent = 'Stato: Nessuna chiave configurata (attivo motore euristico)';
+        if (label) label.textContent = '⚙️ Configura Chiavi AI';
       }
     } catch (err) {
-      console.warn('Errore verifica status Gemini:', err);
+      console.warn('Errore verifica status AI:', err);
     }
   }
 
@@ -539,6 +542,16 @@
       input.style.height = 'auto';
     }
 
+    // Determine AI provider from model
+    let provider = 'gemini';
+    if (model.startsWith('nvidia/') || model.startsWith('meta/') || model.includes('nemotron')) {
+      provider = 'nvidia';
+    } else if (model.startsWith('gpt-')) {
+      provider = 'openai';
+    } else if (model.startsWith('openrouter')) {
+      provider = 'openrouter';
+    }
+
     // UI Updates
     appendUserMessage(promptText);
     showThinkingIndicator();
@@ -556,7 +569,7 @@
           prompt: promptText,
           history: chatHistory,
           model,
-          provider: 'gemini'
+          provider
         })
       });
 
@@ -564,7 +577,7 @@
       removeThinkingIndicator();
 
       if (!data.success || !data.response) {
-        appendModelMessage(`⚠️ **Impossibile completare l'analisi con Gemini Pro:**\n\n${data.error || 'Errore di connessione o chiave API non valida.'}\n\n*Puoi verificare o aggiornare la tua Gemini API Key cliccando sul pulsante **Gemini API** in alto.*`, { model: 'Errore' });
+        appendModelMessage(`⚠️ **Impossibile completare l'analisi:**\n\n${data.error || 'Errore di connessione o chiave API non valida.'}\n\n*Puoi verificare o aggiornare le tue chiavi API (Google Gemini, NVIDIA Nemotron, OpenAI) nella pagina [Impostazioni > Chiavi API](/settings#ai).*`, { model: 'Errore' });
         return;
       }
 
@@ -603,11 +616,21 @@
   }
 
   // ==========================================
-  // GEMINI API KEY MODAL CONTROLLER
+  // AI KEY CONFIGURATION & MODAL CONTROLLER
   // ==========================================
   function initKeyModal() {
     const modal = document.getElementById('geminiKeyModal');
     const openBtn = document.getElementById('geminiKeyModalBtn');
+
+    if (!modal) {
+      if (openBtn && openBtn.tagName !== 'A') {
+        openBtn.addEventListener('click', () => {
+          window.location.href = '/settings#ai';
+        });
+      }
+      return;
+    }
+
     const closeBtn = document.getElementById('btnCloseKeyModal');
     const cancelBtn = document.getElementById('btnCancelKeyModal');
     const saveBtn = document.getElementById('btnSaveKeyModal');
