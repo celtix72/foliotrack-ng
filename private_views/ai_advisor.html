@@ -25,6 +25,10 @@
       </div>
 
       <div class="flex items-center space-x-3 no-print">
+        <button id="geminiKeyModalBtn" type="button" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-mono flex items-center space-x-1.5 transition border border-gray-200/50 dark:border-white/10" title="Configura Chiave API Google Gemini">
+          <span id="geminiStatusDot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span id="geminiStatusLabel">Gemini API</span>
+        </button>
         <select id="reportPortfolioSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
           <option value="all">Tutti i Portafogli (Aggregato)</option>
         </select>
@@ -36,18 +40,111 @@
     </header>
 
     <main class="flex-1 px-8 pb-16 space-y-8 max-w-7xl mx-auto w-full">
-      <!-- AI Advisor Assessment -->
+
+      <!-- ========================================== -->
+      <!-- SECTION 1: GEMINI PRO INTERACTIVE CHAT     -->
+      <!-- ========================================== -->
+      <section class="space-y-4">
+        <div class="signature-card p-6 space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-white/5 pb-4 gap-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 text-lg font-bold">
+                ✦
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <h2 class="text-base font-bold text-gray-900 dark:text-white">Chat & Prompt Personalizzato con Gemini Pro</h2>
+                  <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Live AI</span>
+                </div>
+                <p class="text-xs text-gray-500 font-mono">Fai qualsiasi domanda o analisi sul tuo portafoglio direttamente a Google Gemini Pro</p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 no-print">
+              <select id="chatModelSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="gemini-1.5-pro">Google Gemini 1.5 Pro (Consigliato: Analisi & Strategia)</option>
+                <option value="gemini-2.0-flash">Google Gemini 2.0 Flash (Ultra Rapido)</option>
+                <option value="gemini-2.5-pro">Google Gemini 2.5 Pro</option>
+                <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
+              </select>
+              <button id="btnResetChat" class="btn-pill px-3 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs font-mono text-gray-600 dark:text-gray-300 transition flex items-center space-x-1" title="Azzera conversazione">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                <span>Nuova Chat</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Prompt Quick Suggestions Chips -->
+          <div class="space-y-1.5">
+            <span class="text-[11px] font-mono text-gray-400 block">Prompt suggeriti con un click:</span>
+            <div class="flex flex-wrap gap-2" id="quickPromptChips">
+              <button type="button" class="quick-chip px-2.5 py-1 rounded-lg text-xs font-mono bg-gray-100 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200/50 dark:border-white/5 transition" data-prompt="Quali sono i principali rischi e le concentrazioni critiche del mio portafoglio?">
+                🎯 Rischio & Concentrazione
+              </button>
+              <button type="button" class="quick-chip px-2.5 py-1 rounded-lg text-xs font-mono bg-gray-100 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200/50 dark:border-white/5 transition" data-prompt="Come posso ribilanciare i pesi tra azionario, obbligazionario e liquidità per migliorare l'equilibrio?">
+                ⚖️ Strategia Ribilanciamento
+              </button>
+              <button type="button" class="quick-chip px-2.5 py-1 rounded-lg text-xs font-mono bg-gray-100 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200/50 dark:border-white/5 transition" data-prompt="Stress test: come si comporterebbe questo portafoglio in caso di recessione o forte aumento dei tassi d'interesse?">
+                📉 Stress Test Macro
+              </button>
+              <button type="button" class="quick-chip px-2.5 py-1 rounded-lg text-xs font-mono bg-gray-100 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200/50 dark:border-white/5 transition" data-prompt="Analisi fiscale: quali plusvalenze o minusvalenze ho attive e come posso ottimizzare la tassazione?">
+                💰 Efficienza Fiscale
+              </button>
+              <button type="button" class="quick-chip px-2.5 py-1 rounded-lg text-xs font-mono bg-gray-100 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200/50 dark:border-white/5 transition" data-prompt="Valuta la diversificazione geografica (USA, Europa, Emergenti) e valutaria (EUR, USD). C'è un home bias o rischio cambio eccessivo?">
+                🌍 Esposizione Geografica & Valuta
+              </button>
+              <button type="button" class="quick-chip px-2.5 py-1 rounded-lg text-xs font-mono bg-gray-100 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200/50 dark:border-white/5 transition" data-prompt="Fai un'analisi critica sui 3 titoli con peso maggiore nel portafoglio: sono solidi o presentano criticità?">
+                🔍 Check-up Top Titoli
+              </button>
+            </div>
+          </div>
+
+          <!-- Chat Thread Stream -->
+          <div id="aiChatThread" class="space-y-4 max-h-[500px] overflow-y-auto p-4 rounded-2xl bg-gray-50/60 dark:bg-black/20 border border-gray-200/60 dark:border-white/5">
+            <!-- Welcome Banner -->
+            <div id="chatWelcomeBanner" class="p-4 rounded-xl bg-white dark:bg-[#18181b] border border-gray-200/60 dark:border-white/5 space-y-2 text-xs">
+              <div class="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <span>✦</span>
+                <span>Assistente Finanziario Gemini AI Pro pronto</span>
+              </div>
+              <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Scrivi un prompt o seleziona un suggerimento in alto per analizzare i tuoi investimenti. FolioTrack fornisce in tempo reale a Gemini la composizione esatta del portafoglio selezionato (asset, pesi %, liquidità, P&L realizzato e non realizzato, dividendi, settori e aree geografiche) per formulare risposte personalizzate e ad alta precisione.
+              </p>
+            </div>
+          </div>
+
+          <!-- Chat Input Area -->
+          <div class="space-y-2">
+            <div class="relative flex items-end gap-2 bg-white dark:bg-[#141416] p-2 rounded-2xl border border-gray-200 dark:border-white/10 focus-within:ring-2 focus-within:ring-emerald-500/50 focus-within:border-emerald-500 transition shadow-sm">
+              <textarea id="aiPromptInput" rows="2" placeholder="Fai una domanda a Gemini Pro sul tuo portafoglio... (es: 'Quali asset dovrei ribilanciare?')"
+                class="flex-1 bg-transparent resize-none border-0 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 px-2 py-1 leading-relaxed"></textarea>
+              <button id="btnSendPrompt" type="button" class="btn-pill px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm shadow-emerald-600/20 disabled:opacity-50">
+                <span>Chiedi a Gemini</span>
+                <span>✦</span>
+              </button>
+            </div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-gray-400 px-1">
+              <span>Premi <kbd class="px-1 py-0.5 rounded bg-gray-100 dark:bg-white/10">Invio</kbd> per inviare, <kbd class="px-1 py-0.5 rounded bg-gray-100 dark:bg-white/10">Shift+Invio</kbd> per andare a capo</span>
+              <span id="chatActivePortfolioLabel">Portafoglio: Globale Aggregato</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SECTION 2: AI ADVISOR ASSESSMENT           -->
+      <!-- ========================================== -->
       <section class="space-y-4">
         <div class="signature-card p-6 space-y-5">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-white/5 pb-3 gap-2">
             <div>
-              <h2 class="text-base font-bold text-gray-900 dark:text-white">AI Portfolio Advisor</h2>
+              <h2 class="text-base font-bold text-gray-900 dark:text-white">AI Portfolio Advisor (Scorecard Quantitativa)</h2>
               <p class="text-xs text-gray-500 font-mono">Analisi qualitativa e quantitativa con Google Gemini, OpenAI o motore euristico</p>
             </div>
             <div class="flex items-center space-x-3 no-print">
               <select id="aiProviderSelect" class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141416] text-xs font-mono text-gray-900 dark:text-white">
                 <option value="auto">Auto (Gemini / OpenAI / Heuristic)</option>
-                <option value="gemini">Google Gemini (gemini-2.0-flash)</option>
+                <option value="gemini">Google Gemini (gemini-1.5-pro)</option>
                 <option value="openai">OpenAI (gpt-4o-mini)</option>
                 <option value="openrouter">OpenRouter</option>
                 <option value="heuristic">Motore Euristico Offline</option>
@@ -149,6 +246,40 @@
     </main>
   </div>
 
+  <!-- ========================================== -->
+  <!-- GEMINI API KEY SETUP MODAL                 -->
+  <!-- ========================================== -->
+  <div id="geminiKeyModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="signature-card p-6 max-w-lg w-full space-y-4 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 shadow-2xl rounded-2xl">
+      <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">🔑</span>
+          <h3 class="text-sm font-bold text-gray-900 dark:text-white">Google Gemini API Key</h3>
+        </div>
+        <button id="btnCloseKeyModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl leading-none">&times;</button>
+      </div>
+
+      <p class="text-xs text-gray-500 leading-relaxed">
+        Inserisci la tua chiave API di Google Gemini. Puoi generarne una <strong>gratuitamente</strong> in pochi istanti su <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-emerald-600 dark:text-emerald-400 underline font-semibold">Google AI Studio</a>. La chiave viene cifrata sul database locale con algoritmo AES-256-GCM.
+      </p>
+
+      <div class="space-y-1.5">
+        <label class="block text-xs font-mono text-gray-700 dark:text-gray-300">Chiave API Gemini (AIzaSy...):</label>
+        <div class="relative">
+          <input type="password" id="modalGeminiApiKeyInput" placeholder="AIzaSy..."
+            class="w-full text-xs font-mono px-3 py-2 bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 pr-10">
+          <button type="button" id="toggleApiKeyVisibility" class="absolute right-3 top-2 text-gray-400 hover:text-gray-600 text-xs">👁️</button>
+        </div>
+        <p id="modalKeyStatusText" class="text-[10px] font-mono text-gray-400">Stato: Verifica in corso...</p>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100 dark:border-white/5">
+        <button type="button" id="btnCancelKeyModal" class="btn-pill px-4 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 text-xs font-medium text-gray-700 dark:text-gray-300">Annulla</button>
+        <button type="button" id="btnSaveKeyModal" class="btn-pill px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white">Salva Chiave</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Vendors & Component Scripts -->
   <script src="/vendor/chartjs/chart.umd.min.js"></script>
   <script src="/header_indices.js"></script>
@@ -176,6 +307,10 @@
           if (initialP && (initialP === 'all' || sel.querySelector(`option[value="${initialP}"]`))) {
             sel.value = initialP;
           }
+
+          if (window.updateAiChatPortfolioLabel) {
+            window.updateAiChatPortfolioLabel();
+          }
         }
       } catch (err) {
         console.warn(err);
@@ -184,10 +319,12 @@
 
     document.getElementById('reportPortfolioSelect').addEventListener('change', (e) => {
       localStorage.setItem('foliotrack_selected_portfolio', e.target.value);
+      if (window.updateAiChatPortfolioLabel) {
+        window.updateAiChatPortfolioLabel();
+      }
     });
 
     document.addEventListener('DOMContentLoaded', initPortfoliosDropdown);
   </script>
 </body>
 </html>
-

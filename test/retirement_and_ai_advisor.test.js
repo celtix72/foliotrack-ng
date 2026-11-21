@@ -257,6 +257,72 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(data.analysis.riskScore > 0);
       assert.ok(data.analysis.diversificationScore > 0);
     });
+
+    test('POST /api/ai/analyze supports aggregated portfolioId: "all"', async () => {
+      const res = await fetch(`${baseUrl}/api/ai/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ portfolioId: 'all', provider: 'heuristic' })
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.ok(data.analysis);
+      assert.ok(data.analysis.riskScore > 0);
+    });
+
+    test('GET /api/ai/status returns provider key status', async () => {
+      const res = await fetch(`${baseUrl}/api/ai/status`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.strictEqual(typeof data.hasGeminiKey, 'boolean');
+      assert.strictEqual(data.defaultModel, 'gemini-1.5-pro');
+    });
+
+    test('POST /api/ai/chat returns interactive response for portfolio prompt', async () => {
+      const res = await fetch(`${baseUrl}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          prompt: 'Quali sono i punti di forza del mio portafoglio?',
+          provider: 'heuristic',
+          model: 'gemini-1.5-pro'
+        })
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.ok(typeof data.response === 'string' && data.response.length > 20);
+      assert.ok(data.response.includes('Analisi') || data.response.includes('Portafoglio'));
+    });
+
+    test('POST /api/ai/chat fails gracefully with 400 on empty prompt', async () => {
+      const res = await fetch(`${baseUrl}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          portfolioId,
+          prompt: '   '
+        })
+      });
+      assert.strictEqual(res.status, 400);
+      const data = await res.json();
+      assert.strictEqual(data.success, false);
+      assert.ok(data.error.includes('obbligatorio'));
+    });
   });
 
   describe('4. Dual-View Reports & Client-Side Scripts', () => {
@@ -283,6 +349,9 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(!html.includes('statFireNumber'), 'statFireNumber should be removed');
       assert.ok(html.includes('aiRiskScore'));
       assert.ok(html.includes('aiDiversificationScore'));
+      assert.ok(html.includes('aiPromptInput'), 'Should contain interactive AI prompt input');
+      assert.ok(html.includes('chatModelSelect'), 'Should contain model selector');
+      assert.ok(html.includes('geminiKeyModal'), 'Should contain Gemini API key modal');
       assert.ok(html.includes('/ai_reports.js'));
       assert.ok(html.includes('/pdf_report.js'));
       assert.ok(!html.includes('Pensione & FIRE'), 'Pensione & FIRE link should be removed from sidebar');
@@ -299,6 +368,9 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(!html.includes('statFireNumber'), 'statFireNumber should be removed on mobile');
       assert.ok(html.includes('aiRiskScore'));
       assert.ok(html.includes('aiDiversificationScore'));
+      assert.ok(html.includes('aiPromptInput'), 'Mobile view should contain prompt input');
+      assert.ok(html.includes('chatModelSelect'), 'Mobile view should contain model selector');
+      assert.ok(html.includes('geminiKeyModal'), 'Mobile view should contain Gemini key modal');
     });
   });
 });

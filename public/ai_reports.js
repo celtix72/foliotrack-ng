@@ -6,10 +6,118 @@
   let monteCarloChart = null;
   let lastSimulationData = null;
   let lastAiAnalysisData = null;
+  const chatHistory = [];
+  let isAiGenerating = false;
 
   const fmtEur = (v) => '€ ' + (Number(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   const fmtPct = (v) => (Number(v) || 0).toFixed(1) + '%';
 
+  /**
+   * Escape HTML to prevent XSS
+   */
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  /**
+   * Lightweight, robust Markdown to HTML renderer for AI financial answers.
+   */
+  function renderMarkdown(md) {
+    if (!md) return '';
+
+    // First preserve code blocks
+    const codeBlocks = [];
+    let text = md.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+      const idx = codeBlocks.length;
+      codeBlocks.push(`<pre class="p-3 my-2 rounded-xl bg-gray-900 text-gray-100 font-mono text-[11px] overflow-x-auto border border-white/10"><code>${escapeHtml(code.trim())}</code></pre>`);
+      return `__CODE_BLOCK_${idx}__`;
+    });
+
+    // Escape raw HTML outside of code blocks
+    text = escapeHtml(text);
+
+    // Headers
+    text = text.replace(/^### (.*$)/gim, '<h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mt-3 mb-1.5 flex items-center space-x-1.5"><span class="text-emerald-500 font-mono">▸</span><span>$1</span></h3>');
+    text = text.replace(/^## (.*$)/gim, '<h2 class="text-sm font-bold text-gray-900 dark:text-white mt-4 mb-2 pb-1 border-b border-gray-100 dark:border-white/5">$1</h2>');
+    text = text.replace(/^# (.*$)/gim, '<h1 class="text-base font-extrabold text-gray-900 dark:text-white mt-4 mb-2">$1</h1>');
+
+    // Horizontal Rules
+    text = text.replace(/^---$/gim, '<hr class="my-3 border-gray-200 dark:border-white/10">');
+
+    // Blockquotes
+    text = text.replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-emerald-500 pl-3 py-1 my-2 text-gray-600 dark:text-gray-300 italic bg-emerald-50/20 dark:bg-emerald-950/20 rounded-r text-xs leading-relaxed">$1</blockquote>');
+
+    // Bold & Italic
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-gray-900 dark:text-white">$1</strong>');
+    text = text.replace(/__(.*?)__/g, '<strong class="font-bold text-gray-900 dark:text-white">$1</strong>');
+    text = text.replace(/\*(.*?)\*/g, '<em class="italic text-gray-700 dark:text-gray-300">$1</em>');
+
+    // Inline Code
+    text = text.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 font-mono text-emerald-600 dark:text-emerald-400 text-[11px]">$1</code>');
+
+    // Markdown Tables
+    const tableRegex = /((?:\|[^\n]+\|\n?)+)/g;
+    text = text.replace(tableRegex, (match) => {
+      const rows = match.trim().split('\n').map(r => r.trim()).filter(Boolean);
+      if (rows.length < 2) return match;
+
+      let html = '<div class="overflow-x-auto my-3"><table class="min-w-full text-xs divide-y divide-gray-200 dark:divide-white/10 border border-gray-200 dark:border-white/10 rounded-xl">';
+      let isHeader = true;
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.includes('---')) {
+          isHeader = false;
+          continue;
+        }
+
+        const cols = row.split('|').slice(1, -1).map(c => c.trim());
+        if (isHeader) {
+          html += '<thead class="bg-gray-50 dark:bg-white/[0.03]"><tr>';
+          cols.forEach(c => {
+            html += `<th class="px-3 py-2 text-left font-mono font-bold text-gray-600 dark:text-gray-400 text-[11px]">${c}</th>`;
+          });
+          html += '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-white/5">';
+        } else {
+          html += '<tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition">';
+          cols.forEach(c => {
+            html += `<td class="px-3 py-2 font-mono text-gray-800 dark:text-gray-200">${c}</td>`;
+          });
+          html += '</tr>';
+        }
+      }
+
+      html += '</tbody></table></div>';
+      return html;
+    });
+
+    // Unordered Lists
+    text = text.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="flex items-start space-x-2 my-1"><span class="text-emerald-500 font-bold select-none">&bull;</span><span class="flex-1">$1</span></li>');
+    text = text.replace(/((?:<li class="flex items-start space-x-2 my-1">[\s\S]*?<\/li>\n?)+)/g, '<ul class="my-2 space-y-1">$1</ul>');
+
+    // Numbered Lists
+    text = text.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li class="flex items-start space-x-2 my-1"><span class="text-emerald-500 font-mono font-bold text-xs select-none">$1.</span><span class="flex-1">$2</span></li>');
+
+    // Restore Code Blocks
+    codeBlocks.forEach((block, idx) => {
+      text = text.replace(`__CODE_BLOCK_${idx}__`, block);
+    });
+
+    // Paragraph line breaks
+    text = text.replace(/\n\n+/g, '<div class="h-2"></div>');
+
+    return text;
+  }
+
+  // ==========================================
+  // RETIREMENT / MONTE CARLO SIMULATION
+  // ==========================================
   async function loadSavedGoals() {
     if (!document.getElementById('goalCurrentAge')) return;
     try {
@@ -85,7 +193,6 @@
   function renderSimulationResults(data) {
     const m = data.metrics;
 
-    // KPI Cards
     const successEl = document.getElementById('statSuccessRate');
     if (successEl) {
       successEl.textContent = fmtPct(m.successRate);
@@ -120,12 +227,15 @@
     }
 
     const labels = percentiles.map(p => `Età ${p.age}`);
-    const p90 = percentiles.map(p => p.p90);
-    const p50 = percentiles.map(p => p.p50);
-    const p10 = percentiles.map(p => p.p10);
-    const sorrValues = sorr.map(s => s.wealth);
+    const p10 = percentiles.map(p => Math.round(p.p10));
+    const p50 = percentiles.map(p => Math.round(p.p50));
+    const p90 = percentiles.map(p => Math.round(p.p90));
+    const sorrVals = (sorr || []).map(s => Math.round(s.wealth));
 
-    if (monteCarloChart) monteCarloChart.destroy();
+    if (monteCarloChart) {
+      monteCarloChart.destroy();
+    }
+
     const isDark = document.documentElement.classList.contains('dark');
 
     monteCarloChart = new Chart(canvas, {
@@ -134,38 +244,41 @@
         labels,
         datasets: [
           {
-            label: 'Percentile 90 (Ottimistico)',
+            label: 'P90 (Scenario Ottimistico)',
             data: p90,
-            borderColor: '#10b981',
-            borderWidth: 1.5,
-            pointRadius: 0,
-            fill: false,
-            tension: 0.1
+            borderColor: 'rgba(16, 185, 129, 0.7)',
+            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+            fill: '+1',
+            tension: 0.2,
+            borderDash: [4, 4],
+            pointRadius: 0
           },
           {
-            label: 'Percentile 50 (Mediano)',
+            label: 'P50 (Mediana)',
             data: p50,
-            borderColor: '#3b82f6',
+            borderColor: 'rgba(16, 185, 129, 1)',
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.2,
             borderWidth: 2.5,
-            pointRadius: 0,
-            fill: false,
-            tension: 0.1
+            pointRadius: 0
           },
           {
-            label: 'Percentile 10 (Pessimistico)',
+            label: 'P10 (Scenario Conservativo)',
             data: p10,
-            borderColor: '#f59e0b',
-            borderWidth: 1.5,
-            pointRadius: 0,
+            borderColor: 'rgba(239, 68, 68, 0.7)',
+            backgroundColor: 'transparent',
             fill: false,
-            tension: 0.1
+            tension: 0.2,
+            borderDash: [4, 4],
+            pointRadius: 0
           },
           {
-            label: 'Scenario SORR (Crollo -30%)',
-            data: sorrValues,
-            borderColor: '#ef4444',
-            borderWidth: 2,
-            borderDash: [5, 5],
+            label: 'SORR (Sequenza Rendimenti Avversa)',
+            data: sorrVals,
+            borderColor: 'rgba(245, 158, 11, 0.9)',
+            backgroundColor: 'transparent',
+            borderWidth: 1.8,
             pointRadius: 0,
             fill: false,
             tension: 0.1
@@ -208,22 +321,26 @@
     });
   }
 
+  // ==========================================
+  // STRUCTURED AI ADVISOR ASSESSMENT
+  // ==========================================
   async function runAiAnalysis() {
-    const portfolioId = document.getElementById('reportPortfolioSelect').value;
-    if (portfolioId === 'all') {
-      alert('Seleziona un singolo portafoglio specifico per eseguire l\'analisi dettagliata con AI Advisor.');
-      return;
+    const portfolioSelect = document.getElementById('reportPortfolioSelect');
+    const portfolioId = portfolioSelect ? portfolioSelect.value : 'all';
+
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const provider = providerSelect ? providerSelect.value : 'auto';
+
+    const aiBtn = document.getElementById('runAiBtn');
+    if (aiBtn) {
+      aiBtn.disabled = true;
+      aiBtn.textContent = 'Analisi in elaborazione...';
     }
 
-    const provider = document.getElementById('aiProviderSelect').value;
-    const aiBtn = document.getElementById('runAiBtn');
-    aiBtn.disabled = true;
-    aiBtn.textContent = 'Analisi in elaborazione...';
-
     const container = document.getElementById('aiResultsContainer');
-    container.classList.remove('hidden');
-    document.getElementById('aiLoadingSpinner').classList.remove('hidden');
-    document.getElementById('aiAnalysisContent').classList.add('hidden');
+    if (container) container.classList.remove('hidden');
+    document.getElementById('aiLoadingSpinner')?.classList.remove('hidden');
+    document.getElementById('aiAnalysisContent')?.classList.add('hidden');
 
     try {
       const res = await fetch('/api/ai/analyze', {
@@ -243,31 +360,36 @@
     } catch (err) {
       alert('Errore di comunicazione: ' + err.message);
     } finally {
-      aiBtn.disabled = false;
-      aiBtn.textContent = 'Genera Analisi con AI Advisor';
-      document.getElementById('aiLoadingSpinner').classList.add('hidden');
+      if (aiBtn) {
+        aiBtn.disabled = false;
+        aiBtn.textContent = 'Genera Analisi con AI Advisor';
+      }
+      document.getElementById('aiLoadingSpinner')?.classList.add('hidden');
     }
   }
 
   function renderAiResults(a) {
-    document.getElementById('aiAnalysisContent').classList.remove('hidden');
+    document.getElementById('aiAnalysisContent')?.classList.remove('hidden');
 
-    // Model and provider info
-    document.getElementById('aiProviderBadge').textContent = `${a.provider} (${a.model || ''})`;
+    const badge = document.getElementById('aiProviderBadge');
+    if (badge) badge.textContent = `${a.provider} (${a.model || ''})`;
 
-    // Scores
-    document.getElementById('aiRiskScore').textContent = `${a.riskScore}/100`;
-    document.getElementById('aiDiversificationScore').textContent = `${a.diversificationScore}/100`;
-    document.getElementById('aiQualityBadge').textContent = a.assetAllocationQuality || 'Buona';
+    const riskEl = document.getElementById('aiRiskScore');
+    if (riskEl) riskEl.textContent = `${a.riskScore}/100`;
 
-    // Lists
+    const divEl = document.getElementById('aiDiversificationScore');
+    if (divEl) divEl.textContent = `${a.diversificationScore}/100`;
+
+    const qualEl = document.getElementById('aiQualityBadge');
+    if (qualEl) qualEl.textContent = a.assetAllocationQuality || 'Buona';
+
     const renderList = (items, elementId, bulletClass = 'text-emerald-500') => {
       const ul = document.getElementById(elementId);
       if (!ul) return;
       ul.innerHTML = (items || []).map(item => `
         <li class="flex items-start space-x-2">
           <span class="${bulletClass} font-bold select-none">&bull;</span>
-          <span class="text-xs text-gray-700 dark:text-gray-300">${item}</span>
+          <span class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">${item}</span>
         </li>
       `).join('');
     };
@@ -278,10 +400,280 @@
     renderList(a.strategicRecommendations, 'aiStrategicList', 'text-purple-500');
 
     if (a.marketContextSummary) {
-      document.getElementById('aiMarketContext').textContent = a.marketContextSummary;
+      const mc = document.getElementById('aiMarketContext');
+      if (mc) mc.textContent = a.marketContextSummary;
     }
   }
 
+  // ==========================================
+  // GEMINI PRO INTERACTIVE CHAT & PROMPT ENGINE
+  // ==========================================
+  function updateAiChatPortfolioLabel() {
+    const sel = document.getElementById('reportPortfolioSelect');
+    const label = document.getElementById('chatActivePortfolioLabel');
+    if (sel && label) {
+      const selectedText = sel.options[sel.selectedIndex]?.text || 'Globale Aggregato';
+      label.textContent = `Portafoglio: ${selectedText}`;
+    }
+  }
+
+  async function checkGeminiStatus() {
+    try {
+      const res = await fetch('/api/ai/status');
+      const data = await res.json();
+      const dot = document.getElementById('geminiStatusDot');
+      const label = document.getElementById('geminiStatusLabel');
+      const modalStatus = document.getElementById('modalKeyStatusText');
+
+      if (data.success && data.hasGeminiKey) {
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        if (label) label.textContent = 'Gemini API: Attiva (Pro)';
+        if (modalStatus) modalStatus.textContent = `Stato: Chiave attiva (${data.geminiKeyMasked || 'Cifrata'})`;
+      } else {
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+        if (label) label.textContent = 'Gemini API: Configura';
+        if (modalStatus) modalStatus.textContent = 'Stato: Nessuna chiave configurata (attivo motore euristico)';
+      }
+    } catch (err) {
+      console.warn('Errore verifica status Gemini:', err);
+    }
+  }
+
+  function appendUserMessage(text) {
+    const thread = document.getElementById('aiChatThread');
+    if (!thread) return;
+
+    // Remove welcome banner if present
+    document.getElementById('chatWelcomeBanner')?.classList.add('hidden');
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'flex justify-end';
+    msgDiv.innerHTML = `
+      <div class="max-w-[85%] rounded-2xl rounded-tr-sm bg-emerald-600 text-white px-4 py-2.5 text-xs shadow-sm leading-relaxed whitespace-pre-wrap">
+        ${escapeHtml(text)}
+      </div>
+    `;
+    thread.appendChild(msgDiv);
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function appendModelMessage(text, meta = {}) {
+    const thread = document.getElementById('aiChatThread');
+    if (!thread) return;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'flex flex-col space-y-1.5 max-w-full';
+
+    const timestamp = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    const modelLabel = meta.model || 'Gemini Pro';
+
+    msgDiv.innerHTML = `
+      <div class="flex items-center justify-between text-[10px] font-mono text-gray-400 px-1">
+        <span class="flex items-center space-x-1 text-emerald-600 dark:text-emerald-400 font-bold">
+          <span>✦</span>
+          <span>${modelLabel} • ${timestamp}</span>
+        </span>
+        <button class="copy-btn hover:text-emerald-500 flex items-center space-x-1 transition cursor-pointer" title="Copia risposta">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          <span class="copy-label">Copia</span>
+        </button>
+      </div>
+      <div class="signature-card p-4 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-white/10 text-xs text-gray-800 dark:text-gray-200 leading-relaxed shadow-sm space-y-2 ai-markdown-body">
+        ${renderMarkdown(text)}
+      </div>
+    `;
+
+    // Copy action
+    const copyBtn = msgDiv.querySelector('.copy-btn');
+    const copyLabel = msgDiv.querySelector('.copy-label');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(text).then(() => {
+          if (copyLabel) copyLabel.textContent = 'Copiato!';
+          setTimeout(() => { if (copyLabel) copyLabel.textContent = 'Copia'; }, 2000);
+        }).catch(() => {
+          if (copyLabel) copyLabel.textContent = 'Errore copia';
+        });
+      });
+    }
+
+    thread.appendChild(msgDiv);
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function showThinkingIndicator() {
+    const thread = document.getElementById('aiChatThread');
+    if (!thread) return;
+
+    const ind = document.createElement('div');
+    ind.id = 'aiThinkingIndicator';
+    ind.className = 'flex items-center space-x-2 text-xs font-mono text-emerald-600 dark:text-emerald-400 py-2 px-1';
+    ind.innerHTML = `
+      <span class="animate-spin w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full"></span>
+      <span class="animate-pulse">Gemini AI Pro sta analizzando il portafoglio...</span>
+    `;
+    thread.appendChild(ind);
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function removeThinkingIndicator() {
+    document.getElementById('aiThinkingIndicator')?.remove();
+  }
+
+  async function sendAiChatPrompt(customPrompt = null) {
+    if (isAiGenerating) return;
+
+    const input = document.getElementById('aiPromptInput');
+    const promptText = (customPrompt || input?.value || '').trim();
+    if (!promptText) return;
+
+    const portfolioSelect = document.getElementById('reportPortfolioSelect');
+    const portfolioId = portfolioSelect ? portfolioSelect.value : 'all';
+
+    const modelSelect = document.getElementById('chatModelSelect');
+    const model = modelSelect ? modelSelect.value : 'gemini-1.5-pro';
+
+    // Clear input
+    if (input) {
+      input.value = '';
+      input.style.height = 'auto';
+    }
+
+    // UI Updates
+    appendUserMessage(promptText);
+    showThinkingIndicator();
+
+    const sendBtn = document.getElementById('btnSendPrompt');
+    if (sendBtn) sendBtn.disabled = true;
+    isAiGenerating = true;
+
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          portfolioId,
+          prompt: promptText,
+          history: chatHistory,
+          model,
+          provider: 'gemini'
+        })
+      });
+
+      const data = await res.json();
+      removeThinkingIndicator();
+
+      if (!data.success || !data.response) {
+        appendModelMessage(`⚠️ **Impossibile completare l'analisi con Gemini Pro:**\n\n${data.error || 'Errore di connessione o chiave API non valida.'}\n\n*Puoi verificare o aggiornare la tua Gemini API Key cliccando sul pulsante **Gemini API** in alto.*`, { model: 'Errore' });
+        return;
+      }
+
+      // Append model response
+      appendModelMessage(data.response, { model: data.model || model });
+
+      // Save turns in session history
+      chatHistory.push({ role: 'user', content: promptText });
+      chatHistory.push({ role: 'model', content: data.response });
+
+    } catch (err) {
+      removeThinkingIndicator();
+      appendModelMessage(`⚠️ **Errore di rete:** ${err.message}`, { model: 'Errore' });
+    } finally {
+      if (sendBtn) sendBtn.disabled = false;
+      isAiGenerating = false;
+    }
+  }
+
+  function resetChatHistory() {
+    chatHistory.length = 0;
+    const thread = document.getElementById('aiChatThread');
+    if (thread) {
+      thread.innerHTML = `
+        <div id="chatWelcomeBanner" class="p-4 rounded-xl bg-white dark:bg-[#18181b] border border-gray-200/60 dark:border-white/5 space-y-2 text-xs">
+          <div class="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-bold">
+            <span>✦</span>
+            <span>Conversazione azzerata. Assistente Gemini Pro pronto</span>
+          </div>
+          <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
+            Scrivi una nuova richiesta o seleziona un suggerimento in alto per analizzare i tuoi investimenti con dati di portafoglio aggiornati in tempo reale.
+          </p>
+        </div>
+      `;
+    }
+  }
+
+  // ==========================================
+  // GEMINI API KEY MODAL CONTROLLER
+  // ==========================================
+  function initKeyModal() {
+    const modal = document.getElementById('geminiKeyModal');
+    const openBtn = document.getElementById('geminiKeyModalBtn');
+    const closeBtn = document.getElementById('btnCloseKeyModal');
+    const cancelBtn = document.getElementById('btnCancelKeyModal');
+    const saveBtn = document.getElementById('btnSaveKeyModal');
+    const toggleVisBtn = document.getElementById('toggleApiKeyVisibility');
+    const input = document.getElementById('modalGeminiApiKeyInput');
+
+    const showModal = () => {
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      if (input) input.focus();
+    };
+
+    const hideModal = () => {
+      if (!modal) return;
+      modal.classList.add('hidden');
+    };
+
+    openBtn?.addEventListener('click', showModal);
+    closeBtn?.addEventListener('click', hideModal);
+    cancelBtn?.addEventListener('click', hideModal);
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) hideModal();
+    });
+
+    toggleVisBtn?.addEventListener('click', () => {
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+
+    saveBtn?.addEventListener('click', async () => {
+      const key = input?.value?.trim();
+      if (!key) {
+        alert('Inserisci una chiave API Gemini valida (inizia solitamente con AIzaSy...).');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Salvataggio...';
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gemini_api_key: key })
+        });
+        const data = await res.json();
+        if (data.success) {
+          hideModal();
+          await checkGeminiStatus();
+          alert('Google Gemini API Key salvata con successo e cifrata sul database.');
+        } else {
+          alert('Errore salvataggio: ' + (data.error || 'Riprova.'));
+        }
+      } catch (err) {
+        alert('Errore di comunicazione: ' + err.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salva Chiave';
+      }
+    });
+  }
+
+  // ==========================================
+  // INITIALIZATION
+  // ==========================================
   document.addEventListener('DOMContentLoaded', async () => {
     if (document.getElementById('goalCurrentAge')) {
       await loadSavedGoals();
@@ -309,13 +701,61 @@
     if (document.getElementById('runSimulationBtn')) {
       setTimeout(runSimulation, 400);
     }
+
+    // Interactive Chat Handlers
+    document.getElementById('btnSendPrompt')?.addEventListener('click', () => sendAiChatPrompt());
+
+    const promptInput = document.getElementById('aiPromptInput');
+    if (promptInput) {
+      promptInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendAiChatPrompt();
+        }
+      });
+
+      // Auto-resize textarea
+      promptInput.addEventListener('input', () => {
+        promptInput.style.height = 'auto';
+        promptInput.style.height = Math.min(promptInput.scrollHeight, 140) + 'px';
+      });
+    }
+
+    // Quick Prompt Chips
+    document.querySelectorAll('.quick-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const promptText = btn.getAttribute('data-prompt');
+        if (promptText) {
+          if (promptInput) {
+            promptInput.value = promptText;
+            promptInput.style.height = 'auto';
+            promptInput.style.height = Math.min(promptInput.scrollHeight, 140) + 'px';
+          }
+          sendAiChatPrompt(promptText);
+        }
+      });
+    });
+
+    // Reset Chat
+    document.getElementById('btnResetChat')?.addEventListener('click', resetChatHistory);
+
+    // Key Modal
+    initKeyModal();
+
+    // Check Gemini API Status
+    await checkGeminiStatus();
+    updateAiChatPortfolioLabel();
   });
+
+  window.updateAiChatPortfolioLabel = updateAiChatPortfolioLabel;
 
   window.AiReportsController = {
     runSimulation,
     runAiAnalysis,
+    sendAiChatPrompt,
+    resetChatHistory,
+    renderMarkdown,
     getLastSimulation: () => lastSimulationData,
     getLastAiAnalysis: () => lastAiAnalysisData
   };
 })();
-
