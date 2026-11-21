@@ -19,23 +19,27 @@ router.use(requireAuth);
  * Resolves API key from request payload or stored user encrypted settings or environment.
  */
 function resolveApiKey(provider, userKey, userId) {
-  if (userKey) return userKey;
+  if (userKey && String(userKey).trim()) return String(userKey).trim();
 
   if (provider === 'gemini') {
-    return getSetting(userId, 'gemini_api_key', true) || process.env.GEMINI_API_KEY || null;
+    const k = getSetting(userId, 'gemini_api_key', true) || process.env.GEMINI_API_KEY || null;
+    return k ? String(k).trim() : null;
   }
   if (provider === 'openai') {
-    return getSetting(userId, 'openai_api_key', true) || process.env.OPENAI_API_KEY || null;
+    const k = getSetting(userId, 'openai_api_key', true) || process.env.OPENAI_API_KEY || null;
+    return k ? String(k).trim() : null;
   }
   if (provider === 'openrouter') {
-    return getSetting(userId, 'openrouter_api_key', true) || process.env.OPENROUTER_API_KEY || null;
+    const k = getSetting(userId, 'openrouter_api_key', true) || process.env.OPENROUTER_API_KEY || null;
+    return k ? String(k).trim() : null;
   }
 
   // Auto: prefer Gemini, then OpenAI, then OpenRouter
-  return getSetting(userId, 'gemini_api_key', true) || process.env.GEMINI_API_KEY
+  const k = getSetting(userId, 'gemini_api_key', true) || process.env.GEMINI_API_KEY
     || getSetting(userId, 'openai_api_key', true) || process.env.OPENAI_API_KEY
     || getSetting(userId, 'openrouter_api_key', true) || process.env.OPENROUTER_API_KEY
     || null;
+  return k ? String(k).trim() : null;
 }
 
 /**
@@ -197,8 +201,8 @@ router.get('/status', (req, res) => {
     hasGeminiKey: !!geminiKey,
     hasOpenAiKey: !!openaiKey,
     hasTavilyKey: !!tavilyKey,
-    geminiKeyMasked: geminiKey ? (geminiKey.slice(0, 6) + '...' + geminiKey.slice(-4)) : null,
-    defaultModel: 'gemini-1.5-pro'
+    geminiKeyMasked: geminiKey ? (String(geminiKey).slice(0, 6) + '...' + String(geminiKey).slice(-4)) : null,
+    defaultModel: 'gemini-2.0-flash'
   });
 });
 
@@ -212,7 +216,7 @@ router.post('/chat', async (req, res) => {
     prompt,
     history = [],
     provider = 'gemini',
-    model = 'gemini-1.5-pro',
+    model = 'gemini-2.0-flash',
     apiKey,
     customBaseUrl
   } = req.body || {};
@@ -249,7 +253,8 @@ router.post('/chat', async (req, res) => {
       model: result.model
     });
   } catch (err) {
-    return res.status(500).json({
+    console.error('[AI Advisor Chat Error]:', err.message);
+    return res.status(200).json({
       success: false,
       error: err.message
     });
@@ -296,7 +301,8 @@ router.post('/analyze', async (req, res) => {
       analysis
     });
   } catch (err) {
-    return res.status(500).json({
+    console.error('[AI Advisor Analyze Error]:', err.message);
+    return res.status(200).json({
       success: false,
       error: `Errore durante l'analisi AI: ${err.message}`
     });

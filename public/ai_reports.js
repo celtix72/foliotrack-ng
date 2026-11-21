@@ -531,7 +531,7 @@
     const portfolioId = portfolioSelect ? portfolioSelect.value : 'all';
 
     const modelSelect = document.getElementById('chatModelSelect');
-    const model = modelSelect ? modelSelect.value : 'gemini-1.5-pro';
+    const model = modelSelect ? modelSelect.value : 'gemini-2.0-flash';
 
     // Clear input
     if (input) {

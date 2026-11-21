@@ -282,7 +282,7 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       const data = await res.json();
       assert.strictEqual(data.success, true);
       assert.strictEqual(typeof data.hasGeminiKey, 'boolean');
-      assert.strictEqual(data.defaultModel, 'gemini-1.5-pro');
+      assert.strictEqual(data.defaultModel, 'gemini-2.0-flash');
     });
 
     test('POST /api/ai/chat returns interactive response for portfolio prompt', async () => {

@@ -81,20 +81,23 @@ function buildPortfolioPromptContext(portfolio) {
   const byClass = {};
   const rawClass = allocations.byAssetClass || allocations.byClass || {};
   for (const [k, v] of Object.entries(rawClass)) {
-    byClass[k] = `${Number(v.percentage || v.weight || 0).toFixed(1)}% (€ ${Math.round(v.value || 0).toLocaleString('it-IT')})`;
+    const val = typeof v === 'object' && v !== null ? v : { percentage: Number(v) || 0, value: 0 };
+    byClass[k] = `${Number(val.percentage || val.weight || 0).toFixed(1)}% (€ ${Math.round(val.value || 0).toLocaleString('it-IT')})`;
   }
 
   const bySector = {};
   if (allocations.bySector) {
     for (const [k, v] of Object.entries(allocations.bySector)) {
-      bySector[k] = `${Number(v.percentage || v.weight || 0).toFixed(1)}% (€ ${Math.round(v.value || 0).toLocaleString('it-IT')})`;
+      const val = typeof v === 'object' && v !== null ? v : { percentage: Number(v) || 0, value: 0 };
+      bySector[k] = `${Number(val.percentage || val.weight || 0).toFixed(1)}% (€ ${Math.round(val.value || 0).toLocaleString('it-IT')})`;
     }
   }
 
   const byRegion = {};
   if (allocations.byRegion) {
     for (const [k, v] of Object.entries(allocations.byRegion)) {
-      byRegion[k] = `${Number(v.percentage || v.weight || 0).toFixed(1)}% (€ ${Math.round(v.value || 0).toLocaleString('it-IT')})`;
+      const val = typeof v === 'object' && v !== null ? v : { percentage: Number(v) || 0, value: 0 };
+      byRegion[k] = `${Number(val.percentage || val.weight || 0).toFixed(1)}% (€ ${Math.round(val.value || 0).toLocaleString('it-IT')})`;
     }
   }
 
@@ -246,12 +249,132 @@ ${top3Summary || 'Nessun asset presente.'}
 }
 
 /**
+ * Resilient multi-tier Google Gemini API caller with automatic model fallback.
+ */
+async function callGeminiGenerate({ apiKey, model, systemText, contents, temperature = 0.35 }) {
+  // Always clean API key
+  const cleanKey = String(apiKey || '').trim();
+  if (!cleanKey) {
+    throw new Error('Chiave API Google Gemini mancante o vuota.');
+  }
+
+  // Model cascade: try requested model first, then fallback to highly available models
+  const requested = model || 'gemini-2.0-flash';
+  const modelsToTry = [requested, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+    .filter((m, i, arr) => m && arr.indexOf(m) === i);
+
+  let lastError = null;
+
+  for (const m of modelsToTry) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${cleanKey}`;
+
+      const payload = {
+        systemInstruction: {
+          parts: [{ text: systemText }]
+        },
+        contents,
+        generationConfig: {
+          temperature,
+          maxOutputTokens: 8192
+        }
+      };
+
+      let res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // If systemInstruction field is rejected on older models, retry with system text in user prompt
+      if (!res.ok && res.status === 400) {
+        const errCheck = await res.text();
+        if (errCheck.includes('systemInstruction') || errCheck.includes('system_instruction')) {
+          const fallbackContents = JSON.parse(JSON.stringify(contents));
+          if (fallbackContents.length > 0 && fallbackContents[0].parts?.[0]) {
+            fallbackContents[0].parts[0].text = `${systemText}\n\n---\n\n${fallbackContents[0].parts[0].text}`;
+          }
+          res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: fallbackContents,
+              generationConfig: { temperature, maxOutputTokens: 8192 }
+            })
+          });
+        } else {
+          let parsedErr = errCheck;
+          try {
+            const j = JSON.parse(errCheck);
+            if (j.error?.message) parsedErr = j.error.message;
+          } catch (_) {}
+
+          if (parsedErr.includes('API_KEY_INVALID') || parsedErr.includes('API key not valid')) {
+            throw new Error('La chiave API Google Gemini inserita non è valida. Verifica la chiave su Google AI Studio (aistudio.google.com/app/apikey).');
+          }
+          if (parsedErr.includes('User location is not supported')) {
+            lastError = new Error(`Modello ${m} non supportato per la tua area geografica (${parsedErr}).`);
+            continue; // Try next model
+          }
+          throw new Error(`Google Gemini (${m}): ${parsedErr}`);
+        }
+      }
+
+      if (!res.ok) {
+        const errText = await res.text();
+        let parsedErr = errText;
+        try {
+          const j = JSON.parse(errText);
+          if (j.error?.message) parsedErr = j.error.message;
+        } catch (_) {}
+
+        // If rate limit (429) or model not found (404), try fallback model
+        if (res.status === 429 || res.status === 404 || parsedErr.includes('RESOURCE_EXHAUSTED') || parsedErr.includes('not found')) {
+          console.warn(`[AI Gemini] Modello ${m} ha restituito ${res.status} (${parsedErr}), provo modello alternativo...`);
+          lastError = new Error(`Modello ${m} temporaneamente non disponibile o quota esaurita (${parsedErr}).`);
+          continue;
+        }
+
+        throw new Error(`Google Gemini Error (${res.status}): ${parsedErr}`);
+      }
+
+      const data = await res.json();
+      const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (replyText) {
+        return {
+          model: m,
+          text: replyText,
+          fallbackUsed: m !== requested
+        };
+      }
+
+      const finishReason = data.candidates?.[0]?.finishReason;
+      if (finishReason && finishReason !== 'STOP') {
+        return {
+          model: m,
+          text: `La generazione è terminata con stato "${finishReason}". Prova a riformulare la richiesta con termini diversi.`,
+          fallbackUsed: m !== requested
+        };
+      }
+    } catch (err) {
+      lastError = err;
+      if (err.message.includes('non è valida')) {
+        throw err; // Key invalid, don't cascade
+      }
+    }
+  }
+
+  throw lastError || new Error('Impossibile ottenere una risposta da Google Gemini. Riprova tra poco.');
+}
+
+/**
  * Generates AI portfolio assessment using Google Gemini, OpenAI, or compatible endpoints.
  *
  * @param {object} params
  * @param {object} params.portfolio Complete portfolio object with metrics
  * @param {string} [params.provider='auto'] 'gemini' | 'openai' | 'openrouter' | 'auto' | 'heuristic'
- * @param {string} [params.model] e.g. 'gemini-1.5-pro', 'gemini-2.0-flash', 'gpt-4o'
+ * @param {string} [params.model] e.g. 'gemini-2.0-flash', 'gemini-1.5-pro', 'gpt-4o'
  * @param {string} [params.apiKey]
  * @param {string} [params.tavilyKey]
  * @param {string} [params.customBaseUrl]
@@ -272,20 +395,20 @@ async function generatePortfolioAiAssessment({
 
   // Determine active provider and credentials
   let selectedProvider = provider;
-  let activeKey = apiKey;
+  let activeKey = apiKey ? String(apiKey).trim() : null;
 
   if (selectedProvider === 'auto') {
     if (activeKey) {
       selectedProvider = 'gemini';
     } else if (process.env.GEMINI_API_KEY) {
       selectedProvider = 'gemini';
-      activeKey = process.env.GEMINI_API_KEY;
+      activeKey = process.env.GEMINI_API_KEY.trim();
     } else if (process.env.OPENAI_API_KEY) {
       selectedProvider = 'openai';
-      activeKey = process.env.OPENAI_API_KEY;
+      activeKey = process.env.OPENAI_API_KEY.trim();
     } else if (process.env.OPENROUTER_API_KEY) {
       selectedProvider = 'openrouter';
-      activeKey = process.env.OPENROUTER_API_KEY;
+      activeKey = process.env.OPENROUTER_API_KEY.trim();
     } else {
       selectedProvider = 'heuristic';
     }
@@ -336,7 +459,7 @@ Devi restituire ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di codice m
     let usedModel = model;
 
     if (selectedProvider === 'gemini') {
-      usedModel = model || 'gemini-1.5-pro';
+      usedModel = model || 'gemini-2.0-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${activeKey}`;
 
       const res = await fetch(url, {
@@ -361,7 +484,6 @@ Devi restituire ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di codice m
       const data = await res.json();
       rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     } else {
-      // OpenAI / OpenRouter / Custom compatible API
       usedModel = model || (selectedProvider === 'openrouter' ? 'meta-llama/llama-3.3-70b-instruct' : 'gpt-4o-mini');
       const baseUrl = customBaseUrl || (selectedProvider === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1');
 
@@ -391,7 +513,6 @@ Devi restituire ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di codice m
       rawText = data.choices?.[0]?.message?.content || '';
     }
 
-    // Clean JSON text
     const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
 
@@ -416,7 +537,7 @@ Devi restituire ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di codice m
  * @param {object} params.portfolio Portfolio data (single or aggregated)
  * @param {string} params.userPrompt Custom prompt or question from user
  * @param {Array<{role: string, content: string}>} [params.chatHistory=[]] Conversation turns
- * @param {string} [params.model='gemini-1.5-pro']
+ * @param {string} [params.model='gemini-2.0-flash']
  * @param {string} [params.apiKey]
  * @param {string} [params.provider='gemini']
  * @param {string} [params.customBaseUrl]
@@ -426,7 +547,7 @@ async function chatWithPortfolioAi({
   portfolio,
   userPrompt,
   chatHistory = [],
-  model = 'gemini-1.5-pro',
+  model = 'gemini-2.0-flash',
   apiKey = null,
   provider = 'gemini',
   customBaseUrl = null
@@ -435,17 +556,17 @@ async function chatWithPortfolioAi({
   if (!userPrompt || !userPrompt.trim()) throw new Error('Prompt utente mancante.');
 
   let selectedProvider = provider || 'gemini';
-  let activeKey = apiKey;
+  let activeKey = apiKey ? String(apiKey).trim() : null;
 
   if (selectedProvider === 'auto') {
     if (activeKey) {
       selectedProvider = 'gemini';
     } else if (process.env.GEMINI_API_KEY) {
       selectedProvider = 'gemini';
-      activeKey = process.env.GEMINI_API_KEY;
+      activeKey = process.env.GEMINI_API_KEY.trim();
     } else if (process.env.OPENAI_API_KEY) {
       selectedProvider = 'openai';
-      activeKey = process.env.OPENAI_API_KEY;
+      activeKey = process.env.OPENAI_API_KEY.trim();
     } else {
       selectedProvider = 'heuristic';
     }
@@ -480,10 +601,6 @@ LINEE GUIDA PER LE RISPOSTE:
 5. Termina con un brevissimo disclaimer etico standard ("Le analisi fornite hanno scopo illustrativo ed educativo e non costituiscono consulenza finanziaria personalizzata").`;
 
   if (selectedProvider === 'gemini') {
-    const usedModel = model || 'gemini-1.5-pro';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${activeKey}`;
-
-    // Format chat history for Gemini API: must alternate user / model
     const contents = [];
 
     if (Array.isArray(chatHistory) && chatHistory.length > 0) {
@@ -501,12 +618,12 @@ LINEE GUIDA PER LE RISPOSTE:
       }
     }
 
-    // Ensure the conversation starts with user if it started with model
+    // Ensure conversation starts with user
     if (contents.length > 0 && contents[0].role === 'model') {
       contents.shift();
     }
 
-    // Append latest user message
+    // Append latest user prompt
     if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
       contents[contents.length - 1].parts[0].text += `\n\n${userPrompt.trim()}`;
     } else {
@@ -516,49 +633,23 @@ LINEE GUIDA PER LE RISPOSTE:
       });
     }
 
-    const payload = {
-      systemInstruction: {
-        parts: [{ text: systemInstructionText }]
-      },
+    const res = await callGeminiGenerate({
+      apiKey: activeKey,
+      model: model || 'gemini-2.0-flash',
+      systemText: systemInstructionText,
       contents,
-      generationConfig: {
-        temperature: 0.35,
-        maxOutputTokens: 8192
-      }
-    };
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      temperature: 0.35
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      let parsedErr = errText;
-      try {
-        const jsonErr = JSON.parse(errText);
-        if (jsonErr.error && jsonErr.error.message) {
-          parsedErr = jsonErr.error.message;
-        }
-      } catch (_) {}
-
-      if (res.status === 400 && (parsedErr.includes('API_KEY_INVALID') || parsedErr.includes('API key not valid'))) {
-        throw new Error('La chiave API Google Gemini inserita non è valida. Verifica la chiave su Google AI Studio (aistudio.google.com/app/apikey).');
-      }
-      if (res.status === 429 || parsedErr.includes('RESOURCE_EXHAUSTED')) {
-        throw new Error('Limite di frequenza o quota Google Gemini superata (Resource Exhausted). Attendi un minuto prima di inviare un\'altra richiesta.');
-      }
-      throw new Error(`Google Gemini Error (${res.status}): ${parsedErr}`);
+    let finalMessage = res.text;
+    if (res.fallbackUsed) {
+      finalMessage += `\n\n*(Nota: Analisi elaborata con il modello ${res.model})*`;
     }
-
-    const data = await res.json();
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Nessuna risposta ricevuta da Google Gemini.';
 
     return {
       provider: 'gemini',
-      model: usedModel,
-      message: replyText
+      model: res.model,
+      message: finalMessage
     };
   }
 
