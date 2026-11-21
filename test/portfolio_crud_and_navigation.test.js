@@ -250,10 +250,27 @@ describe('Portfolio Full CRUD & Multi-Portfolio Selector Verification', () => {
     assert.ok(pageJs.includes('function renderDesktopPortfolios'), 'portfolios_page.js must contain renderDesktopPortfolios');
     assert.ok(pageJs.includes('Controvalore'), 'mobile layout must show Controvalore');
     assert.ok(pageJs.includes('Liquidità'), 'mobile layout must show Liquidità');
+    assert.ok(pageJs.includes('fmtEurSigned'), 'portfolios_page.js must implement fmtEurSigned');
+    assert.ok(pageJs.includes('Gain Posizioni Aperte'), 'desktop layout must show Gain Posizioni Aperte');
+    assert.ok(pageJs.includes('Gain Pos. Aperte'), 'mobile layout must show Gain Pos. Aperte');
     assert.ok(pageJs.includes('togglePortfolioInclude'), 'portfolios_page.js must implement togglePortfolioInclude');
     assert.ok(pageJs.includes('input type="checkbox" switch'), 'card templates must render switch checkbox');
     assert.ok(pageJs.includes('ft-pillow-switch'), 'card templates must render ft-pillow-switch');
     assert.ok(pageJs.includes('ft-switch-knob'), 'card templates must render ft-switch-knob');
+  });
+
+  test('Portfolios API reports total unrealized Gain for open positions', async () => {
+    const res = await fetch(`${baseUrl}/api/portfolios`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.ok(Array.isArray(data.portfolios));
+    for (const p of data.portfolios) {
+      assert.notEqual(p.unrealizedPnl, undefined, `Portfolio ${p.id} must expose unrealizedPnl at root`);
+      assert.notEqual(p.unrealizedPnlPercent, undefined, `Portfolio ${p.id} must expose unrealizedPnlPercent at root`);
+      assert.notEqual(p.metrics?.unrealizedPnl, undefined, `Portfolio ${p.id} metrics must expose unrealizedPnl`);
+    }
   });
 
   test('Portfolio inclusion flag (include_in_totals) toggle and global calculation exclusion', async () => {

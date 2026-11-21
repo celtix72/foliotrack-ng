@@ -57,6 +57,15 @@ const fmtEur = (v) => '€ ' + Math.round(Number(v) || 0).toLocaleString('it-IT'
   maximumFractionDigits: 0
 });
 
+const fmtEurSigned = (v) => {
+  const n = Math.round(Number(v) || 0);
+  const sign = n > 0 ? '+' : (n < 0 ? '-' : '');
+  return `${sign}€ ${Math.abs(n).toLocaleString('it-IT', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  })}`;
+};
+
 const fmtPct = (v) => {
   const n = Number(v) || 0;
   return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
@@ -82,6 +91,8 @@ function escapeHtml(str) {
 function renderMobilePortfolios(portfolios) {
   const totValue = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.totalValue) || 0) : sum, 0);
   const totCash = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.currentCash) || 0) : sum, 0);
+  const totGain = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.unrealizedPnl ?? p.metrics?.unrealizedPnl) || 0) : sum, 0);
+  const isTotGainPos = totGain >= 0;
   const activeCount = portfolios.filter(p => p.include_in_totals).length;
 
   let summaryHtml = '';
@@ -92,17 +103,23 @@ function renderMobilePortfolios(portfolios) {
           <span>Totale Portafogli</span>
           <span>${activeCount}/${portfolios.length} inclusi nei calcoli</span>
         </div>
-        <div class="grid grid-cols-2 gap-2 mt-1 pt-1 border-t border-emerald-500/15 font-mono">
+        <div class="grid grid-cols-3 gap-2 mt-1 pt-1 border-t border-emerald-500/15 font-mono">
           <div>
             <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Controvalore</span>
             <div class="mt-0.5">
-              <span class="text-sm font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(totValue)}</span>
+              <span class="text-xs font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(totValue)}</span>
+            </div>
+          </div>
+          <div>
+            <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Liquidità</span>
+            <div class="mt-0.5">
+              <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">${fmtEur(totCash)}</span>
             </div>
           </div>
           <div class="text-right">
-            <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Liquidità</span>
+            <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Gain Pos. Aperte</span>
             <div class="mt-0.5">
-              <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">${fmtEur(totCash)}</span>
+              <span class="text-xs font-bold tabular-nums ${isTotGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${fmtEurSigned(totGain)}</span>
             </div>
           </div>
         </div>
@@ -111,8 +128,8 @@ function renderMobilePortfolios(portfolios) {
   }
 
   const cardsHtml = portfolios.map(p => {
-    const pnl = p.metrics?.unrealizedPnl || 0;
-    const pnlPct = p.metrics?.unrealizedPnlPercent || 0;
+    const pnl = p.unrealizedPnl !== undefined ? Number(p.unrealizedPnl) : (p.metrics?.unrealizedPnl || 0);
+    const pnlPct = p.unrealizedPnlPercent !== undefined ? Number(p.unrealizedPnlPercent) : (p.metrics?.unrealizedPnlPercent || 0);
     const isPos = pnl >= 0;
     const badgePnlClass = isPos ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-rose-600 dark:text-rose-400 font-bold';
     const isIncluded = Boolean(p.include_in_totals);
@@ -166,9 +183,8 @@ function renderMobilePortfolios(portfolios) {
               </div>
             ` : `
               <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">Controvalore</span>
-              <div class="flex items-baseline space-x-1 mt-0.5">
+              <div class="mt-0.5">
                 <span class="text-sm font-bold text-gray-900 dark:text-white tabular-nums">${fmtEur(p.totalValue)}</span>
-                ${pnlPct !== 0 ? `<span class="text-[9px] tabular-nums ${badgePnlClass}">(${fmtPct(pnlPct)})</span>` : ''}
               </div>
             `}
           </div>
@@ -178,6 +194,15 @@ function renderMobilePortfolios(portfolios) {
             <div class="mt-0.5">
               <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">${fmtEur(p.currentCash)}</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Line 3: Gain Posizioni Aperte -->
+        <div class="flex items-center justify-between p-1.5 px-2 rounded-lg bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-[10px] font-mono">
+          <span class="uppercase font-bold text-gray-400 tracking-wider">Gain Pos. Aperte</span>
+          <div class="flex items-baseline space-x-1.5">
+            <span class="font-bold tabular-nums ${badgePnlClass}">${fmtEurSigned(pnl)}</span>
+            <span class="text-[9px] font-semibold tabular-nums ${badgePnlClass}">(${fmtPct(pnlPct)})</span>
           </div>
         </div>
       </div>
@@ -191,6 +216,10 @@ function renderDesktopPortfolios(portfolios) {
   const totValue = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.totalValue) || 0) : sum, 0);
   const totCash = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.currentCash) || 0) : sum, 0);
   const totInvested = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.investedCapital) || 0) : sum, 0);
+  const totGain = portfolios.reduce((sum, p) => p.include_in_totals ? sum + (Number(p.unrealizedPnl ?? p.metrics?.unrealizedPnl) || 0) : sum, 0);
+  const totCostBasis = totValue - totGain - totCash;
+  const totGainPct = totCostBasis > 0 ? (totGain / totCostBasis) * 100 : 0;
+  const isTotGainPos = totGain >= 0;
   const activeCount = portfolios.filter(p => p.include_in_totals).length;
 
   let summaryHtml = '';
@@ -219,14 +248,20 @@ function renderDesktopPortfolios(portfolios) {
             <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Capitale Versato</span>
             <span class="text-base font-bold text-gray-700 dark:text-gray-300 tabular-nums">${fmtEur(totInvested)}</span>
           </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Gain Pos. Aperte</span>
+            <span class="text-base font-bold tabular-nums ${isTotGainPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
+              ${fmtEurSigned(totGain)} <span class="text-xs font-semibold">(${fmtPct(totGainPct)})</span>
+            </span>
+          </div>
         </div>
       </div>
     `;
   }
 
   const cardsHtml = portfolios.map(p => {
-    const pnl = p.metrics?.unrealizedPnl || 0;
-    const pnlPct = p.metrics?.unrealizedPnlPercent || 0;
+    const pnl = p.unrealizedPnl !== undefined ? Number(p.unrealizedPnl) : (p.metrics?.unrealizedPnl || 0);
+    const pnlPct = p.unrealizedPnlPercent !== undefined ? Number(p.unrealizedPnlPercent) : (p.metrics?.unrealizedPnlPercent || 0);
     const isPos = pnl >= 0;
     const badgePnlClass = isPos ? 'badge-profit' : 'badge-loss';
     const isIncluded = Boolean(p.include_in_totals);
@@ -289,14 +324,24 @@ function renderDesktopPortfolios(portfolios) {
             `}
           </div>
 
-          <!-- P&L Badge -->
-          <div class="mt-3 flex items-center space-x-2 text-xs font-mono">
-            <span class="${badgePnlClass} tabular-nums">${fmtPct(pnlPct)}</span>
-            <span class="text-gray-400 text-[11px] tabular-nums">${fmtEur(pnl)} non real.</span>
+          <!-- Gain Posizioni Aperte Block -->
+          <div class="mt-3.5 p-3 rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex items-center justify-between font-mono">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Gain Posizioni Aperte</span>
+              <span class="text-[11px] text-gray-500 dark:text-gray-400">P&L non realizzato</span>
+            </div>
+            <div class="text-right">
+              <span class="text-base font-bold tabular-nums block ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
+                ${fmtEurSigned(pnl)}
+              </span>
+              <span class="${badgePnlClass} text-[11px] tabular-nums inline-block mt-0.5">
+                ${fmtPct(pnlPct)}
+              </span>
+            </div>
           </div>
 
           <!-- Metrics Breakdown Grid -->
-          <div class="mt-5 pt-4 border-t border-gray-100 dark:border-white/5 grid grid-cols-2 gap-3 text-xs font-mono">
+          <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 grid grid-cols-2 gap-3 text-xs font-mono">
             <div>
               <span class="text-gray-400 text-[10px] uppercase block">Liquidità</span>
               <span class="font-bold text-gray-800 dark:text-gray-200 tabular-nums">${fmtEur(p.currentCash)}</span>
