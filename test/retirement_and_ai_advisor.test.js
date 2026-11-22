@@ -622,6 +622,151 @@ describe('Phase 9: Retirement & FIRE Monte Carlo Simulator and AI Advisor', () =
       assert.ok(mobHtml.includes('id="tavily_api_key"'));
       assert.ok(mobHtml.includes('NVIDIA NIM'));
     });
+
+    test('CD_IFIS and DEPOSITO_VINCOLATO are strictly treated as Liquidità (never Equity) in AI Advisor and Analysis', async () => {
+      const {
+        buildWeeklyReportPrompt,
+        buildPortfolioPromptContext,
+        generateHeuristicChatResponse,
+        generateHeuristicAnalysis,
+        resolveMarketName
+      } = require('../src/services/aiService');
+
+      // 1. resolveMarketName treats DEPOSITO_VINCOLATO and CD_* as unquoted liquidity
+      assert.strictEqual(resolveMarketName('CD_IFIS', 'EUR', '', 'DEPOSITO_VINCOLATO'), 'Liquidità / Deposito Vincolato (Non quotato)');
+      assert.strictEqual(resolveMarketName('CD_RENDIMAX', 'EUR'), 'Liquidità / Deposito Vincolato (Non quotato)');
+
+      const mockPortfolio = {
+        id: 1,
+        name: 'Portafoglio Test Liquidità',
+        currency: 'EUR',
+        currentCash: 5000,
+        totalValue: 55000,
+        metrics: {
+          totalValue: 55000,
+          currentCash: 5000,
+          investedCapital: 50000,
+          unrealizedPnl: 5000,
+          realizedPnl: 0,
+          totalDividends: 0,
+          holdings: [
+            {
+              ticker: 'ISP.MI',
+              name: 'Intesa Sanpaolo',
+              type: 'EQUITY',
+              currency: 'EUR',
+              quantity: 5000,
+              currentPrice: 3.0,
+              currentPriceNative: 3.0,
+              previousClose: 2.9,
+              currentValue: 15000,
+              marketValue: 15000,
+              weight: 27.27
+            },
+            {
+              ticker: 'AAPL',
+              name: 'Apple Inc',
+              type: 'EQUITY',
+              currency: 'USD',
+              quantity: 100,
+              currentPrice: 150.0,
+              currentPriceNative: 150.0,
+              previousClose: 145.0,
+              currentValue: 15000,
+              marketValue: 15000,
+              weight: 27.27
+            },
+            {
+              ticker: 'CD_IFIS',
+              name: 'Conto Deposito Vincolato Banca IFIS',
+              type: 'DEPOSITO_VINCOLATO',
+              currency: 'EUR',
+              quantity: 25000,
+              currentPrice: 1.0,
+              currentPriceNative: 1.0,
+              previousClose: 1.0,
+              currentValue: 25000,
+              marketValue: 25000,
+              weight: 45.45
+            }
+          ],
+          allocations: {
+            byAssetClass: {
+              EQUITY: { value: 30000, percentage: 54.55 },
+              DEPOSITO_VINCOLATO: { value: 25000, percentage: 45.45 }
+            }
+          }
+        }
+      };
+
+      // 2. buildWeeklyReportPrompt format and instruction verification
+      const weeklyPromptData = buildWeeklyReportPrompt(mockPortfolio);
+      assert.ok(weeklyPromptData.prompt.includes('| CD_IFIS | Conto Deposito Vincolato Banca IFIS | Liquidità / Deposito Vincolato (Non quotato) | 25000 | 1.00 | 1.00 | EUR |'));
+      assert.ok(weeklyPromptData.prompt.includes('REGOLA FONDAMENTALE DI CLASSIFICAZIONE'));
+      assert.ok(weeklyPromptData.prompt.includes('NON devono essere inclusi nel conteggio delle azioni'));
+
+      // 3. generateHeuristicChatResponse (weekly report prompt) isolates CD_IFIS into Liquidità & Depositi Vincolati
+      const weeklyResp = generateHeuristicChatResponse(mockPortfolio, 'Fornisci un report settimanale sul portafoglio azionario con Tabella Riepilogativa delle Performance');
+      assert.ok(weeklyResp.includes('### Liquidità & Depositi Vincolati'));
+      assert.ok(weeklyResp.includes('CD_IFIS'));
+      assert.ok(weeklyResp.includes('garantito (Liquidità)'));
+      // Intesa is in Borsa Italiana, Apple in Borsa Americana, CD_IFIS is NOT in Borsa Italiana
+      const borsaItSection = weeklyResp.substring(weeklyResp.indexOf('### Borsa Italiana'), weeklyResp.indexOf('### Borsa Americana'));
+      assert.ok(borsaItSection.includes('ISP.MI'));
+      assert.ok(!borsaItSection.includes('CD_IFIS'), 'CD_IFIS must not appear under Borsa Italiana section');
+
+      // 4. generateHeuristicChatResponse (general chat) shows total liquidity with deposits
+      const generalResp = generateHeuristicChatResponse(mockPortfolio, 'Come sta andando il portafoglio?');
+      assert.ok(generalResp.includes('**Liquidità Totale (Cash + Depositi Vincolati):** € 30.000 (54.5%)'));
+      assert.ok(generalResp.includes('Depositi Vincolati: € 25.000'));
+
+      // 5. buildPortfolioPromptContext includes CD_IFIS as Liquidità
+      const ctxJson = JSON.parse(buildPortfolioPromptContext(mockPortfolio));
+      assert.strictEqual(ctxJson.totalLiquidityEur, '€ 30.000 (54.5%)');
+      assert.strictEqual(ctxJson.depositsVincolatiEur, '€ 25.000');
+      const ifisItem = ctxJson.holdings.find(h => h.ticker === 'CD_IFIS');
+      assert.ok(ifisItem);
+      assert.strictEqual(ifisItem.assetClass, 'LIQUIDITA (Deposito Vincolato)');
+      assert.strictEqual(ifisItem.macroCategory, 'Liquidità');
+      assert.strictEqual(ifisItem.isLiquidity, true);
+
+      // 6. Quantitative Heuristic Analysis includes deposits in cashWeight
+      const quant = generateHeuristicAnalysis(mockPortfolio);
+      assert.ok(quant.strengths.some(s => s.includes('Liquidità disponibile al 54.5%')));
+
+      // 7. Stock Analysis endpoint (/api/analysis) excludes CD_IFIS
+      // Insert a transaction for CD_IFIS and ensure it does not appear in stock analysis
+      const pRes = await fetch(`${baseUrl}/api/portfolios`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: `foliotrack_token=${authToken}` },
+        body: JSON.stringify({ name: 'Portafoglio Test Analysis Liquidity', currency: 'EUR' })
+      });
+      const pData = await pRes.json();
+      assert.ok(pData.portfolio && pData.portfolio.id);
+
+      // Create transaction for CD_IFIS
+      await fetch(`${baseUrl}/api/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: `foliotrack_token=${authToken}` },
+        body: JSON.stringify({
+          portfolioId: pData.portfolio.id,
+          type: 'BUY',
+          assetTicker: 'CD_IFIS',
+          quantity: 10000,
+          price: 1,
+          date: '2026-01-15'
+        })
+      });
+
+      const analysisRes = await fetch(`${baseUrl}/api/analysis`, {
+        headers: { Cookie: `foliotrack_token=${authToken}` }
+      });
+      assert.strictEqual(analysisRes.status, 200);
+      const analysisData = await analysisRes.json();
+      assert.ok(analysisData.success);
+      const foundIfisInAnalysis = (analysisData.items || []).some(item => item.ticker === 'CD_IFIS');
+      assert.strictEqual(foundIfisInAnalysis, false, 'CD_IFIS must not appear in /api/analysis stock overview');
+    });
   });
 });
 

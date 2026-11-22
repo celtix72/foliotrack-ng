@@ -16,9 +16,23 @@ function normalizeNvidiaModel(model) {
 /**
  * Resolves high-level market name for European / US equity classification.
  */
-function resolveMarketName(ticker = '', currency = 'EUR', exchange = '') {
+function resolveMarketName(ticker = '', currency = 'EUR', exchange = '', type = '') {
   const t = String(ticker || '').toUpperCase();
   const ex = String(exchange || '').toUpperCase();
+  const normType = String(type || '').toUpperCase();
+
+  if (
+    normType === 'DEPOSITO_VINCOLATO' ||
+    normType === 'CASH' ||
+    normType === 'LIQUIDITA' ||
+    t.startsWith('CD_') ||
+    t.startsWith('CD-') ||
+    t.includes('IFIS') ||
+    t.includes('RENDIMAX') ||
+    t.includes('DEPOSIT')
+  ) {
+    return 'Liquidità / Deposito Vincolato (Non quotato)';
+  }
   if (t.endsWith('.MI') || t.endsWith('.TI') || ex === 'BIT' || ex === 'MTA' || ex === 'MIL' || ex.includes('MILAN') || ex.includes('BORSA ITALIANA')) {
     return 'Borsa Italiana / Euronext Milan';
   }
@@ -81,7 +95,7 @@ function buildWeeklyReportPrompt(portfolio) {
     const rows = holdings.map(h => {
       const ticker = h.ticker;
       const name = (h.name || h.ticker).replace(/\|/g, '-');
-      const market = resolveMarketName(ticker, h.currency);
+      const market = resolveMarketName(ticker, h.currency, h.exchange, h.type);
       const qty = Number(h.quantity || 0);
 
       let pStart = null;
@@ -120,14 +134,20 @@ Dati del portafoglio (Ticker, Nome, Mercato, Quantità, Prezzo Inizio Settimana,
 ${holdingsTable}
 """
 
+> **REGOLA FONDAMENTALE DI CLASSIFICAZIONE:**
+> Gli strumenti con Tipo/Classe "DEPOSITO_VINCOLATO" o ticker come "CD_*" (es. CD_IFIS, Banca IFIS, Rendimax, conti deposito vincolati) appartengono ESCLUSIVAMENTE alla classe LIQUIDITÀ (monetario / cash / capitale garantito) e NON sono titoli azionari (EQUITY).
+> - NON devono essere inclusi nel conteggio delle azioni italiane (Borsa Italiana / Euronext Milan) né in quelle americane.
+> - NON cercare trimestrali o notizie di borsa per essi: il loro valore è fisso/garantito da contratto bancario.
+> - Nella tabella e nelle sintesi, trattali sempre come componente di Liquidità/Risparmio protetto.
+
 ### ISTRUZIONI DI ANALISI
 1. **Calcolo delle Performance:**
-   - Per ogni singolo asset, calcola la variazione settimanale in **valore assoluto** (nella valuta nativa e, se necessario, convertita nella valuta di riferimento) e in **percentuale (%)**.
-   - Calcola la variazione **totale del portafoglio** in valore assoluto e in percentuale, evidenziando il contributo dei titoli italiani rispetto a quelli americani.
+   - Per ogni singolo asset, calcola la variazione settimanale in **valore assoluto** (nella valuta nativa e, se necessario, convertita nella valuta di riferimento) e in **percentuale (%)**. Per gli asset di Liquidità e Depositi Vincolati (DEPOSITO_VINCOLATO / CD_IFIS), evidenzia la natura difensiva a capitale garantito.
+   - Calcola la variazione **totale del portafoglio** in valore assoluto e in percentuale, evidenziando il contributo dei titoli italiani rispetto a quelli americani e la stabilità offerta dalla quota di liquidità.
    - Se sono presenti titoli in USD e la valuta base è EUR, segnala brevemente se il tasso di cambio EUR/USD ha avuto un impatto rilevante nella settimana.
 
 2. **Analisi delle News e dei Driver:**
-   - Per ciascun titolo (dando priorità a quelli con le variazioni più marcate, positive o negative), identifica le **notizie principali dell'ultima settimana** che giustificano l'andamento (es. trimestrali, guidance, rating di analisti, annunci M&A, lanci di prodotto, decisioni di banche centrali o dati macroeconomici di settore).
+   - Per ciascun titolo azionario (escludendo la liquidità e i depositi vincolati CD_IFIS/DEPOSITO_VINCOLATO che non hanno notizie societarie di borsa), dando priorità a quelli con le variazioni più marcate, positive o negative, identifica le **notizie principali dell'ultima settimana** che giustificano l'andamento (es. trimestrali, guidance, rating di analisti, annunci M&A, lanci di prodotto, decisioni di banche centrali o dati macroeconomici di settore).
    - Se un titolo si è mosso senza notizie aziendali specifiche, indica se il movimento è attribuibile al sentiment di settore o all'andamento generale dell'indice di riferimento (FTSE MIB per l'Italia, S&P 500 / Nasdaq per gli USA).
 
 3. **Stile e Rigore:**
@@ -143,7 +163,8 @@ Restituisci la risposta seguendo esattamente questa struttura:
    | Asset (Ticker) | Mercato | Valore Iniziale | Valore Finale | Var. Assoluta | Var. % |
    | :--- | :--- | :--- | :--- | :--- | :--- |
    *(Includi una riga finale in grassetto con il **TOTALE PORTAFOGLIO**)*
-3. **Analisi delle News per Singolo Asset:** Elenco puntato diviso per mercato (Borsa Italiana / Borsa Americana) con 2-3 righe per titolo che spiegano il *perché* della variazione settimanale.
+3. **Analisi delle News per Singolo Asset:** Elenco puntato diviso per mercato (Borsa Italiana / Borsa Americana / Liquidità & Depositi Vincolati) con 2-3 righe per titolo che spiegano il *perché* della variazione settimanale.
+4. **Contesto Macro Settimanale:** Breve nota (max 3 punti) sui fattori macroeconomici che hanno influenzato FTSE MIB e mercati USA nella settimana.
 4. **Contesto Macro Settimanale:** Breve nota (max 3 punti) sui fattori macroeconomici che hanno influenzato FTSE MIB e mercati USA nella settimana.`;
 
   return {
@@ -212,28 +233,50 @@ function buildPortfolioPromptContext(portfolio) {
   const unrealizedPct = investedVal > 0 ? (unrealizedPnlVal / investedVal) * 100 : 0;
   const cashPct = totalVal > 0 ? (cashVal / totalVal) * 100 : 0;
 
-  const holdingsList = holdings.map(h => ({
-    ticker: h.ticker,
-    name: h.name || h.ticker,
-    market: resolveMarketName(h.ticker, h.currency),
-    assetClass: h.type || h.asset_type || 'Altro',
-    currency: (h.currency || portfolio.currency || 'EUR').toUpperCase(),
-    quantity: h.quantity,
-    currentPrice: h.currentPrice ? `€ ${Number(h.currentPrice).toFixed(2)}` : 'N/D',
-    averagePurchasePrice: h.averagePrice ? `€ ${Number(h.averagePrice).toFixed(2)}` : 'N/D',
-    currentValue: h.currentValue ? `€ ${Math.round(h.currentValue).toLocaleString('it-IT')}` : 'N/D',
-    weight: h.weight !== undefined ? `${Number(h.weight).toFixed(1)}%` : 'N/D',
-    unrealizedGainLoss: h.unrealizedPnL !== undefined ? `€ ${Math.round(h.unrealizedPnL).toLocaleString('it-IT')}` : 'N/D',
-    unrealizedGainLossPercent: h.unrealizedPnLPercent !== undefined ? `${Number(h.unrealizedPnLPercent).toFixed(1)}%` : 'N/D',
-    sector: h.sector || 'Generale / N/D',
-    region: h.region || 'Globale / N/D'
-  }));
+  let depositsVal = 0.0;
+  const holdingsList = holdings.map(h => {
+    const t = String(h.ticker || '').toUpperCase();
+    const type = String(h.type || '').toUpperCase();
+    const isDeposit = type === 'DEPOSITO_VINCOLATO' || t.startsWith('CD_') || t.startsWith('CD-') || t.includes('IFIS') || t.includes('RENDIMAX');
+    const assetVal = Number(h.currentValue || h.marketValue || 0);
+    if (isDeposit) {
+      depositsVal += assetVal;
+    }
+    const assetClass = isDeposit ? 'LIQUIDITA (Deposito Vincolato)' : (h.type || h.asset_type || 'Altro');
+    const macroCategory = isDeposit ? 'Liquidità' : (h.macroCategory || 'Altro');
+
+    return {
+      ticker: h.ticker,
+      name: h.name || h.ticker,
+      market: resolveMarketName(h.ticker, h.currency, h.exchange, h.type),
+      assetClass,
+      macroCategory,
+      isLiquidity: isDeposit || h.type === 'CASH' || h.type === 'LIQUIDITA',
+      currency: (h.currency || portfolio.currency || 'EUR').toUpperCase(),
+      quantity: h.quantity,
+      currentPrice: h.currentPrice ? `€ ${Number(h.currentPrice).toFixed(2)}` : 'N/D',
+      averagePurchasePrice: h.averagePrice ? `€ ${Number(h.averagePrice).toFixed(2)}` : 'N/D',
+      currentValue: h.currentValue ? `€ ${Math.round(h.currentValue).toLocaleString('it-IT')}` : 'N/D',
+      weight: h.weight !== undefined ? `${Number(h.weight).toFixed(1)}%` : 'N/D',
+      unrealizedGainLoss: h.unrealizedPnL !== undefined ? `€ ${Math.round(h.unrealizedPnL).toLocaleString('it-IT')}` : 'N/D',
+      unrealizedGainLossPercent: h.unrealizedPnLPercent !== undefined ? `${Number(h.unrealizedPnLPercent).toFixed(1)}%` : 'N/D',
+      sector: isDeposit ? 'Liquidità' : (h.sector || 'Generale / N/D'),
+      region: isDeposit ? 'Italia / Eurozona' : (h.region || 'Globale / N/D')
+    };
+  });
 
   const byClass = {};
   const rawClass = allocations.byAssetClass || allocations.byClass || {};
   for (const [k, v] of Object.entries(rawClass)) {
     const val = typeof v === 'object' && v !== null ? v : { percentage: Number(v) || 0, value: 0 };
-    byClass[k] = `${Number(val.percentage || val.weight || 0).toFixed(1)}% (€ ${Math.round(val.value || 0).toLocaleString('it-IT')})`;
+    const displayKey = (k === 'DEPOSITO_VINCOLATO' || k === 'CONTO_DEPOSITO' || k === 'LIQUIDITA') ? 'LIQUIDITA (Cash & Depositi Vincolati)' : k;
+    if (!byClass[displayKey]) byClass[displayKey] = { percentage: 0, value: 0 };
+    byClass[displayKey].percentage += Number(val.percentage || val.weight || 0);
+    byClass[displayKey].value += Number(val.value || 0);
+  }
+  const formattedClass = {};
+  for (const [k, v] of Object.entries(byClass)) {
+    formattedClass[k] = `${v.percentage.toFixed(1)}% (€ ${Math.round(v.value).toLocaleString('it-IT')})`;
   }
 
   const bySector = {};
@@ -252,16 +295,21 @@ function buildPortfolioPromptContext(portfolio) {
     }
   }
 
+  const totalLiquidityEur = cashVal + depositsVal;
+  const totalLiquidityPct = totalVal > 0 ? (totalLiquidityEur / totalVal) * 100 : 0;
+
   return JSON.stringify({
     portfolioName: isAggregated ? 'Tutti i Portafogli (Patrimonio Globale Aggregato)' : (portfolio.name || 'Portafoglio'),
     currency: portfolio.currency || 'EUR',
     totalValueEur: `€ ${Math.round(totalVal).toLocaleString('it-IT')}`,
     investedCapitalEur: `€ ${Math.round(investedVal).toLocaleString('it-IT')}`,
+    totalLiquidityEur: `€ ${Math.round(totalLiquidityEur).toLocaleString('it-IT')} (${totalLiquidityPct.toFixed(1)}%)`,
     cashAvailableEur: `€ ${Math.round(cashVal).toLocaleString('it-IT')} (${cashPct.toFixed(1)}%)`,
+    depositsVincolatiEur: `€ ${Math.round(depositsVal).toLocaleString('it-IT')}`,
     unrealizedGainLossEur: `€ ${Math.round(unrealizedPnlVal).toLocaleString('it-IT')} (${unrealizedPct >= 0 ? '+' : ''}${unrealizedPct.toFixed(1)}%)`,
     realizedGainLossEur: `€ ${Math.round(realizedPnlVal).toLocaleString('it-IT')}`,
     dividendsCollectedEur: `€ ${Math.round(totalDivs).toLocaleString('it-IT')}`,
-    allocationByAssetClass: byClass,
+    allocationByAssetClass: formattedClass,
     allocationBySector: bySector,
     allocationByRegion: byRegion,
     totalHoldingsCount: holdingsList.length,
@@ -281,7 +329,17 @@ function generateHeuristicAnalysis(p) {
   const allocations = (p.metrics && p.metrics.allocations) || {};
   const totalVal = Number(p.totalValue || p.metrics?.totalValue) || 0.0;
   const cashVal = Number(p.currentCash || p.metrics?.currentCash) || 0.0;
-  const cashWeight = totalVal > 0 ? (cashVal / totalVal) * 100.0 : 0.0;
+
+  let depositsVal = 0.0;
+  for (const h of holdings) {
+    const t = String(h.ticker || '').toUpperCase();
+    const type = String(h.type || '').toUpperCase();
+    if (type === 'DEPOSITO_VINCOLATO' || t.startsWith('CD_') || t.startsWith('CD-') || t.includes('IFIS') || t.includes('RENDIMAX')) {
+      depositsVal += Number(h.marketValue || h.currentValue || 0.0);
+    }
+  }
+  const totalLiquidityVal = cashVal + depositsVal;
+  const cashWeight = totalVal > 0 ? (totalLiquidityVal / totalVal) * 100.0 : 0.0;
 
   // Concentration: HHI (Herfindahl-Hirschman Index)
   let hhi = 0;
@@ -385,12 +443,24 @@ function generateHeuristicChatResponse(portfolio, userPrompt) {
 
     const itHoldings = [];
     const usHoldings = [];
+    const liquidityHoldings = [];
 
     const tableRows = holdings.map(h => {
       const t = (h.ticker || '').toUpperCase();
-      const isIt = t.endsWith('.MI') || t.endsWith('.TI') || (h.currency === 'EUR' && !t.includes('.DE'));
-      const market = isIt ? 'Borsa Italiana / Euronext Milan' : 'NYSE / NASDAQ (USA)';
-      if (isIt) itHoldings.push(h); else usHoldings.push(h);
+      const normType = String(h.type || '').toUpperCase();
+      const isDeposit = normType === 'DEPOSITO_VINCOLATO' || t.startsWith('CD_') || t.startsWith('CD-') || t.includes('IFIS') || t.includes('RENDIMAX');
+      const isIt = !isDeposit && (t.endsWith('.MI') || t.endsWith('.TI') || (h.currency === 'EUR' && !t.includes('.DE')));
+
+      let market = 'NYSE / NASDAQ (USA)';
+      if (isDeposit) {
+        market = 'Liquidità / Deposito Vincolato';
+        liquidityHoldings.push(h);
+      } else if (isIt) {
+        market = 'Borsa Italiana / Euronext Milan';
+        itHoldings.push(h);
+      } else {
+        usHoldings.push(h);
+      }
 
       const qty = Number(h.quantity || 1);
       const pEnd = Number(h.currentPriceNative || h.currentPrice || 1);
@@ -431,7 +501,7 @@ function generateHeuristicChatResponse(portfolio, userPrompt) {
     return `## 1. Sintesi Esecutiva
 Nella settimana di borsa esaminata, il portafoglio ha registrato una variazione complessiva di **${totalVarAbs >= 0 ? '+' : ''}${formatMoney(totalVarAbs)}** (**${totalVarPct >= 0 ? '+' : ''}${totalVarPct.toFixed(2)}%**), attestandosi a un controvalore finale di **${formatMoney(totalFinalValue)}**. 
 Il miglior titolo della settimana è stato **${best ? best.ticker : 'N/D'}** (${best ? (best.varPct >= 0 ? '+' : '') + best.varPct.toFixed(2) + '%' : '-'}), mentre il titolo con la performance più debole è stato **${worst ? worst.ticker : 'N/D'}** (${worst ? worst.varPct.toFixed(2) + '%' : '-'}). 
-La componente azionaria ${itHoldings.length > 0 ? 'italiana (Borsa Italiana / Euronext Milan)' : 'europea'} ha evidenziato ${totalVarPct >= 0 ? 'una buona tenuta' : 'volatilità fisiologica'}, mentre i titoli quotati sui mercati USA hanno risentito delle dinamiche di settore e dell'andamento dei tassi d'interesse.
+La componente azionaria ${itHoldings.length > 0 ? 'italiana (Borsa Italiana / Euronext Milan)' : 'europea'} ha evidenziato ${totalVarPct >= 0 ? 'una buona tenuta' : 'volatilità fisiologica'}, mentre i titoli quotati sui mercati USA hanno risentito delle dinamiche di settore e dell'andamento dei tassi d'interesse.${liquidityHoldings.length > 0 ? ' La quota allocata in liquidità e depositi vincolati ha garantito piena protezione del capitale senza volatilità.' : ''}
 
 ## 2. Tabella Riepilogativa delle Performance
 | Asset (Ticker) | Mercato | Valore Iniziale | Valore Finale | Var. Assoluta | Var. % |
@@ -445,6 +515,7 @@ ${itHoldings.length > 0 ? itHoldings.map(h => `- **${h.ticker}** (${h.name || h.
 
 ### Borsa Americana (NYSE / NASDAQ)
 ${usHoldings.length > 0 ? usHoldings.map(h => `- **${h.ticker}** (${h.name || h.ticker}): scambi guidati dal sentiment su Wall Street, con rotazione settoriale e impatto contenuto del tasso di cambio EUR/USD sui controvalori convertiti.`).join('\n') : '- Nessun titolo quotato sui mercati USA presente nel portafoglio.'}
+${liquidityHoldings.length > 0 ? `\n### Liquidità & Depositi Vincolati\n${liquidityHoldings.map(h => `- **${h.ticker}** (${h.name || h.ticker}): strumento di liquidità / deposito vincolato a capitale garantito (Liquidità). Nessun rischio azionario o volatilità di borsa.`).join('\n')}` : ''}
 
 ## 4. Contesto Macro Settimanale
 - **FTSE MIB (Borsa Italiana):** Il mercato milanese ha seguito le indicazioni dei listini dell'Eurozona, sostenuto dalla stabilità dello spread BTP/Bund e dalle attese sui tassi della BCE.
@@ -453,6 +524,17 @@ ${usHoldings.length > 0 ? usHoldings.map(h => `- **${h.ticker}** (${h.name || h.
 
 *Le analisi fornite hanno scopo illustrativo ed educativo e non costituiscono consulenza finanziaria personalizzata.*`;
   }
+
+  let depositsTotal = 0;
+  for (const h of holdings) {
+    const t = (h.ticker || '').toUpperCase();
+    const type = String(h.type || '').toUpperCase();
+    if (type === 'DEPOSITO_VINCOLATO' || t.startsWith('CD_') || t.startsWith('CD-') || t.includes('IFIS') || t.includes('RENDIMAX')) {
+      depositsTotal += Number(h.marketValue || h.currentValue || 0);
+    }
+  }
+  const totalLiquidityTotal = cashVal + depositsTotal;
+  const totalLiquidityTotalPct = totalVal > 0 ? (totalLiquidityTotal / totalVal) * 100 : 0;
 
   const top3 = [...holdings].sort((a, b) => (b.weight || 0) - (a.weight || 0)).slice(0, 3);
   const top3Summary = top3.map(h => `- **${h.ticker}** (${h.name || h.ticker}): peso ${(h.weight || 0).toFixed(1)}%, valore € ${Math.round(h.currentValue || 0).toLocaleString('it-IT')}`).join('\n');
@@ -463,7 +545,7 @@ ${usHoldings.length > 0 ? usHoldings.map(h => `- **${h.ticker}** (${h.name || h.
 
 #### 🔍 Sintesi Dati del Portafoglio:
 - **Valore Totale:** € ${Math.round(totalVal).toLocaleString('it-IT')}
-- **Liquidità Disponibile:** € ${Math.round(cashVal).toLocaleString('it-IT')} (${cashPct.toFixed(1)}%)
+- **Liquidità Totale (Cash + Depositi Vincolati):** € ${Math.round(totalLiquidityTotal).toLocaleString('it-IT')} (${totalLiquidityTotalPct.toFixed(1)}%)${depositsTotal > 0 ? ` [di cui Cash: € ${Math.round(cashVal).toLocaleString('it-IT')}, Depositi Vincolati: € ${Math.round(depositsTotal).toLocaleString('it-IT')}]` : ''}
 - **P&L Non Realizzato:** € ${Math.round(unrealizedPnlVal).toLocaleString('it-IT')}
 - **P&L Realizzato (Posizioni Chiuse):** € ${Math.round(realizedPnlVal).toLocaleString('it-IT')}
 - **Numero Posizioni Aperte:** ${holdings.length}
@@ -473,7 +555,7 @@ ${top3Summary || 'Nessun asset presente.'}
 
 #### 💡 Risposta in merito alla tua richiesta (*"${userPrompt.slice(0, 100)}..."*):
 1. **Ribilanciamento & Controllo Pesi:** Con ${holdings.length} posizioni, verifica periodicamente se la concentrazione sui primi titoli supera il 35-40% del totale.
-2. **Gestione Liquidità:** La liquidità attuale (${cashPct.toFixed(1)}%) ${cashPct > 10 ? 'costituisce un buon cuscinetto per cogliere storni di mercato o coprire spese impreviste.' : 'è piuttosto contenuta; valuta se mantenere un piccolo margine di sicurezza.'}
+2. **Gestione Liquidità:** La liquidità complessiva (${totalLiquidityTotalPct.toFixed(1)}%) ${totalLiquidityTotalPct > 10 ? 'costituisce un solido cuscinetto difensivo a capitale garantito per cogliere opportunità o preservare patrimonio.' : 'è piuttosto contenuta; valuta se mantenere un piccolo margine di sicurezza.'}
 3. **Efficienza Fiscale:** Monitora le posizioni in guadagno rispetto ad eventuali minusvalenze pregresse prima di effettuare prese di profitto.
 
 *Le analisi fornite hanno scopo illustrativo ed educativo e non costituiscono consulenza finanziaria personalizzata.*`;
@@ -920,14 +1002,15 @@ ${portfolioContext}
 
 LINEE GUIDA PER LE RISPOSTE:
 1. Rispondi con grande rigore analitico, chiarezza finanziaria, professionalità ed eleganza espositiva in lingua ITALIANA.
-2. Fai riferimento concreto e specifico ai dati reali del portafoglio dell'utente (ticker effettivi, pesi percentuali, controvalore, liquidità disponibile, guadagni/perdite realizzati e non realizzati, allocazione geografica e settoriale).
-3. Se l'utente chiede suggerimenti di ribilanciamento, acquisti o disinvestimenti, motiva le scelte analizzando rischio, rendimento atteso, diversificazione, decorrelazione ed efficienza fiscale (tassazione, minusvalenze compensabili).
-4. Utilizza una formattazione Markdown strutturata ed elegante:
+2. REGOLA MANDATORIA DI CLASSIFICAZIONE ASSET: Gli strumenti contrassegnati come "DEPOSITO_VINCOLATO" o con ticker "CD_*" (es. CD_IFIS, Banca IFIS, Rendimax, depositi a risparmio vincolati) appartengono ESCLUSIVAMENTE alla macro-classe LIQUIDITÀ (capitale garantito, rischio azionario zero). NON devono MAI essere considerati Equity (Azioni) né inclusi tra i titoli di Borsa Italiana o mercati USA. Non associare loro notizie aziendali o trimestrali di borsa.
+3. Fai riferimento concreto e specifico ai dati reali del portafoglio dell'utente (ticker effettivi, pesi percentuali, controvalore, liquidità totale comprensiva di cash e depositi vincolati, guadagni/perdite realizzati e non realizzati, allocazione geografica e settoriale).
+4. Se l'utente chiede suggerimenti di ribilanciamento, acquisti o disinvestimenti, motiva le scelte analizzando rischio, rendimento atteso, diversificazione, decorrelazione ed efficienza fiscale (tassazione, minusvalenze compensabili).
+5. Utilizza una formattazione Markdown strutturata ed elegante:
    - Titoli gerarchici con ## e ###
    - Elenchi puntati chiari e compatti
    - Grassetto per concetti chiave, ticker e valori numerici rilevanti
    - Tabelle Markdown comparative se utili per confrontare pesi target vs attuali o simulazioni
-5. Termina con un brevissimo disclaimer etico standard ("Le analisi fornite hanno scopo illustrativo ed educativo e non costituiscono consulenza finanziaria personalizzata").`;
+6. Termina con un brevissimo disclaimer etico standard ("Le analisi fornite hanno scopo illustrativo ed educativo e non costituiscono consulenza finanziaria personalizzata").`;
 
   if (selectedProvider === 'gemini') {
     const contents = [];

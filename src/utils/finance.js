@@ -1,4 +1,10 @@
-const { GICS_SECTORS } = require('./constants');
+const {
+  GICS_SECTORS,
+  normalizeAssetType,
+  isManualAssetType,
+  isLiquidityAssetType,
+  getMacroAssetClass
+} = require('./constants');
 const { resolveAssetTaxInfo } = require('./taxEngine');
 
 /**
@@ -420,7 +426,7 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
         const assetInfo = assetsMap[ticker] || {
           ticker,
           name: tx.notes || ticker,
-          type: 'EQUITY',
+          type: normalizeAssetType(null, ticker, tx.notes),
           sector: 'Unclassified',
           region: 'Global',
           currency: portfolioCurrency
@@ -432,7 +438,7 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
           date: tx.date,
           ticker,
           name: assetInfo.name || tx.notes || ticker,
-          type: assetInfo.type || 'EQUITY',
+          type: normalizeAssetType(assetInfo.type, ticker, assetInfo.name),
           sector: assetInfo.sector || 'Unclassified',
           region: assetInfo.region || 'Global',
           taxCategory: taxInfo.taxCategory,
@@ -519,7 +525,7 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
       const asset = assetsMap[ticker] || {
         ticker,
         name: ticker,
-        type: 'EQUITY',
+        type: normalizeAssetType(null, ticker),
         currentPrice: pos.pmc, // Fallback to PMC if market price is not yet fetched
         currency: 'EUR',
         sector: 'Unclassified',
@@ -638,11 +644,16 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
       totalCostBasis += bookValue;
 
       const taxInfo = resolveAssetTaxInfo(asset);
+      const normType = normalizeAssetType(asset.type, ticker, asset.name);
+      const macroClass = getMacroAssetClass(normType, ticker, asset.name);
+      const isLiq = macroClass === 'LIQUIDITA';
 
       holdings.push({
         ticker,
         name: asset.name || ticker,
-        type: asset.type || 'EQUITY',
+        type: normType,
+        macroCategory: isLiq ? 'Liquidità' : (macroClass === 'AZIONARIO' ? 'Azionario' : (macroClass === 'OBBLIGAZIONARIO' ? 'Obbligazionario' : (macroClass === 'ORO' ? 'Oro' : 'Crypto'))),
+        isLiquidity: isLiq,
         taxCategory: taxInfo.taxCategory,
         taxCategoryLabel: taxInfo.label,
         taxRate: taxInfo.taxRate,
@@ -778,8 +789,18 @@ function calculateHoldingsAndMetrics(transactions = [], assetsMap = {}, initialC
   const baselineValue = totalPortfolioValue - totalDayPnl;
   const totalDayPnlPercent = baselineValue > 0 ? (totalDayPnl / baselineValue) * 100.0 : 0.0;
 
+  let totalDeposits = 0.0;
+  for (const h of holdings) {
+    if (isLiquidityAssetType(h.type, h.ticker, h.name)) {
+      totalDeposits += (Number(h.marketValue) || 0.0);
+    }
+  }
+  const totalLiquidity = currentCash + totalDeposits;
+
   return {
     currentCash,
+    totalDeposits,
+    totalLiquidity,
     totalAssetValue,
     totalValue: totalPortfolioValue,
     totalCost: totalCostBasis,

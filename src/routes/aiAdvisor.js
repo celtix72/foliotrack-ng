@@ -69,6 +69,7 @@ function getPortfolioOrAggregated(portfolioId, userId, userRole) {
     const assetsMap = getAssetsMap();
     let grandTotalValue = 0.0;
     let grandTotalCash = 0.0;
+    let grandTotalDeposits = 0.0;
     let grandInvestedCapital = 0.0;
     let grandRealizedPnl = 0.0;
     let grandUnrealizedPnl = 0.0;
@@ -90,13 +91,19 @@ function getPortfolioOrAggregated(portfolioId, userId, userRole) {
         grandTotalDividends += (full.metrics.totalDividends || 0);
 
         for (const h of (full.metrics.holdings || [])) {
+          const normType = String(h.type || '').toUpperCase();
+          const isDeposit = normType === 'DEPOSITO_VINCOLATO' || (h.ticker || '').toUpperCase().startsWith('CD_') || (h.ticker || '').toUpperCase().startsWith('CD-') || (h.ticker || '').toUpperCase().includes('IFIS') || (h.ticker || '').toUpperCase().includes('RENDIMAX');
+          const assetClass = isDeposit ? 'LIQUIDITA' : (h.type || 'Altro');
+
           if (!allHoldingsMap.has(h.ticker)) {
             allHoldingsMap.set(h.ticker, {
               ticker: h.ticker,
               name: h.name || h.ticker,
-              type: h.type || 'Altro',
-              sector: h.sector,
-              region: h.region,
+              type: assetClass,
+              macroCategory: isDeposit ? 'Liquidità' : (h.macroCategory || 'Altro'),
+              isLiquidity: isDeposit || h.type === 'CASH' || h.type === 'LIQUIDITA',
+              sector: isDeposit ? 'Liquidità' : h.sector,
+              region: isDeposit ? 'Italia / Eurozona' : h.region,
               quantity: 0,
               currentPrice: h.currentPrice,
               currentValue: 0,
@@ -109,13 +116,17 @@ function getPortfolioOrAggregated(portfolioId, userId, userRole) {
           item.currentValue += (h.currentValue || 0);
           item.investedValue += ((h.averagePrice || 0) * (h.quantity || 0));
           item.unrealizedPnL += (h.unrealizedPnL || 0);
+          if (isDeposit) {
+            grandTotalDeposits += (h.currentValue || 0);
+          }
         }
 
         if (full.metrics.allocations) {
           const rawClass = full.metrics.allocations.byAssetClass || full.metrics.allocations.byClass || {};
           for (const [cls, data] of Object.entries(rawClass)) {
-            if (!aggregatedAssetClass[cls]) aggregatedAssetClass[cls] = { value: 0.0, percentage: 0.0 };
-            aggregatedAssetClass[cls].value += (data.value || 0);
+            const mappedCls = (cls === 'DEPOSITO_VINCOLATO' || cls === 'CONTO_DEPOSITO' || cls === 'LIQUIDITA') ? 'CASH' : cls;
+            if (!aggregatedAssetClass[mappedCls]) aggregatedAssetClass[mappedCls] = { value: 0.0, percentage: 0.0 };
+            aggregatedAssetClass[mappedCls].value += (data.value || 0);
           }
           if (full.metrics.allocations.bySector) {
             for (const [sec, data] of Object.entries(full.metrics.allocations.bySector)) {
@@ -158,9 +169,13 @@ function getPortfolioOrAggregated(portfolioId, userId, userRole) {
       isAggregated: true,
       totalValue: grandTotalValue,
       currentCash: grandTotalCash,
+      totalDeposits: grandTotalDeposits,
+      totalLiquidity: grandTotalCash + grandTotalDeposits,
       metrics: {
         totalValue: grandTotalValue,
         currentCash: grandTotalCash,
+        totalDeposits: grandTotalDeposits,
+        totalLiquidity: grandTotalCash + grandTotalDeposits,
         investedCapital: grandInvestedCapital,
         realizedPnl: grandRealizedPnl,
         unrealizedPnl: grandUnrealizedPnl,

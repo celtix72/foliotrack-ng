@@ -279,10 +279,10 @@ router.get('/', (req, res) => {
       .filter(Boolean);
     const subConds = [];
     for (const at of types) {
-      if (at === 'CASH') {
-        subConds.push("(t.assetTicker IS NULL OR UPPER(a.type) = 'CASH' OR t.type IN ('DEPOSIT', 'WITHDRAWAL', 'TRANSFER'))");
+      if (at === 'CASH' || at === 'LIQUIDITA') {
+        subConds.push("(t.assetTicker IS NULL OR UPPER(a.type) IN ('CASH', 'LIQUIDITA', 'DEPOSITO_VINCOLATO', 'DEPOSITO VINCOLATO') OR t.type IN ('DEPOSIT', 'WITHDRAWAL', 'TRANSFER') OR t.assetTicker LIKE 'CD_%' OR t.assetTicker LIKE 'CD-%' OR t.assetTicker LIKE '%IFIS%' OR t.assetTicker LIKE '%RENDIMAX%')");
       } else if (at === 'EQUITY' || at === 'STOCK') {
-        subConds.push("UPPER(a.type) IN ('EQUITY', 'STOCK')");
+        subConds.push("(UPPER(a.type) IN ('EQUITY', 'STOCK') AND UPPER(COALESCE(a.type, '')) != 'DEPOSITO_VINCOLATO' AND t.assetTicker NOT LIKE 'CD_%' AND t.assetTicker NOT LIKE 'CD-%' AND t.assetTicker NOT LIKE '%IFIS%' AND t.assetTicker NOT LIKE '%RENDIMAX%')");
       } else if (at === 'BOND') {
         subConds.push("UPPER(a.type) IN ('BOND', 'OBBLIGAZIONE', 'OBBLIGAZIONI', 'FIXED_INCOME')");
       } else if (at === 'ETF') {
@@ -292,7 +292,7 @@ router.get('/', (req, res) => {
       } else if (at === 'COMMODITY') {
         subConds.push("UPPER(a.type) = 'COMMODITY'");
       } else if (at === 'DEPOSITO_VINCOLATO' || at === 'DEPOSITO VINCOLATO') {
-        subConds.push("UPPER(a.type) IN ('DEPOSITO_VINCOLATO', 'DEPOSITO VINCOLATO')");
+        subConds.push("(UPPER(a.type) IN ('DEPOSITO_VINCOLATO', 'DEPOSITO VINCOLATO') OR t.assetTicker LIKE 'CD_%' OR t.assetTicker LIKE 'CD-%' OR t.assetTicker LIKE '%IFIS%' OR t.assetTicker LIKE '%RENDIMAX%')");
       } else if (at === 'BUONO_POSTALE' || at === 'BUONO POSTALE') {
         subConds.push("UPPER(a.type) IN ('BUONO_POSTALE', 'BUONO POSTALE')");
       } else if (at === 'TFR') {

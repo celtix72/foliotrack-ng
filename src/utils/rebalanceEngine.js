@@ -132,10 +132,10 @@ function normalizeAssetClass(h) {
   if (!h) return 'EQUITY';
   if (typeof h === 'string') {
     const t = h.toUpperCase().trim();
+    if (t.includes('CASH') || t.includes('LIQUID') || t.includes('CURRENCY') || t.includes('FOREX') || t.includes('DEPOSITO') || t.startsWith('CD_') || t.startsWith('CD-') || t.includes('IFIS') || t.includes('RENDIMAX')) return 'CASH';
     if (t.includes('BOND') || t.includes('BTP') || t.includes('BOT') || t.includes('TREASURY') || t === 'FIXED_INCOME') return 'BOND';
     if (t.includes('COMMODIT') || t.includes('GOLD') || t.includes('METAL') || t.includes('OIL')) return 'COMMODITY';
     if (t.includes('CRYPTO') || t.includes('BTC') || t.includes('ETH')) return 'CRYPTO';
-    if (t.includes('CASH') || t.includes('LIQUID') || t.includes('CURRENCY') || t.includes('FOREX')) return 'CASH';
     if (t.includes('REAL_ESTATE') || t.includes('REIT')) return 'REAL_ESTATE';
     if (t === 'ETF' || t === 'STOCK' || t === 'EQUITY' || t === 'SHARE') return 'EQUITY';
     return 'EQUITY';
@@ -146,13 +146,15 @@ function normalizeAssetClass(h) {
   const type = String(h.type || 'EQUITY').toUpperCase().trim();
   const sector = String(h.sector || '').toUpperCase().trim();
 
-  // Cash / Liquidity / Money Market / Currencies (e.g. XEON, C3M, SMART, overnight rate, conto deposito, EURUSD=X)
+  // Cash / Liquidity / Money Market / Currencies / Depositi Vincolati
   if (
-    type === 'CASH' || type === 'LIQUIDITY' || type === 'CURRENCY' || type === 'FOREX' ||
+    type === 'CASH' || type === 'LIQUIDITY' || type === 'LIQUIDITA' || type === 'CURRENCY' || type === 'FOREX' ||
+    type === 'DEPOSITO_VINCOLATO' || type === 'CONTO_DEPOSITO' ||
+    ticker.startsWith('CD_') || ticker.startsWith('CD-') || ticker.includes('IFIS') || ticker.includes('RENDIMAX') ||
     ticker === 'XEON.DE' || ticker === 'XEON' || ticker === 'C3M.MI' || ticker === 'SMART.MI' ||
     ticker.endsWith('=X') ||
     name.includes('OVERNIGHT') || name.includes('OVER.RATE') || name.includes('MONEY MARKET') ||
-    name.includes('LIQUIDIT') || name.includes('CONTO DEPOSITO')
+    name.includes('LIQUIDIT') || name.includes('CONTO DEPOSITO') || name.includes('DEPOSITO VINCOLATO') || name.includes('IFIS') || name.includes('RENDIMAX')
   ) {
     return 'CASH';
   }
@@ -203,8 +205,8 @@ function classifyMacroCategory(h) {
   if (typeof h === 'string') {
     const t = h.toUpperCase().trim();
     if (t.includes('GOLD') || t.includes('COMMODIT') || t.includes('METAL') || t.includes('ORO') || t.includes('SILVER') || t.includes('OIL') || t.includes('GAS')) return 'ORO';
-    if (t.includes('BOND') || t.includes('BTP') || t.includes('BOT') || t.includes('TREASURY') || t.includes('FIXED') || t.includes('DEPOSITO') || t.includes('BUONO') || t.includes('TFR') || t.includes('PENSIONE')) return 'OBBLIGAZIONARIO';
-    if (t.includes('CASH') || t.includes('LIQUID') || t.includes('CURRENCY') || t.includes('FOREX') || t.includes('MONEY')) return 'LIQUIDITA';
+    if (t.includes('CASH') || t.includes('LIQUID') || t.includes('CURRENCY') || t.includes('FOREX') || t.includes('MONEY') || t.includes('DEPOSITO') || t.startsWith('CD_') || t.startsWith('CD-') || t.includes('IFIS') || t.includes('RENDIMAX')) return 'LIQUIDITA';
+    if (t.includes('BOND') || t.includes('BTP') || t.includes('BOT') || t.includes('TREASURY') || t.includes('FIXED') || t.includes('BUONO') || t.includes('TFR') || t.includes('PENSIONE')) return 'OBBLIGAZIONARIO';
     return 'AZIONARIO';
   }
 
@@ -225,9 +227,12 @@ function classifyMacroCategory(h) {
     return 'ORO';
   }
 
-  // 2. LIQUIDITA (Cash, Conto Deposito libero, Monetary/Overnight ETFs, Valute)
+  // 2. LIQUIDITA (Cash, Depositi Vincolati, Conti Deposito, Monetary/Overnight ETFs, Valute)
   if (
-    type === 'CASH' || type === 'LIQUIDITY' || type === 'CURRENCY' || type === 'FOREX' ||
+    type === 'CASH' || type === 'LIQUIDITY' || type === 'LIQUIDITA' || type === 'CURRENCY' || type === 'FOREX' ||
+    type === 'DEPOSITO_VINCOLATO' || type === 'CONTO_DEPOSITO' ||
+    ticker.startsWith('CD_') || ticker.startsWith('CD-') || ticker.includes('IFIS') || ticker.includes('RENDIMAX') ||
+    name.includes('CONTO DEPOSITO') || name.includes('DEPOSITO VINCOLATO') || name.includes('IFIS') || name.includes('RENDIMAX') ||
     ticker === 'XEON.DE' || ticker === 'XEON' || ticker === 'XEON.MI' || ticker === 'C3M.MI' || ticker === 'SMART.MI' ||
     ticker.endsWith('=X') ||
     name.includes('OVERNIGHT') || name.includes('OVER.RATE') || name.includes('MONEY MARKET') ||
@@ -236,13 +241,13 @@ function classifyMacroCategory(h) {
     return 'LIQUIDITA';
   }
 
-  // 3. OBBLIGAZIONARIO (BTP, BOT, Obbligazioni, Conti Deposito Vincolati, Buoni Postali, TFR, Fondi Pensione)
+  // 3. OBBLIGAZIONARIO (BTP, BOT, Obbligazioni, Buoni Postali, TFR, Fondi Pensione)
   if (
     type.includes('BOND') || type.includes('BTP') || type.includes('BOT') || type === 'FIXED_INCOME' ||
-    type === 'DEPOSITO_VINCOLATO' || type === 'BUONO_POSTALE' || type === 'TFR' || type === 'FONDO_PENSIONE' ||
+    type === 'BUONO_POSTALE' || type === 'TFR' || type === 'FONDO_PENSIONE' ||
     sector === 'GOVERNMENT' || sector.includes('TREASURY') || sector.includes('FIXED INCOME') ||
     name.includes('BTP') || name.includes('BOT') || name.includes('BOND') || name.includes('GOVT') ||
-    name.includes('TREASURY') || name.includes('OBBLIGAZION') || name.includes('CONTO DEPOSITO') || name.includes('BUONO POSTALE') ||
+    name.includes('TREASURY') || name.includes('OBBLIGAZION') || name.includes('BUONO POSTALE') ||
     name.includes('FONDO PENSIONE') || name.includes('TFR') ||
     (type !== 'EQUITY' && type !== 'STOCK' && (ticker.startsWith('IT000') || ticker.startsWith('XS')))
   ) {

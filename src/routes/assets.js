@@ -288,8 +288,8 @@ router.post('/', (req, res) => {
 
   const cleanTicker = ticker.toUpperCase().trim();
   const cleanName = (name || cleanTicker).trim();
-  const cleanType = normalizeAssetType(type, cleanTicker);
-  const isManualType = isManualAssetType(cleanType, cleanTicker);
+  const cleanType = normalizeAssetType(type, cleanTicker, cleanName);
+  const isManualType = isManualAssetType(cleanType, cleanTicker, cleanName);
   const validSource = isManualType
     ? 'MANUAL'
     : (['YAHOO', 'BORSA_ITALIANA', 'GOOGLE', 'MANUAL', 'DELISTED'].includes(String(dataSource).toUpperCase())
@@ -384,8 +384,8 @@ router.put('/:ticker', (req, res) => {
   } = req.body || {};
 
   const cleanName = name !== undefined ? String(name).trim() : existing.name;
-  const cleanType = type !== undefined ? normalizeAssetType(type, ticker) : existing.type;
-  const isManualType = isManualAssetType(cleanType, ticker);
+  const cleanType = type !== undefined ? normalizeAssetType(type, ticker, cleanName) : existing.type;
+  const isManualType = isManualAssetType(cleanType, ticker, cleanName);
   const cleanExchange = exchange !== undefined ? String(exchange).trim() : existing.exchange;
   const cleanCurrency = currency !== undefined ? String(currency).toUpperCase() : existing.currency;
   const cleanPrice = currentPrice !== undefined ? Number(currentPrice) || 0.0 : existing.currentPrice;
@@ -475,10 +475,10 @@ router.put('/:ticker/classification', (req, res) => {
     return res.status(404).json({ success: false, error: `Titolo '${ticker}' non trovato.` });
   }
 
-  const cleanType = type !== undefined ? normalizeAssetType(type, ticker) : existing.type;
+  const cleanType = type !== undefined ? normalizeAssetType(type, ticker, existing.name) : existing.type;
   const cleanSector = sector !== undefined ? String(sector) : existing.sector;
   const cleanRegion = region !== undefined ? String(region) : existing.region;
-  const isManualType = isManualAssetType(cleanType, ticker);
+  const isManualType = isManualAssetType(cleanType, ticker, existing.name);
 
   db.prepare(`
     UPDATE assets

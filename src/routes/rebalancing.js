@@ -442,7 +442,7 @@ router.post('/enrich-equities', async (req, res) => {
   const { force = false, ticker = null } = req.body || {};
 
   try {
-    let query = `SELECT * FROM assets WHERE (type IN ('EQUITY', 'STOCK', 'ETF', 'SHARE') OR type IS NULL)`;
+    let query = `SELECT * FROM assets WHERE (type IN ('EQUITY', 'STOCK', 'ETF', 'SHARE') OR type IS NULL) AND UPPER(COALESCE(type, '')) != 'DEPOSITO_VINCOLATO' AND ticker NOT LIKE 'CD_%' AND ticker NOT LIKE 'CD-%' AND ticker NOT LIKE '%IFIS%' AND ticker NOT LIKE '%RENDIMAX%' AND UPPER(COALESCE(name, '')) NOT LIKE '%CONTO DEPOSITO%' AND UPPER(COALESCE(name, '')) NOT LIKE '%DEPOSITO VINCOLATO%'`;
     const params = [];
 
     if (ticker) {
@@ -456,7 +456,7 @@ router.post('/enrich-equities', async (req, res) => {
     const enrichedList = [];
 
     for (const a of assetsToEnrich) {
-      if (a.ticker.endsWith('=X') || a.type === 'CASH' || a.type === 'CURRENCY') continue;
+      if (a.ticker.endsWith('=X') || a.type === 'CASH' || a.type === 'CURRENCY' || a.type === 'DEPOSITO_VINCOLATO' || a.ticker.startsWith('CD_') || a.ticker.startsWith('CD-') || a.ticker.includes('IFIS') || a.ticker.includes('RENDIMAX')) continue;
       const resEnrich = await enrichEquityClassification(a.ticker, a, db);
       if (resEnrich) {
         enrichedList.push(resEnrich);

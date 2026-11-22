@@ -488,8 +488,8 @@ function createSchema(database) {
     database.exec(`
       UPDATE assets
       SET type = 'DEPOSITO_VINCOLATO', dataSource = 'MANUAL'
-      WHERE (ticker LIKE 'CD_%' OR ticker LIKE 'CD-%' OR name LIKE '%Conto Deposito%' OR name LIKE '%Deposito Vincolato%')
-        AND (type = 'EQUITY' OR type = 'CASH' OR type = 'DEPOSITO' OR type IS NULL);
+      WHERE (ticker LIKE 'CD_%' OR ticker LIKE 'CD-%' OR ticker LIKE '%IFIS%' OR ticker LIKE '%RENDIMAX%' OR name LIKE '%Conto Deposito%' OR name LIKE '%Deposito Vincolato%' OR name LIKE '%IFIS%' OR name LIKE '%Rendimax%')
+        AND (type = 'EQUITY' OR type = 'STOCK' OR type = 'CASH' OR type = 'DEPOSITO' OR type IS NULL);
 
       UPDATE assets
       SET type = 'BUONO_POSTALE', dataSource = 'MANUAL'

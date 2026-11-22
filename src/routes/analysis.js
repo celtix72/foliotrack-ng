@@ -87,6 +87,15 @@ router.get('/', async (req, res) => {
         AND TRIM(t.assetTicker) != ''
         AND TRIM(UPPER(t.assetTicker)) NOT IN ('CASH', 'EUR', 'USD', 'DEPOSIT', 'WITHDRAWAL')
         AND (a.type IS NULL OR TRIM(a.type) = '' OR UPPER(TRIM(a.type)) IN ('EQUITY', 'STOCK'))
+        AND UPPER(TRIM(COALESCE(a.type, ''))) != 'DEPOSITO_VINCOLATO'
+        AND NOT (
+          TRIM(UPPER(t.assetTicker)) LIKE 'CD_%' OR
+          TRIM(UPPER(t.assetTicker)) LIKE 'CD-%' OR
+          TRIM(UPPER(t.assetTicker)) LIKE '%IFIS%' OR
+          TRIM(UPPER(t.assetTicker)) LIKE '%RENDIMAX%' OR
+          UPPER(TRIM(COALESCE(a.name, ''))) LIKE '%CONTO DEPOSITO%' OR
+          UPPER(TRIM(COALESCE(a.name, ''))) LIKE '%DEPOSITO VINCOLATO%'
+        )
       GROUP BY TRIM(UPPER(t.assetTicker))
       HAVING SUM(CASE WHEN t.type = 'BUY' THEN t.quantity WHEN t.type = 'SELL' THEN -t.quantity ELSE 0 END) > 1e-6
          OR COUNT(CASE WHEN t.type IN ('BUY', 'SELL') THEN 1 END) > 0
@@ -570,7 +579,13 @@ router.delete('/watchlist/:ticker', async (req, res) => {
       SELECT COUNT(*) as c
       FROM transactions t
       JOIN assets a ON t.assetTicker = a.ticker
-      WHERE t.assetTicker = ? AND UPPER(a.type) IN ('EQUITY', 'STOCK')
+      WHERE t.assetTicker = ? 
+        AND UPPER(a.type) IN ('EQUITY', 'STOCK')
+        AND UPPER(a.type) != 'DEPOSITO_VINCOLATO'
+        AND t.assetTicker NOT LIKE 'CD_%'
+        AND t.assetTicker NOT LIKE 'CD-%'
+        AND t.assetTicker NOT LIKE '%IFIS%'
+        AND t.assetTicker NOT LIKE '%RENDIMAX%'
     `).get(ticker).c > 0;
 
     if (isInPortfolio) {

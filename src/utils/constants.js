@@ -103,6 +103,57 @@ function isManualAssetType(type, ticker = '', name = '') {
 }
 
 /**
+ * Checks whether an asset represents liquidity / cash instruments (including DEPOSITO_VINCOLATO).
+ *
+ * @param {string} [type]
+ * @param {string} [ticker]
+ * @param {string} [name]
+ * @returns {boolean}
+ */
+function isLiquidityAssetType(type, ticker = '', name = '') {
+  const norm = normalizeAssetType(type, ticker, name);
+  const tick = String(ticker || '').trim().toUpperCase();
+  const nam = String(name || '').trim().toUpperCase();
+  return (
+    norm === 'DEPOSITO_VINCOLATO' ||
+    norm === 'CASH' ||
+    norm === 'LIQUIDITA' ||
+    tick.startsWith('CD_') ||
+    tick.startsWith('CD-') ||
+    tick.includes('IFIS') ||
+    tick.includes('RENDIMAX') ||
+    nam.includes('CONTO DEPOSITO') ||
+    nam.includes('DEPOSITO VINCOLATO') ||
+    nam.includes('IFIS')
+  );
+}
+
+/**
+ * Returns the macro asset class ('LIQUIDITA', 'AZIONARIO', 'OBBLIGAZIONARIO', 'ORO', 'CRYPTO')
+ *
+ * @param {string} [type]
+ * @param {string} [ticker]
+ * @param {string} [name]
+ * @returns {'LIQUIDITA' | 'AZIONARIO' | 'OBBLIGAZIONARIO' | 'ORO' | 'CRYPTO'}
+ */
+function getMacroAssetClass(type, ticker = '', name = '') {
+  if (isLiquidityAssetType(type, ticker, name)) {
+    return 'LIQUIDITA';
+  }
+  const norm = normalizeAssetType(type, ticker, name);
+  if (norm === 'BOND' || norm === 'BUONO_POSTALE' || norm === 'TFR' || norm === 'FONDO_PENSIONE') {
+    return 'OBBLIGAZIONARIO';
+  }
+  if (norm === 'COMMODITY') {
+    return 'ORO';
+  }
+  if (norm === 'CRYPTO') {
+    return 'CRYPTO';
+  }
+  return 'AZIONARIO';
+}
+
+/**
  * Returns human-readable Italian label for an asset type.
  *
  * @param {string} [type]
@@ -164,6 +215,8 @@ module.exports = {
   MANUAL_ASSET_TYPES,
   normalizeAssetType,
   isManualAssetType,
+  isLiquidityAssetType,
+  getMacroAssetClass,
   getAssetTypeLabel,
   PORTFOLIO_TYPES,
   TRANSACTION_TYPES,

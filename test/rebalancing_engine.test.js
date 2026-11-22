@@ -612,11 +612,12 @@ describe('Wealthfolio-Compatible Target Allocation & Rebalancing Engine Tests', 
     // 2. Obbligazionario
     assert.strictEqual(classifyMacroCategory({ ticker: 'IT0005594483', name: 'BTP Valore Mg30', type: 'BOND' }), 'OBBLIGAZIONARIO');
     assert.strictEqual(classifyMacroCategory({ ticker: 'X25E.MI', name: 'Xtrackers II Eurozone Govt 25+', type: 'ETF', sector: 'Government' }), 'OBBLIGAZIONARIO');
-    assert.strictEqual(classifyMacroCategory({ ticker: 'CD_WID', name: 'Conto Deposito Vincolato Widiba', type: 'DEPOSITO_VINCOLATO' }), 'OBBLIGAZIONARIO');
     assert.strictEqual(classifyMacroCategory({ ticker: 'BP_POSTE', name: 'Buono Postale Rinnova', type: 'BUONO_POSTALE' }), 'OBBLIGAZIONARIO');
     assert.strictEqual(classifyMacroCategory({ ticker: 'TFR_AZIENDALE', name: 'Trattamento Fine Rapporto', type: 'TFR' }), 'OBBLIGAZIONARIO');
 
     // 3. Liquidità
+    assert.strictEqual(classifyMacroCategory({ ticker: 'CD_WID', name: 'Conto Deposito Vincolato Widiba', type: 'DEPOSITO_VINCOLATO' }), 'LIQUIDITA');
+    assert.strictEqual(classifyMacroCategory({ ticker: 'CD_IFIS', name: 'Rendimax Vincolato Banca IFIS', type: 'DEPOSITO_VINCOLATO' }), 'LIQUIDITA');
     assert.strictEqual(classifyMacroCategory({ ticker: 'XEON.DE', name: 'Xtrackers Overnight Rate', type: 'ETF' }), 'LIQUIDITA');
     assert.strictEqual(classifyMacroCategory({ ticker: 'C3M.MI', name: 'Amundi Euro Liquidity', type: 'ETF' }), 'LIQUIDITA');
     assert.strictEqual(classifyMacroCategory({ ticker: 'EURUSD=X', name: 'EUR/USD', type: 'CURRENCY' }), 'LIQUIDITA');
